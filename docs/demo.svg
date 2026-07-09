@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 520" font-family="SFMono-Regular, Consolas, Menlo, 'Noto Sans Mono CJK TC', monospace" font-size="15">
+  <rect width="880" height="520" rx="10" fill="#0d1117"/>
+  <rect width="880" height="36" rx="10" fill="#161b22"/>
+  <rect y="26" width="880" height="10" fill="#161b22"/>
+  <circle cx="22" cy="18" r="6" fill="#f85149"/>
+  <circle cx="42" cy="18" r="6" fill="#d29922"/>
+  <circle cx="62" cy="18" r="6" fill="#3fb950"/>
+  <text x="440" y="23" text-anchor="middle" fill="#8b949e" font-size="13">python -m legal_agent.run  ·  free local llama3.1</text>
+
+  <g>
+    <text x="20" y="72"><tspan fill="#3fb950">$</tspan><tspan fill="#c9d1d9"> python -m legal_agent.run</tspan></text>
+
+    <text x="20" y="104"><tspan fill="#58a6ff">你 &gt;</tspan><tspan fill="#c9d1d9"> 樓上鄰居三更半夜狂敲打、搬東西，我報過警但沒用…</tspan></text>
+    <text x="20" y="128"><tspan fill="#8b949e">助理 &gt; 這種深夜敲打確實擾人。幾乎每天嗎？哪個時段最嚴重？</tspan></text>
+    <text x="600" y="128" fill="#6e7681" font-size="12.5">← 模型主導問診（自然對話）</text>
+    <text x="20" y="152"><tspan fill="#58a6ff">你 &gt;</tspan><tspan fill="#c9d1d9"> 每天，深夜最兇。沒有其他了，請幫我分析</tspan></text>
+    <text x="20" y="176" fill="#6e7681" font-size="13">…蒐集完事實後，只檢索一次，再依五道防線作答…</text>
+
+    <text x="20" y="212" fill="#8b949e">══════════════ 診斷結果 ══════════════</text>
+    <text x="20" y="236" fill="#c9d1d9">法律明文：社會秩序維護法第72條 …</text>
+    <text x="20" y="260" fill="#c9d1d9">實務見解：（非法律明文，僅供參考）…</text>
+
+    <text x="20" y="296"><tspan fill="#f85149">⚠ 引用查核：噪音管制法第8條 → corpus 查無此法源</tspan></text>
+    <text x="560" y="296" fill="#d29922" font-size="12.5">← 8B 模型幻覺，被攔下</text>
+    <text x="20" y="320"><tspan fill="#f85149">⚠ 引用查核：噪音管制法第9條 → corpus 查無此法源</tspan></text>
+    <text x="20" y="344"><tspan fill="#f85149">⚠ 引用查核：公寀大廈管理條例第16條 → corpus 查無此法源</tspan></text>
+    <text x="560" y="344" fill="#6e7681" font-size="12.5">← 連錯字都抓（公寓→公寀）</text>
+
+    <text x="20" y="380" fill="#c9d1d9">建議處理順序（由低成本 → 高，打官司最後）：</text>
+    <text x="20" y="404"><tspan fill="#3fb950">  1. 反映管委會    [建議下一步]   免費 · 即時~數日</tspan></text>
+    <text x="20" y="428" fill="#8b949e">  2. 報警請警到場  [已嘗試]       免費 · 即時</text>
+    <text x="20" y="452" fill="#8b949e">  3. 里長 / 調解委員會 調解 …</text>
+    <text x="20" y="476" fill="#8b949e">  5. 民事訴訟      （最後手段）</text>
+  </g>
+
+  <text x="20" y="506" fill="#6e7681" font-size="12.5">the model errs — the user knows.  retrieval-first · five gates · verified against a time-versioned corpus</text>
+</svg>

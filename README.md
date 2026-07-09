@@ -43,6 +43,10 @@ disputes) — so the corpus is small enough to hand-verify every article.
 
 ## Demo — the gates catching a real hallucination
 
+<p align="center">
+  <img src="docs/demo.svg" alt="Live demo: the verifier flags statutes the model hallucinated" width="840">
+</p>
+
 A live run against a **free local `llama3.1` (8B)** model. The user describes the
 problem in plain language; the model drives the intake, then answers under all
 five gates. Being a small model, it over-reached — and the verifier caught it:
