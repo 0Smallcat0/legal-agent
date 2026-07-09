@@ -1,4 +1,6 @@
-# Taiwan Legal Agent — Engineering Specification
+# Legal Agent — Engineering Specification
+
+> Jurisdiction-agnostic engine; this document specifies the **Taiwan (R.O.C.)** reference implementation.
 
 > **Document purpose**: This is a build specification for an AI coding tool (Claude Code / Codex). It defines *what to build* and *why*, module by module. Technical scaffolding is in English; Taiwan-specific legal content (statute names, legal terms, intake scripts) is kept in Chinese on purpose — translating it would introduce distortion and cause the retriever to fetch the wrong material.
 

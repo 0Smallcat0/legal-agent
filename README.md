@@ -1,12 +1,12 @@
-# Taiwan Legal Agent
+# Legal Agent
 
-[![CI](https://github.com/0Smallcat0/taiwan-legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/taiwan-legal-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Tests](https://img.shields.io/badge/tests-126%20passing-brightgreen)
 
-> A personal-use legal assistant for Taiwan (R.O.C.) law, built around one hard
-> problem: **making an LLM cite statutes it cannot hallucinate.**
+> A retrieval-first legal assistant built around one hard problem: **making an LLM
+> cite statutes it cannot hallucinate.**
 
 A 2025 Stanford study measured hallucination rates of *professional* legal AI at
 17–33% — funded products, with RAG. This project is an experiment in the opposite
@@ -14,8 +14,11 @@ discipline: a **retrieval-first** pipeline where the model may only cite what wa
 retrieved, every citation is verified against a **time-versioned** corpus, and
 **when the system errs, the user is told exactly where.**
 
-Scope is deliberately narrowed to one scenario — 住宅噪音糾紛 (residential noise
-disputes) — so the corpus is small enough to hand-verify every article.
+The pipeline is **jurisdiction-agnostic** — the corpus, retriever, and verifier
+know nothing about which country's law they hold. The **reference implementation**
+covers **Taiwan (R.O.C.)** law, scoped to one scenario (住宅噪音糾紛 / residential
+noise disputes) so the corpus is small enough to hand-verify every article. Adding
+a jurisdiction means adding data, not rewriting the engine.
 
 ---
 
@@ -37,7 +40,7 @@ disputes) — so the corpus is small enough to hand-verify every article.
   then retrieval fires **exactly once** on the complete fact set (multi-turn
   re-retrieval is the documented cause of RAG degradation) — enforced by a test.
 - **126 tests**, layered architecture, spec-driven. Full design in
-  [`taiwan-legal-agent-spec.md`](taiwan-legal-agent-spec.md).
+  [`SPEC.md`](SPEC.md).
 
 ---
 
@@ -72,10 +75,10 @@ five gates. Being a small model, it over-reached — and the verifier caught it:
   5. 民事訴訟(最後手段) …
 ```
 
-The 8B model cited 噪音管制法 §8/§9 (not in the retrieved corpus) and typo'd a
-statute name. **Every one was flagged.** That is the entire thesis: *the model
-errs; the user knows.* A stronger model (or the paid API) errs less — the gates
-work identically regardless of backend.
+The 8B model cited statutes not in the retrieved corpus and typo'd a statute name.
+**Every one was flagged.** That is the entire thesis: *the model errs; the user
+knows.* A stronger model (or the paid API) errs less — the gates work identically
+regardless of backend.
 
 ---
 
@@ -86,7 +89,7 @@ Requires **Python 3.10+**.
 ```bash
 pip install -r requirements.txt
 
-# build the SQLite schema + load the hand-verified noise corpus
+# build the SQLite schema + load the hand-verified reference corpus
 python -c "from legal_agent.data.database import init_db; from legal_agent.config import DB_PATH; init_db(DB_PATH)"
 python -m legal_agent.cli seed
 python -m legal_agent.data.noise_seed
@@ -107,7 +110,7 @@ assembled prompt for you to paste into any chat — no local model, no API key.
 
 ## Architecture
 
-Each spec layer maps to one package under `legal_agent/`:
+Each layer maps to one package under `legal_agent/`:
 
 | Layer | Package | What it does |
 |---|---|---|
@@ -118,7 +121,7 @@ Each spec layer maps to one package under `legal_agent/`:
 | Evaluation | `evaluation/` | Tier-1 golden-set runner + Tier-2 batch hallucination check |
 
 The runtime backends live in `dialogue/{manual,ollama,stage3}_llm` and are chosen
-by `config.LLM_PROVIDER`.
+by `config.LLM_PROVIDER`. Nothing above the data layer is jurisdiction-specific.
 
 ---
 
@@ -128,17 +131,18 @@ by `config.LLM_PROVIDER`.
 dialogue → solution ladder → evaluation harness — is implemented and green
 (126 tests), and runs end-to-end for free on a local model.
 
-Scoped on purpose: one scenario, a hand-verified corpus of 11 statute articles, no
-judgments yet. Roadmap: author the ~20–30 case golden set (Tier-1 baseline),
-calibrate the honesty threshold, then expand scenarios and add judgment ingestion.
+Scoped on purpose: one jurisdiction (Taiwan), one scenario, a hand-verified corpus
+of 11 statute articles, no judgments yet. Roadmap: author the ~20–30 case golden
+set (Tier-1 baseline), calibrate the honesty threshold, add judgment ingestion,
+then **broaden to more scenarios and additional jurisdictions** on the same engine.
 
 ---
 
 ## Disclaimer
 
 A personal-use engineering experiment. **Not legal advice**, not a substitute for
-a lawyer, and not affiliated with any government body. Statute text is quoted
-verbatim from the public database at law.moj.gov.tw.
+a lawyer, and not affiliated with any government body. Reference statute text is
+quoted verbatim from official public sources.
 
 ## License
 
