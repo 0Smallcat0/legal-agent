@@ -1,0 +1,25 @@
+[
+  {
+    "id": "noise-pass",
+    "question": "樓上鄰居深夜喧嘩、製造噪音,我可以怎麼辦?",
+    "facts": {
+      "noise_type": "深夜喧嘩爭吵、製造噪音",
+      "timing": "半夜,幾乎每天",
+      "building_type": "公寓大廈,有管委會"
+    },
+    "expected_statutes": ["社會秩序維護法第72條"],
+    "expected_action": "噪音當下報警請警察到場(社維法§72),並反映管委會。",
+    "notes": "FIXTURE (invented, NOT real legal content) — exercises the statute-coverage PASS path: the noise facts surface 社維法§72."
+  },
+  {
+    "id": "noise-miss",
+    "question": "鄰居深夜卡拉OK很吵,我想請求精神損害賠償,適用什麼?",
+    "facts": {
+      "noise_type": "深夜喧嘩、卡拉OK",
+      "building_type": "公寓大廈,有管委會"
+    },
+    "expected_statutes": ["民法第184條"],
+    "expected_action": "情節重大時,可依民法§184、§195第1項請求損害賠償(建議先諮詢律師)。",
+    "notes": "FIXTURE (invented) — the noise facts do NOT surface 民法§184, so the harness scores MISS (a real coverage gap to flag for a human)."
+  }
+]

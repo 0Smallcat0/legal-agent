@@ -1,0 +1,20 @@
+[
+  {
+    "statute_id": "示範處理辦法(測試,非真實)",
+    "article_no": "第11條",
+    "content": "(示範用途,非真實條文)本辦法所稱案件,依受理機關之分工辦理。",
+    "effective_from": "2012-01-01",
+    "effective_to": null,
+    "hierarchy_level": "命令",
+    "source_url": "https://example.test/O-demo/flno=11"
+  },
+  {
+    "statute_id": "示範機關(81)字第329號(測試,非真實)",
+    "article_no": "",
+    "content": "(示範用途,非真實見解)關於噪音案件受理分工之處理原則……。",
+    "effective_from": "1992-05-01",
+    "effective_to": null,
+    "hierarchy_level": "行政實務見解",
+    "source_url": "https://example.test/interp/329"
+  }
+]
