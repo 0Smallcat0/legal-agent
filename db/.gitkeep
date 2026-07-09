@@ -1,0 +1,3 @@
+# Keeps the db/ directory in version control. The SQLite file (legal_agent.db)
+# is created here at runtime by legal_agent.data.database.init_db and is
+# gitignored — never commit the database itself.

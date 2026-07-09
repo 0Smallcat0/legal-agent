@@ -1,0 +1,26 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# Taiwan Legal Agent — Python dependencies
+#
+# The data layer itself uses only the built-in `sqlite3` module. The deps below
+# are all IN USE by the current build (retrieval + runtime model + tests) —
+# install them with `pip install -r requirements.txt`. Versions are pinned where
+# the code relies on specific behavior.
+#
+# Python 3.10+ required (uses `X | None` type hints and dataclasses).
+# Versions are indicative minimums — pin them when you actually install.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# ── Runtime reasoning model (spec §0.4) ── [used from the reasoning/dialogue step]
+anthropic==0.116.0       # Claude API client — the runtime reasoning model (spec §0.4); dependency-injected in Stage 3.
+python-dotenv>=1.0.0     # Load the Anthropic API key from a local .env, keeping the key out of source.
+
+# ── Retrieval (spec §2.2 Mechanism 1) ── [IN USE as of step 3a; pinned]
+rank-bm25==0.2.2         # Lexical BM25 over the corpus; strong for exact legal terms / article numbers. No GPU, no model download.
+jieba==0.42.1            # Chinese word segmentation; BM25 needs tokenized Chinese text.
+# numpy is pulled in transitively by rank-bm25 (developed/tested against numpy 2.4.4).
+
+# ── Evaluation & tests (spec §4) ──
+pytest>=8.0.0            # Golden-set + hallucination-check harness (Tiers 1 & 2), and the schema smoke test.
+
+# ── Data import / parsing (spec §1.2) ── [importer NOT built yet — left commented]
+# lxml>=5.0.0            # Parse 全國法規資料庫 statute XML into rows. Uncomment when building the importer.
