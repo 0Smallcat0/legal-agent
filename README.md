@@ -56,30 +56,8 @@ a jurisdiction means adding data, not rewriting the engine.
 
 A live run against a **free local `llama3.1` (8B)** model. The user describes the
 problem in plain language; the model drives the intake, then answers under all
-five gates. Being a small model, it over-reached — and the verifier caught it:
-
-```text
-你 > 樓上鄰居三更半夜一直搬東西、很大聲敲打，幾乎每天，我有錄影，報過警但沒用
-…(model-driven intake collects the facts, then retrieves ONCE)…
-
-══════════════ 診斷結果 ══════════════
-法律明文: 社會秩序維護法第72條 …
-實務見解: 以下為主管機關實務見解/處理原則，非法律明文，僅供參考 …
-
-⚠ 引用查核(下列引用有疑慮,請對照條文原文):
-  - 噪音管制法第8條: corpus 查無此法源
-  - 噪音管制法第9條: corpus 查無此法源
-  - 公寀大廈管理條例第16條: corpus 查無此法源      ← model even typo'd 公寓→公寀
-
-建議處理順序(由低成本 → 高成本;打官司是最後手段):
-  1. 反映管理委員會   [建議下一步]   免費 · 即時~數日
-  2. 報警請警察到場   [已嘗試]       免費 · 即時
-  3. 里長 / 調解委員會 調解 …
-  4. 寄發存證信函 …
-  5. 民事訴訟(最後手段) …
-```
-
-The 8B model cited statutes not in the retrieved corpus and typo'd a statute name.
+five gates. Being a small model, it over-reached (it even typo'd 公寓→公寀) —
+and the verifier caught every citation.
 **Every one was flagged.** That is the entire thesis: *the model errs; the user
 knows.* A stronger model (or the paid API) errs less — the gates work identically
 regardless of backend.
@@ -89,6 +67,10 @@ regardless of backend.
 ```bash
 python app.py   # Gradio demo: paste any "AI legal answer", watch the verifier flag it
 ```
+
+<p align="center">
+  <img src="docs/demo_web.png" alt="Web demo: paste an AI answer, the verifier flags the wrong amount, the out-of-corpus statute, and the typo'd statute name" width="840">
+</p>
 
 Four tabs: 引用查核 playground (pre-filled with a 3-defect answer: wrong fine
 amount, out-of-corpus statute, typo'd statute name — all flagged), 檢索 +
