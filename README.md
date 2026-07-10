@@ -72,12 +72,15 @@ python app.py   # Gradio demo: paste any "AI legal answer", watch the verifier f
   <img src="docs/demo_web.png" alt="Web demo: paste an AI answer, the verifier flags the wrong amount, the out-of-corpus statute, and the typo'd statute name" width="840">
 </p>
 
-Four tabs: 引用查核 playground (pre-filled with a 3-defect answer: wrong fine
-amount, out-of-corpus statute, typo'd statute name — all flagged), 檢索 +
-time-slice explorer (set as-of to `2024-06-01` and watch the 2025 版社維法§72
-vanish from candidates), the full five-gate flow (paste-back manual mode works
-anywhere; one-click generation when local Ollama is up), and the measured
-numbers. Free hosting recipe: [`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
+The first tab is the product: a clinic-style consultation — describe the
+problem, answer the intake checklist, and on fact-completion the system
+retrieves ONCE and returns the applicable statutes (verbatim, relevance-ranked),
+the graded explanation, and the low-cost-first action ladder, with citation
+verification as a quiet status line under the answer. Stages 1–2 and everything
+deterministic run with no model at all; a local Ollama adds the 分析研判
+narrative. Remaining tabs: the citation-check tool (pre-filled with a 3-defect
+answer), the retrieval/time-slice explorer, and the measured numbers. Free
+hosting recipe: [`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
 
 ---
 
