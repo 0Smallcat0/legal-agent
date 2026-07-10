@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-126%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-134%20passing-brightgreen)
 
 > A retrieval-first legal assistant built around one hard problem: **making an LLM
 > cite statutes it cannot hallucinate.**
@@ -39,7 +39,11 @@ a jurisdiction means adding data, not rewriting the engine.
 - **Clinic-style dialogue.** An LLM-driven intake collects facts conversationally,
   then retrieval fires **exactly once** on the complete fact set (multi-turn
   re-retrieval is the documented cause of RAG degradation) — enforced by a test.
-- **126 tests**, layered architecture, spec-driven. Full design in
+- **Measured, not vibed.** A 25-case golden set, a seeded-error mutation test
+  (verifier catch rate **31/31, 0 false positives**), a bare-vs-gated ablation
+  across local models, and a data-driven honesty-threshold calibration — all
+  reproducible offline for $0. Numbers in [`evals/RESULTS.md`](evals/RESULTS.md).
+- **134 tests**, layered architecture, spec-driven. Full design in
   [`SPEC.md`](SPEC.md).
 
 ---
@@ -80,6 +84,40 @@ The 8B model cited statutes not in the retrieved corpus and typo'd a statute nam
 knows.* A stronger model (or the paid API) errs less — the gates work identically
 regardless of backend.
 
+**Try it yourself** — the same catch, interactive, no key needed:
+
+```bash
+python app.py   # Gradio demo: paste any "AI legal answer", watch the verifier flag it
+```
+
+Four tabs: 引用查核 playground (pre-filled with a 3-defect answer: wrong fine
+amount, out-of-corpus statute, typo'd statute name — all flagged), 檢索 +
+time-slice explorer (set as-of to `2024-06-01` and watch the 2025 版社維法§72
+vanish from candidates), the full five-gate flow (paste-back manual mode works
+anywhere; one-click generation when local Ollama is up), and the measured
+numbers. Free hosting recipe: [`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
+
+---
+
+## Measured results (local models, $0)
+
+Full tables and method notes in [`evals/RESULTS.md`](evals/RESULTS.md); raw
+per-run data in `evals/ablation_raw.json`. Headlines:
+
+| what | number |
+|---|---|
+| Verifier catch rate on 31 seeded errors (fake statute / ghost article / wrong amount / out-of-force) | **31/31 (100%), 0/10 false positives** |
+| Golden-set statute coverage (25 cases, llama3.1 8B, gated) | **84% pass+partial** (58% strict) |
+| Honesty-tier accuracy / anti-sycophancy premise detection | **80% / 100%** |
+| Out-of-scope questions refused instead of answered | **4/5** (the 1 leak is documented) |
+| Bare model (no pipeline): memory-cited statutes traceable to a vetted source | **0–5%** (llama3.1 / qwen3) |
+| Gated: every citation checked; small-model over-reach flagged inline with the verbatim article | **30–40% flagged** — *the model errs; the user knows* |
+
+The golden set also caught a real retriever defect while being built
+(single-character function-word tokens matched everything → fixed, tests
+added), and the threshold-calibration sweep proved the current honesty signal
+saturates at 80% — quantified motivation for the hybrid-retrieval roadmap item.
+
 ---
 
 ## Quickstart
@@ -95,7 +133,12 @@ python -m legal_agent.cli seed
 python -m legal_agent.data.noise_seed
 python -m legal_agent.data.source_ingest corpus/noise_routing_proposal.json
 
-python -m pytest -q          # 126 passing
+python -m pytest -q          # 134 passing
+
+# measure it (no key, no cost — see evals/RESULTS.md for current numbers)
+python -m legal_agent.evaluation.mutation                               # verifier catch rate
+python -m legal_agent.evaluation.golden_set evals/golden_noise_v1.json  # Tier-1 golden set
+python -m legal_agent.evaluation.calibrate evals/golden_noise_v1.json   # threshold sweep
 
 # talk to it (default backend: free local Ollama — https://ollama.com)
 #   ollama pull llama3.1     # once
@@ -118,7 +161,7 @@ Each layer maps to one package under `legal_agent/`:
 | Retrieval | `retrieval/` | BM25 (jieba + CJK bigrams); point-in-time filter before ranking |
 | Anti-hallucination | `anti_hallucination/` | the five gates (verifier / honesty / structure / sycophancy) |
 | Dialogue | `dialogue/` | four-stage clinic flow; LLM-driven + rule-based intake; solution ladder |
-| Evaluation | `evaluation/` | Tier-1 golden-set runner + Tier-2 batch hallucination check |
+| Evaluation | `evaluation/` | golden-set runner (auto-scored coverage/tier/premise) + batch hallucination check + seeded-error mutation test + bare-vs-gated ablation + threshold calibration |
 
 The runtime backends live in `dialogue/{manual,ollama,stage3}_llm` and are chosen
 by `config.LLM_PROVIDER`. Nothing above the data layer is jurisdiction-specific.
@@ -127,14 +170,18 @@ by `config.LLM_PROVIDER`. Nothing above the data layer is jurisdiction-specific.
 
 ## Status & roadmap
 
-**MVP complete and tested.** The full pipeline — data → retrieval → five gates →
-dialogue → solution ladder → evaluation harness — is implemented and green
-(126 tests), and runs end-to-end for free on a local model.
+**MVP complete, tested, and measured.** The full pipeline — data → retrieval →
+five gates → dialogue → solution ladder — is implemented and green (134 tests),
+runs end-to-end for free on a local model, ships an interactive demo (`app.py`),
+and carries a reproducible evaluation suite with published numbers
+([`evals/RESULTS.md`](evals/RESULTS.md)): 25-case golden set, seeded-error
+verifier test, bare-vs-gated ablation, honesty-threshold calibration.
 
-Scoped on purpose: one jurisdiction (Taiwan), one scenario, a hand-verified corpus
-of 11 statute articles, no judgments yet. Roadmap: author the ~20–30 case golden
-set (Tier-1 baseline), calibrate the honesty threshold, add judgment ingestion,
-then **broaden to more scenarios and additional jurisdictions** on the same engine.
+Scoped on purpose: one jurisdiction (Taiwan), one scenario, a hand-verified
+corpus of 11 entries, no judgments yet. Roadmap — each item now motivated by a
+measured gap: **hybrid (dense) retrieval** (coverage 84% pass+partial; honesty
+signal saturates at 80% on BM25 alone), official-XML corpus ingestion at scale,
+judgment ingestion, then more scenarios and jurisdictions on the same engine.
 
 ---
 
