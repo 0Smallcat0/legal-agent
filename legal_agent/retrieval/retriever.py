@@ -60,8 +60,17 @@ def _cjk_bigrams(text: str) -> list[str]:
 
 
 def _tokenize(text: str) -> list[str]:
-    """jieba word tokens (punctuation dropped) + CJK character bigrams."""
-    words = [tok for tok in jieba.lcut(text) if _MEANINGFUL.search(tok)]
+    """jieba word tokens (punctuation dropped) + CJK character bigrams.
+
+    Single-character CJK word tokens are dropped: function words (的/與/及/之…)
+    otherwise create spurious lexical overlap with almost every article — the
+    golden set's out-of-scope cases caught exactly this. Content signal from
+    single characters is still carried by the bigrams.
+    """
+    words = [
+        tok for tok in jieba.lcut(text)
+        if _MEANINGFUL.search(tok) and not (len(tok) == 1 and _CJK_RUN.fullmatch(tok))
+    ]
     return words + _cjk_bigrams(text)
 
 
