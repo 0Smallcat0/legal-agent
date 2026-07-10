@@ -16,6 +16,8 @@ Golden file schema (a JSON list of cases):
       "facts": {"noise_type": ..., "building_type": ..., ...},
       "expected_statutes": ["社會秩序維護法第72條", ...],   # corpus-format refs
       "expected_action": str,
+      "expected_tier": "normal|marginal|insufficient",   # optional, auto-scored
+      "expected_premise_flag": bool,      # optional, auto-scored (Mechanism 5)
       "notes": str                        # optional
     }
 The real ~20-30 cases are authored separately (human-verified) and dropped in as
@@ -41,6 +43,13 @@ class CaseResult:
     expected_action: str
     honesty_tier: str
     flagged_citation_count: int
+    # Optional machine-checkable expectations (None when the case omits them).
+    top_score: float | None = None          # top BM25 score (calibration input)
+    expected_tier: str | None = None
+    tier_ok: bool | None = None             # honesty_tier == expected_tier
+    expected_premise_flag: bool | None = None
+    premise_flag: bool = False              # Mechanism-5 detector output
+    premise_ok: bool | None = None          # premise_flag == expected_premise_flag
 
 
 @dataclass
@@ -72,12 +81,39 @@ class Scorecard:
         scored = self.total - self.statute_na
         return (self.statute_pass / scored) if scored else 0.0
 
+    @property
+    def tier_checked(self) -> int:
+        return sum(1 for c in self.cases if c.tier_ok is not None)
+
+    @property
+    def tier_correct(self) -> int:
+        return sum(1 for c in self.cases if c.tier_ok)
+
+    @property
+    def tier_accuracy(self) -> float:
+        return (self.tier_correct / self.tier_checked) if self.tier_checked else 0.0
+
+    @property
+    def premise_checked(self) -> int:
+        return sum(1 for c in self.cases if c.premise_ok is not None)
+
+    @property
+    def premise_correct(self) -> int:
+        return sum(1 for c in self.cases if c.premise_ok)
+
+    @property
+    def premise_accuracy(self) -> float:
+        return (self.premise_correct / self.premise_checked) if self.premise_checked else 0.0
+
     def render(self) -> str:
         lines = [
             "═══════ Tier 1 Golden-Set 計分表 ═══════",
             f"案例數:{self.total}｜法條涵蓋 pass {self.statute_pass}"
             f" / partial {self.statute_partial} / miss {self.statute_miss} / n-a {self.statute_na}",
             f"法條涵蓋通過率:{self.statute_pass_rate:.0%}",
+            f"誠實分級正確率:{self.tier_correct}/{self.tier_checked}"
+            f"({self.tier_accuracy:.0%})｜前提偵測正確率:"
+            f"{self.premise_correct}/{self.premise_checked}({self.premise_accuracy:.0%})",
             "",
             "⚠ 本表只『自動計分法條涵蓋』(expected_statutes 是否被引用或檢索到)。",
             "  法律判斷是否正確,必須由『人工』比對下方 [代理人回答] 與 [預期行動];",
@@ -90,7 +126,16 @@ class Scorecard:
                 f"   法條涵蓋:{c.statute_score}"
                 f"(預期 {c.expected_statutes};命中 {c.matched_statutes};缺 {c.missing_statutes})"
             )
-            lines.append(f"   誠實分級:{c.honesty_tier}｜被標記引用數:{c.flagged_citation_count}")
+            tier_note = "" if c.tier_ok is None else f"(預期 {c.expected_tier};{'✓' if c.tier_ok else '✗'})"
+            premise_note = (
+                "" if c.premise_ok is None
+                else f"｜前提偵測:{c.premise_flag}(預期 {c.expected_premise_flag};{'✓' if c.premise_ok else '✗'})"
+            )
+            score_note = "" if c.top_score is None else f"｜top BM25:{c.top_score:.2f}"
+            lines.append(
+                f"   誠實分級:{c.honesty_tier}{tier_note}｜被標記引用數:"
+                f"{c.flagged_citation_count}{premise_note}{score_note}"
+            )
             lines.append(f"   [代理人回答] {c.agent_answer}")
             lines.append(f"   [預期行動]   {c.expected_action}   ← 需人工比對法律判斷")
             lines.append("")
@@ -145,6 +190,11 @@ def _run_case(case: dict, llm, conn) -> CaseResult:
     matched = [e for e in expected if _article_ref(e) in covered]
     missing = [e for e in expected if _article_ref(e) not in covered]
 
+    scores = result.stage3.retrieval_scores or []
+    top_score = max(scores) if scores else None
+    expected_tier = case.get("expected_tier")
+    expected_premise = case.get("expected_premise_flag")
+
     return CaseResult(
         id=case.get("id", ""),
         question=case.get("question", ""),
@@ -156,6 +206,12 @@ def _run_case(case: dict, llm, conn) -> CaseResult:
         expected_action=case.get("expected_action", ""),
         honesty_tier=result.honesty_tier,
         flagged_citation_count=result.flagged_count,
+        top_score=top_score,
+        expected_tier=expected_tier,
+        tier_ok=None if expected_tier is None else result.honesty_tier == expected_tier,
+        expected_premise_flag=expected_premise,
+        premise_flag=result.premise_flag,
+        premise_ok=None if expected_premise is None else result.premise_flag == expected_premise,
     )
 
 

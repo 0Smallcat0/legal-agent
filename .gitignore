@@ -16,6 +16,13 @@ db/*.db-wal
 # Secrets — Anthropic API key etc. (runtime; spec §0.4)
 .env
 
+# Local tool config + regenerable eval scratch (curated results ARE committed:
+# evals/RESULTS.md, evals/ablation_raw.json)
+.claude/
+evals/*_out.txt
+evals/golden_stub_note.txt
+evals/golden_case_lines.txt
+
 # OS / editor cruft
 .DS_Store
 Thumbs.db
