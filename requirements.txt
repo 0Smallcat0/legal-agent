@@ -1,5 +1,5 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Taiwan Legal Agent — Python dependencies
+# Legal Agent — Python dependencies
 #
 # The data layer itself uses only the built-in `sqlite3` module. The deps below
 # are all IN USE by the current build (retrieval + runtime model + tests) —
@@ -18,6 +18,9 @@ python-dotenv>=1.0.0     # Load the Anthropic API key from a local .env, keeping
 rank-bm25==0.2.2         # Lexical BM25 over the corpus; strong for exact legal terms / article numbers. No GPU, no model download.
 jieba==0.42.1            # Chinese word segmentation; BM25 needs tokenized Chinese text.
 # numpy is pulled in transitively by rank-bm25 (developed/tested against numpy 2.4.4).
+
+# ── Web demo (app.py) ──
+gradio>=4.0.0            # Zero-key demo UI (verifier playground / retrieval explorer / five-gate flow); also the HF Spaces entrypoint.
 
 # ── Evaluation & tests (spec §4) ──
 pytest>=8.0.0            # Golden-set + hallucination-check harness (Tiers 1 & 2), and the schema smoke test.
