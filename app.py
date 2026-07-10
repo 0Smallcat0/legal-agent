@@ -1,17 +1,17 @@
-"""Gradio demo — the five anti-hallucination gates, made visible.
+"""Gradio demo — clinic-style legal consultation, with the gates as the trust layer.
 
-Design notes: this is a serious tool, so the UI is deliberately austere —
-monochrome theme, no emoji, no badge pills, CJK-first typography, and the
-fewest words that still say the thing. Citations render as verdict cards
-(per-axis ✓/✗, corpus verbatim one click away); inputs left, evidence right;
-the playground auto-runs on load so the first screen already shows a result.
+The first tab IS the product: describe the problem, the system runs the
+pre-designed intake (rule-based, no retrieval), and only when the facts are
+complete does it retrieve ONCE and produce the answer — applicable statutes
+(verbatim, ranked), the graded explanation, and the low-cost-first action
+ladder. Citation verification appears as a quiet status line under the
+answer, not as the headline: the user came for the answer; the gates are why
+the answer can be trusted.
 
-Runs with ZERO keys and ZERO paid API:
-  - 引用查核 / 法規檢索 tabs are fully deterministic (no LLM at all).
-  - 完整流程 tab works in "manual" style anywhere (assemble the retrieval-first
-    prompt -> paste it into any chat you already have -> paste the answer back
-    -> all five gates run over it). If a local Ollama server is reachable, a
-    one-click live-generation button appears too.
+Stages 1–2 and everything deterministic (retrieval, honesty tier, ladder,
+verbatim statutes) work with NO model at all, so the full consultation flow
+runs on HF Spaces free CPU with zero keys. A local Ollama, when present,
+additionally writes the 分析研判 narrative.
 
 Local:      python app.py
 HF Spaces:  push this repo with app.py at the root (sdk: gradio) — see
@@ -30,12 +30,13 @@ from legal_agent.data.database import connect, init_db
 from legal_agent.data.noise_seed import load_noise_statutes
 from legal_agent.data.seed import seed_source_hierarchy
 from legal_agent.data.source_ingest import load_proposals
-from legal_agent.dialogue.flow import SessionState, Stage, advance_to_stage3
+from legal_agent.dialogue.flow import SessionState, Stage, advance_to_stage3, handle_turn
 from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
-from legal_agent.dialogue.stage3 import assemble_fact_query, build_model_input
 from legal_agent.retrieval.retriever import retrieve_scored
 
 # ── content ──────────────────────────────────────────────────────────────────
+GREETING = "請描述你遇到的問題。例:樓上鄰居半夜持續喧嘩,報警後仍未改善。"
+
 # A deliberately-broken sample answer: one wrong amount, one statute not in the
 # corpus, and one TYPO'd statute name (公寀≠公寓) — mirrors what the live 8B
 # model actually did in the README demo. Every defect must be flagged.
@@ -49,30 +50,14 @@ SAMPLE_GOOD_ANSWER = (
 )
 DEFAULT_QUERY = "深夜喧嘩爭吵 半夜 幾乎每天 公寓大廈 管理委員會"
 
-_EXAMPLE_FACTS = {
-    "noise_type": "深夜喧嘩爭吵、摔東西撞擊地板",
-    "timing": "半夜十二點以後,幾乎每天,已持續三個月",
-    "building_type": "公寓大廈,設有管理委員會",
-    "impact": "長期失眠,精神耗弱",
-    "evidence": "有錄音與分貝App紀錄",
-    "actions_taken": "報過警兩次,也向管委會反映過,對方不聽勸阻",
+_FIELD_ZH = {
+    "noise_type": "噪音類型",
+    "timing": "時段與頻率",
+    "building_type": "建物型態",
+    "impact": "影響",
+    "evidence": "證據",
+    "actions_taken": "已採取行動",
 }
-_DOG_FACTS = {
-    "noise_type": "鄰居飼養的犬隻長時間吠叫",
-    "timing": "白天晚上都有,斷斷續續",
-    "building_type": "公寓大廈,設有管理委員會",
-    "impact": "無法休息",
-    "evidence": "有錄影",
-    "actions_taken": "口頭反映過,對方不改善",
-}
-_FIELD_LABELS = [
-    ("noise_type", "噪音類型"),
-    ("timing", "時段與頻率"),
-    ("building_type", "建物型態"),
-    ("impact", "影響"),
-    ("evidence", "證據"),
-    ("actions_taken", "已採取行動"),
-]
 
 _TIER_TEXT = {
     "normal": "充分——檢索到高相關法源",
@@ -102,7 +87,7 @@ CSS = """
 .verdict.insufficient {border-left-color:#b3372f}
 
 .note {border:1px solid var(--border-color-primary); border-radius:6px;
-  padding:8px 14px; margin:2px 0 10px; font-size:13.5px; opacity:.92}
+  padding:8px 14px; margin:10px 0; font-size:13.5px; opacity:.92}
 
 .cite-card {border:1px solid var(--border-color-primary); border-left:3px solid #2f7d4f;
   border-radius:6px; padding:10px 14px; margin:8px 0}
@@ -123,6 +108,10 @@ CSS = """
 .retr-card .ref {font-weight:650; font-size:14px}
 .retr-card .meta {font-size:12px; opacity:.6}
 .retr-card .excerpt {font-size:12.5px; opacity:.75; margin-top:3px}
+.retr-card details {margin-top:5px; font-size:12.5px}
+.retr-card summary {cursor:pointer; opacity:.6}
+.retr-card pre {white-space:pre-wrap; font-size:12.5px; border-radius:6px; padding:10px;
+  margin-top:6px; background:var(--background-fill-secondary); line-height:1.7}
 .bar {height:4px; border-radius:2px; background:var(--background-fill-secondary);
   margin-top:8px; overflow:hidden}
 .bar > i {display:block; height:100%; background:#64748b}
@@ -150,7 +139,7 @@ h4.blockhead {margin:16px 0 2px; font-size:14px; font-weight:650; opacity:.85}
 HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
-  <p class="sub">模型只能引用檢索到的法源;每筆引用經「存在、內容、時效」三軸查核——錯了,使用者會知道錯在哪。</p>
+  <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
   <p class="meta">134 項測試通過 · 植入錯誤抓取率 31/31 · 不需任何 API 金鑰</p>
 </div>
 """
@@ -215,7 +204,7 @@ def _tier_bar(tier: str) -> str:
     return f'<div class="verdict {escape(tier)}">{_TIER_TEXT.get(tier, escape(tier))}</div>'
 
 
-def _retr_cards(scored) -> str:
+def _retr_cards(scored, with_fulltext: bool = False) -> str:
     if not scored:
         return '<div class="verdict insufficient">檢索結果為空——系統不作答,不編造</div>'
     top = max(sc for _, sc in scored) or 1.0
@@ -223,18 +212,148 @@ def _retr_cards(scored) -> str:
     for s, sc in scored:
         width = max(4, int(round(sc / top * 100)))
         excerpt = escape(s.content[:56].replace("\n", " "))
+        fulltext = (
+            f'<details><summary>條文全文</summary><pre>{escape(s.content)}</pre></details>'
+            if with_fulltext else ""
+        )
         cards.append(
             '<div class="retr-card"><div class="head">'
             f'<span class="ref">{escape(s.statute_id + s.article_no)}</span>'
             f'<span class="meta">{escape(s.hierarchy_level)} · 生效 {escape(s.effective_from)}'
             f" · 相關度 {sc:.1f}</span></div>"
-            f'<div class="excerpt">{excerpt}…</div>'
+            f'<div class="excerpt">{excerpt}…</div>{fulltext}'
             f'<div class="bar"><i style="width:{width}%"></i></div></div>'
         )
     return "".join(cards)
 
 
-# ── 引用查核(無模型,純決定論) ────────────────────────────────────────────────
+def _clean_section(title: str, body: str) -> str:
+    """Strip the model's markdown-bold remnants and duplicated heading."""
+    base = title.split("(")[0]
+    text = body
+    for _ in range(3):
+        text = text.strip().strip("*:：」「").strip()
+        if text.startswith(base):
+            text = text[len(base):]
+    return text.strip()
+
+
+def _sections_html(result) -> str:
+    blocks = []
+    for title, body in (
+        ("法律明文", result.law_section),
+        ("實務見解(非法律明文)", result.practice_section),
+        ("分析研判(模型推論)", result.analysis_section),
+    ):
+        if body:
+            blocks.append(
+                f'<div class="seccard"><div class="t">{title}</div>'
+                f'<div class="b">{escape(_clean_section(title, body))}</div></div>'
+            )
+    if not blocks:   # model skipped the headings — show the raw answer, flagged
+        return (
+            '<div class="note">模型未依三段格式作答,以下為原文。</div>'
+            f'<div class="seccard"><div class="b">{escape(result.answer)}</div></div>'
+        )
+    return "".join(blocks)
+
+
+# ── 法律諮詢(clinic flow;Stages 1–2 rule-based, retrieval fires once) ───────
+def _fresh_chat() -> list[dict]:
+    return [{"role": "assistant", "content": GREETING}]
+
+
+def _stub_llm(_prompt: str) -> str:
+    """No-model fallback: keep the three-section contract, add no citations,
+    and say plainly what is and is not machine-generated."""
+    return (
+        "「法律明文」:未連接語言模型;適用條文見右欄「適用法源」,均為資料庫逐字內容。\n"
+        "「實務見解」:以下為主管機關實務見解/處理原則,非法律明文,僅供參考:見右欄所列實務見解來源。\n"
+        "「分析研判」:未連接語言模型,不產生推論。啟動本機 Ollama 後重新諮詢,可取得此段分析。"
+    )
+
+
+def _clean_ladder(text: str) -> str:
+    """Display-side cleanup of CLI-oriented ladder text (emoji marker, variable name)."""
+    return text.replace("👉 ", "").replace("letter_template", "存證信函範本")
+
+
+def _quiet_verification(vs) -> str:
+    if not vs:
+        return '<div class="note">引用查核:本回答未含條號引用。</div>'
+    flagged = [v for v in vs if v.flagged]
+    if not flagged:
+        return f'<div class="note">引用查核:{len(vs)} 筆引用全數可回溯至資料庫。</div>'
+    return (
+        f'<div class="note">引用查核:{len(vs)} 筆引用中 {len(flagged)} 筆有疑慮,逐筆如下。</div>'
+        + _cite_cards(flagged)
+    )
+
+
+def _consult_result_html(result) -> str:
+    if result.honesty_tier == "insufficient":
+        return (
+            _tier_bar("insufficient")
+            + f'<div class="note">{escape(result.answer)}</div>'
+            + '<h4 class="blockhead">一般性處理順序(不涉法條)</h4>'
+            + f'<div class="ladder">{escape(_clean_ladder(result.solution_text))}</div>'
+        )
+    parts = [_tier_bar(result.honesty_tier)]
+    if result.premise_flag:
+        parts.append(
+            '<div class="note">前提提醒:你的描述含法律結論斷言;以下以法規實際規定為準,而非附和。</div>'
+        )
+    scored = list(zip(result.stage3.retrieved, result.stage3.retrieval_scores or []))
+    parts.append('<h4 class="blockhead">適用法源(本次檢索,逐字)</h4>')
+    parts.append(_retr_cards(scored, with_fulltext=True))
+    parts.append('<h4 class="blockhead">說明</h4>')
+    parts.append(_sections_html(result))
+    parts.append('<h4 class="blockhead">建議處理順序(低成本優先,訴訟最後)</h4>')
+    parts.append(f'<div class="ladder">{escape(_clean_ladder(result.solution_text))}</div>')
+    parts.append(_quiet_verification(result.verifications))
+    return "".join(parts)
+
+
+def _ready_summary(state: SessionState) -> str:
+    lines = ["事實已收集完成,開始檢索與診斷。", ""]
+    lines += [
+        f"・{_FIELD_ZH.get(k, k)}:{v}" for k, v in state.collected_facts.items()
+    ]
+    return "\n".join(lines)
+
+
+def consult_step(message: str, history: list[dict], state: SessionState):
+    message = (message or "").strip()
+    if not message:
+        return history, state, gr.update(), ""
+    if state.stage is Stage.READY_FOR_STAGE3:   # previous case closed — start anew
+        history, state = _fresh_chat(), SessionState()
+
+    reply, state = handle_turn(state, message)
+    history = history + [{"role": "user", "content": message}]
+
+    if state.stage is not Stage.READY_FOR_STAGE3:
+        history.append({"role": "assistant", "content": reply})
+        return history, state, gr.update(), ""
+
+    # facts complete: replace the CLI-oriented ready-text with a plain summary,
+    # then run the one-shot retrieval + gates + ladder.
+    history.append({"role": "assistant", "content": _ready_summary(state)})
+    llm = ollama_llm() if ollama_available() else _stub_llm
+    conn = connect(config.DB_PATH)
+    try:
+        result = advance_to_stage3(state, llm=llm, conn=conn)
+    finally:
+        conn.close()
+    history.append({"role": "assistant", "content": "診斷完成,結果見右側。按「重新開始」可諮詢下一件。"})
+    return history, state, _consult_result_html(result), ""
+
+
+def consult_reset():
+    return _fresh_chat(), SessionState(), "", ""
+
+
+# ── 引用查核(獨立工具,無模型) ────────────────────────────────────────────────
 def check_citations(answer_text: str, as_of: str) -> str:
     conn = connect(config.DB_PATH)
     try:
@@ -246,7 +365,7 @@ def check_citations(answer_text: str, as_of: str) -> str:
     flagged = sum(1 for v in vs if v.flagged)
     tone = "insufficient" if flagged else "normal"
     return (
-        f'<div class="verdict {tone}">{len(vs)} 筆引用,{flagged} 筆未通過</div>'
+        f'<div class="verdict {tone}">{len(vs)} 筆引用,{flagged} 筆有疑慮</div>'
         + _cite_cards(vs)
     )
 
@@ -281,90 +400,6 @@ def compare_timeslice(query: str) -> str:
     )
 
 
-# ── 完整流程(手動貼回 / 本機 Ollama) ─────────────────────────────────────────
-def _facts_from_inputs(*values: str) -> dict:
-    return {
-        key: v.strip()
-        for (key, _), v in zip(_FIELD_LABELS, values)
-        if v and v.strip()
-    }
-
-
-def assemble_prompt(as_of: str, *values: str) -> str:
-    facts = _facts_from_inputs(*values)
-    if not facts:
-        return "請至少填一個欄位。"
-    conn = connect(config.DB_PATH)
-    try:
-        scored = retrieve_scored(assemble_fact_query(facts), as_of_date=(as_of or None), conn=conn)
-    finally:
-        conn.close()
-    return build_model_input([s for s, _ in scored], facts)
-
-
-def _sections_html(result) -> str:
-    blocks = []
-    for title, body in (
-        ("法律明文", result.law_section),
-        ("實務見解(非法律明文)", result.practice_section),
-        ("分析研判(模型推論)", result.analysis_section),
-    ):
-        if body:
-            blocks.append(
-                f'<div class="seccard"><div class="t">{title}</div>'
-                f'<div class="b">{escape(body.strip())}</div></div>'
-            )
-    if not blocks:   # model skipped the headings — show the raw answer, flagged
-        return (
-            '<div class="note">模型未依三段格式作答,以下為原文。</div>'
-            f'<div class="seccard"><div class="b">{escape(result.answer)}</div></div>'
-        )
-    return "".join(blocks)
-
-
-def _run_gates(llm, user_text: str, as_of: str, *values: str) -> str:
-    facts = _facts_from_inputs(*values)
-    if not facts:
-        return '<div class="note">請至少填一個欄位。</div>'
-    state = SessionState(
-        stage=Stage.READY_FOR_STAGE3,
-        collected_facts=facts,
-        user_text=(user_text or None),
-    )
-    conn = connect(config.DB_PATH)
-    try:
-        result = advance_to_stage3(state, llm=llm, as_of_date=(as_of or None), conn=conn)
-    finally:
-        conn.close()
-
-    premise = (
-        '<div class="note">前提警示:描述含法律結論斷言,系統優先查證而非附和。</div>'
-        if result.premise_flag else ""
-    )
-    return (
-        _tier_bar(result.honesty_tier)
-        + premise
-        + '<h4 class="blockhead">引用查核</h4>'
-        + _cite_cards(result.verifications)
-        + '<h4 class="blockhead">回答(依法源位階分段)</h4>'
-        + _sections_html(result)
-        + '<h4 class="blockhead">建議處理順序(低成本優先,訴訟最後)</h4>'
-        + f'<div class="ladder">{escape(result.solution_text)}</div>'
-    )
-
-
-def run_gates_on_pasted(pasted_answer: str, user_text: str, as_of: str, *values: str) -> str:
-    if not (pasted_answer or "").strip():
-        return '<div class="note">請先貼入模型回答,或使用本機 Ollama。</div>'
-    return _run_gates(lambda _p: pasted_answer, user_text, as_of, *values)
-
-
-def run_gates_live(user_text: str, as_of: str, *values: str) -> str:
-    if not ollama_available():
-        return '<div class="note">本機 Ollama 未啟動。請改用「產生提示詞、貼回回答」流程。</div>'
-    return _run_gates(ollama_llm(), user_text, as_of, *values)
-
-
 # ── 評測結果 ─────────────────────────────────────────────────────────────────
 STATS = """
 <div class="statgrid">
@@ -389,8 +424,37 @@ ensure_db()
 with gr.Blocks(title="Legal Agent") as demo:
     gr.HTML(HERO)
 
+    with gr.Tab("法律諮詢"):
+        gr.Markdown("描述問題,依提問補齊事實;資料齊備後,系統檢索一次並給出法源、說明與處理順序。")
+        with gr.Row():
+            with gr.Column(scale=5):
+                chat = gr.Chatbot(value=_fresh_chat(), label="諮詢對話", height=460)
+                msg_in = gr.Textbox(label="輸入", lines=2, placeholder="多個問題可分行回答")
+                with gr.Row():
+                    btn_send = gr.Button("送出", variant="primary")
+                    btn_reset = gr.Button("重新開始")
+                gr.Examples(
+                    examples=[
+                        ["樓上鄰居半夜一直搬東西敲打,幾乎每天,我有錄影,報過警但沒用"],
+                        ["隔壁住戶的狗整天吠叫,管委會可以管嗎"],
+                        ["樓上半夜有腳步聲,這構成恐嚇罪吧,我要告他!"],
+                    ],
+                    inputs=[msg_in],
+                    label="範例開場",
+                )
+            with gr.Column(scale=7):
+                consult_out = gr.HTML(label="諮詢結果")
+        consult_state = gr.State(SessionState())
+        btn_send.click(
+            consult_step, [msg_in, chat, consult_state], [chat, consult_state, consult_out, msg_in]
+        )
+        msg_in.submit(
+            consult_step, [msg_in, chat, consult_state], [chat, consult_state, consult_out, msg_in]
+        )
+        btn_reset.click(consult_reset, [], [chat, consult_state, consult_out, msg_in])
+
     with gr.Tab("引用查核"):
-        gr.Markdown("貼入任一 AI 法律回答,逐筆比對資料庫。預設範例含三處錯誤。")
+        gr.Markdown("獨立工具:檢驗任一 AI 法律回答的引用能否回溯至資料庫。預設範例含三處錯誤。")
         with gr.Row():
             with gr.Column(scale=5):
                 ans_in = gr.Textbox(value=SAMPLE_BAD_ANSWER, lines=5, label="回答內容")
@@ -408,43 +472,6 @@ with gr.Blocks(title="Legal Agent") as demo:
             with gr.Column(scale=7):
                 out_check = gr.HTML()
         btn_check.click(check_citations, [ans_in, asof_1], out_check)
-
-    with gr.Tab("完整流程"):
-        gr.Markdown(
-            "填入案情,產生提示詞,貼到任一對話工具;把回答貼回來,執行五道閘門。"
-            "本機有 Ollama 可直接生成。"
-        )
-        with gr.Row():
-            with gr.Column(scale=5):
-                user_text_in = gr.Textbox(
-                    value="樓上鄰居幾乎每天半夜大聲喧嘩,這構成恐嚇罪吧,我要告他!",
-                    label="問題描述(一句話)",
-                )
-                field_inputs = [
-                    gr.Textbox(value=_EXAMPLE_FACTS[key], label=label)
-                    for key, label in _FIELD_LABELS
-                ]
-                asof_3 = gr.Textbox(value="", label="基準日", placeholder="YYYY-MM-DD,留空為現行")
-                gr.Examples(
-                    examples=[
-                        [_EXAMPLE_FACTS[k] for k, _ in _FIELD_LABELS],
-                        [_DOG_FACTS[k] for k, _ in _FIELD_LABELS],
-                    ],
-                    inputs=field_inputs,
-                    label="範例案情:深夜喧嘩 / 公寓犬吠",
-                )
-                btn_prompt = gr.Button("產生提示詞")
-                prompt_out = gr.Code(label="提示詞(複製至任一對話工具)", language="markdown")
-                pasted_in = gr.Textbox(lines=6, label="貼回模型回答")
-                btn_gates = gr.Button("執行五道閘門", variant="primary")
-                btn_live = gr.Button("以本機 Ollama 生成")
-            with gr.Column(scale=7):
-                gates_out = gr.HTML()
-        btn_prompt.click(assemble_prompt, [asof_3, *field_inputs], prompt_out)
-        btn_gates.click(
-            run_gates_on_pasted, [pasted_in, user_text_in, asof_3, *field_inputs], gates_out
-        )
-        btn_live.click(run_gates_live, [user_text_in, asof_3, *field_inputs], gates_out)
 
     with gr.Tab("法規檢索"):
         gr.Markdown("同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。")
