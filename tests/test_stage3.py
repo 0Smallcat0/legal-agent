@@ -93,10 +93,24 @@ def test_insufficient_short_circuit_binds_no_llm(real_conn, monkeypatch):
 
 
 def test_marginal_tier_prepends_prefix(monkeypatch):
-    monkeypatch.setattr(retriever, "retrieve_scored", lambda *a, **k: [(_STUB, 0.1)])
+    # decoupled from scoring (the default thresholds leave the marginal band
+    # empty — see honesty.py): force the tier, test the prefix behaviour
+    monkeypatch.setattr(retriever, "retrieve_scored", lambda *a, **k: [(_STUB, 50.0)])
+    monkeypatch.setattr(stage3, "grade_honesty", lambda *a, **k: "marginal")
     res = run_stage3({"noise_type": "深夜"}, llm=lambda p: "這是模型的分析內容。", conn=None)
     assert res.honesty_tier == "marginal"
     assert res.answer.startswith(MARGINAL_PREFIX)
+
+
+def test_lexical_noise_score_short_circuits_as_insufficient(monkeypatch):
+    # a hit below the calibrated floor (6.0) is noise, not an answer: the
+    # LLM must not run, the fixed 資料不足 text goes out (oos-01 leak fix)
+    monkeypatch.setattr(retriever, "retrieve_scored", lambda *a, **k: [(_STUB, 3.89)])
+    llm_spy = MagicMock(return_value="不該被呼叫")
+    res = run_stage3({"noise_type": "漏水"}, llm=llm_spy, conn=None)
+    assert res.honesty_tier == "insufficient"
+    assert res.answer == INSUFFICIENT_TEXT
+    assert llm_spy.call_count == 0
 
 
 def test_normal_tier_has_no_prefix(monkeypatch):

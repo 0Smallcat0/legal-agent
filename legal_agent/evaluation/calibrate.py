@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from legal_agent.anti_hallucination.honesty import INSUFFICIENT_SCORE_THRESHOLD
+
 # A stub answer with all three Mechanism-4 headings, so the pipeline runs
 # cleanly; its text is irrelevant to tier grading.
 _STUB_ANSWER = "「法律明文」:(無)\n「實務見解」:(無)\n「分析研判」:(無)"
@@ -36,45 +38,65 @@ class CalibrationResult:
     best_accuracy: float
     default_threshold: float
     default_accuracy: float
+    insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD
 
     def render(self) -> str:
         lines = [
             "═══════ 誠實分級門檻校準(golden set 掃描) ═══════",
             f"樣本數:{len(self.points)}(含 expected_tier 的案例)",
-            f"目前門檻 {self.default_threshold:g} -> 分級正確率 {self.default_accuracy:.0%}",
-            f"最佳門檻 {self.best_threshold:g} -> 分級正確率 {self.best_accuracy:.0%}",
+            f"insufficient 下限(固定):{self.insufficient_threshold:g}",
+            f"目前 marginal 門檻 {self.default_threshold:g} -> 分級正確率 {self.default_accuracy:.0%}",
+            f"最佳 marginal 門檻 {self.best_threshold:g} -> 分級正確率 {self.best_accuracy:.0%}",
         ]
         return "\n".join(lines)
 
 
-def predict_tier(top_score: float | None, threshold: float) -> str:
-    if top_score is None:
+def predict_tier(
+    top_score: float | None,
+    threshold: float,
+    insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD,
+) -> str:
+    """Mirror of honesty.grade_honesty over a bare top score (None = no hits)."""
+    if top_score is None or top_score < insufficient_threshold:
         return "insufficient"
     return "marginal" if top_score < threshold else "normal"
 
 
-def accuracy_at(points: list[CalibrationPoint], threshold: float) -> float:
+def accuracy_at(
+    points: list[CalibrationPoint],
+    threshold: float,
+    insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD,
+) -> float:
     if not points:
         return 0.0
-    hits = sum(1 for p in points if predict_tier(p.top_score, threshold) == p.expected_tier)
+    hits = sum(
+        1 for p in points
+        if predict_tier(p.top_score, threshold, insufficient_threshold) == p.expected_tier
+    )
     return hits / len(points)
 
 
-def sweep_threshold(points: list[CalibrationPoint], default_threshold: float) -> CalibrationResult:
-    """Candidate thresholds = midpoints between adjacent observed scores (plus
+def sweep_threshold(
+    points: list[CalibrationPoint],
+    default_threshold: float,
+    insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD,
+) -> CalibrationResult:
+    """Sweep the MARGINAL threshold (the insufficient floor stays fixed).
+    Candidate thresholds = midpoints between adjacent observed scores (plus
     the extremes), i.e. every decision boundary the data can distinguish."""
     scores = sorted({p.top_score for p in points if p.top_score is not None})
     candidates = [0.0]
     candidates += [(a + b) / 2 for a, b in zip(scores, scores[1:])]
     if scores:
         candidates += [scores[0] / 2, scores[-1] + 1.0]
-    best = max(candidates, key=lambda t: (accuracy_at(points, t), -t))
+    best = max(candidates, key=lambda t: (accuracy_at(points, t, insufficient_threshold), -t))
     return CalibrationResult(
         points=points,
         best_threshold=best,
-        best_accuracy=accuracy_at(points, best),
+        best_accuracy=accuracy_at(points, best, insufficient_threshold),
         default_threshold=default_threshold,
-        default_accuracy=accuracy_at(points, default_threshold),
+        default_accuracy=accuracy_at(points, default_threshold, insufficient_threshold),
+        insufficient_threshold=insufficient_threshold,
     )
 
 
