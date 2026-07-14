@@ -44,7 +44,10 @@ def init_db(db_path: str | Path) -> None:
         conn.close()
 
 
-# TODO (later steps, NOT step 1):
-#   - seed_source_hierarchy(): insert the 4 levels 憲法/法律/命令/函釋 with ranks.
-#   - point-in-time query helpers over the statutes time slices (see schema.sql).
-#   - the statute/judgment importers (parse official XML/JSON -> rows).
+# Shipped since step 1 (kept here as the layer's map):
+#   - seed_source_hierarchy() lives in data/seed.py (5 levels incl. 行政實務見解).
+#   - point-in-time slice queries live in retrieval/retriever.py (_load_in_force).
+#   - the statute importer lives in data/moj_xml.py (official bulk XML ->
+#     human-reviewed proposal JSON -> data/source_ingest.py).
+# TODO (still open):
+#   - the judgment importer (opendata.judicial.gov.tw JSON -> rows).
