@@ -118,7 +118,12 @@ python -m legal_agent.cli seed
 python -m legal_agent.data.noise_seed
 python -m legal_agent.data.source_ingest corpus/noise_routing_proposal.json
 
-python -m pytest -q          # 134 passing
+python -m pytest -q          # 143 passing
+
+# (optional) scale the corpus: parse the official 全國法規資料庫 bulk XML into a
+# proposal file, review it by hand, then ingest through the same validated path
+python -m legal_agent.data.moj_xml FalVMingLing.xml -o proposals.json --include 噪音管制法
+python -m legal_agent.data.source_ingest proposals.json
 
 # measure it (no key, no cost — see evals/RESULTS.md for current numbers)
 python -m legal_agent.evaluation.mutation                               # verifier catch rate
@@ -156,17 +161,23 @@ by `config.LLM_PROVIDER`. Nothing above the data layer is jurisdiction-specific.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (134 tests),
+five gates → dialogue → solution ladder — is implemented and green (143 tests),
 runs end-to-end for free on a local model, ships an interactive demo (`app.py`),
 and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)): 25-case golden set, seeded-error
 verifier test, bare-vs-gated ablation, honesty-threshold calibration.
 
+Corpus growth is now unblocked: a streaming importer
+([`data/moj_xml.py`](legal_agent/data/moj_xml.py)) parses the official
+全國法規資料庫 bulk XML into human-reviewed proposal files — the reviewer stays
+in the loop, and laws the importer can't represent honestly (unknown tier,
+missing dates, repealed history) are flagged, never guessed.
+
 Scoped on purpose: one jurisdiction (Taiwan), one scenario, a hand-verified
-corpus of 11 entries, no judgments yet. Roadmap — each item now motivated by a
+corpus of 11 entries, no judgments yet. Roadmap — each item motivated by a
 measured gap: **hybrid (dense) retrieval** (coverage 84% pass+partial; honesty
-signal saturates at 80% on BM25 alone), official-XML corpus ingestion at scale,
-judgment ingestion, then more scenarios and jurisdictions on the same engine.
+signal saturates at 80% on BM25 alone), judgment ingestion, then more scenarios
+and jurisdictions on the same engine.
 
 ---
 

@@ -25,5 +25,6 @@ gradio>=4.0.0            # Zero-key demo UI (verifier playground / retrieval exp
 # ── Evaluation & tests (spec §4) ──
 pytest>=8.0.0            # Golden-set + hallucination-check harness (Tiers 1 & 2), and the schema smoke test.
 
-# ── Data import / parsing (spec §1.2) ── [importer NOT built yet — left commented]
-# lxml>=5.0.0            # Parse 全國法規資料庫 statute XML into rows. Uncomment when building the importer.
+# ── Data import / parsing (spec §1.2) ──
+# (no dependency) The 全國法規資料庫 bulk-XML importer (legal_agent/data/moj_xml.py)
+# streams with the stdlib xml.etree.ElementTree — lxml turned out to be unnecessary.
