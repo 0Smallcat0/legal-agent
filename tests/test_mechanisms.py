@@ -29,7 +29,19 @@ def test_grade_normal_when_top_score_high():
 
 
 def test_grade_marginal_when_top_score_below_threshold():
-    assert grade_honesty([_STUB], [0.5], threshold=1.0) == "marginal"
+    # explicit low floor: the marginal band sits between the two thresholds
+    assert grade_honesty([_STUB], [0.5], threshold=1.0, insufficient_threshold=0.2) == "marginal"
+
+
+def test_grade_insufficient_when_top_score_is_lexical_noise():
+    # calibrated floor (default 6.0): hits that share only generic tokens with
+    # the question (the oos-01 漏水 leak scored 3.89) are not an answer
+    assert grade_honesty([_STUB], [3.89]) == "insufficient"
+
+
+def test_grade_floor_is_inclusive_lower_bound():
+    # exactly at the floor -> NOT insufficient (half-open band, mirrors slices)
+    assert grade_honesty([_STUB], [6.0]) == "normal"
 
 
 # ── Mechanism 4: 法條/研判 separation ────────────────────────────────────────

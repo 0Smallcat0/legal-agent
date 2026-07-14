@@ -69,11 +69,19 @@ def test_sweep_finds_a_separating_threshold():
         CalibrationPoint("c", 0.5, "marginal"),
         CalibrationPoint("d", None, "insufficient"),
     ]
-    result = sweep_threshold(points, default_threshold=1.5)
+    # synthetic scores sit below the real calibrated floor -> pin it low here
+    result = sweep_threshold(points, default_threshold=1.5, insufficient_threshold=0.2)
     assert result.best_accuracy == 1.0
     assert 0.5 < result.best_threshold <= 4.0
     assert predict_tier(None, result.best_threshold) == "insufficient"
     assert "門檻" in result.render()
+
+
+def test_predict_tier_applies_insufficient_floor():
+    # mirrors honesty.grade_honesty: below the floor -> insufficient even
+    # though something was retrieved (the oos-01 leak shape)
+    assert predict_tier(3.89, 1.5) == "insufficient"
+    assert predict_tier(9.65, 1.5) == "normal"
 
 
 # ── golden set v1 + auto-score extensions ────────────────────────────────────

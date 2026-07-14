@@ -34,19 +34,20 @@ correct controls. `python -m legal_agent.evaluation.mutation`
 | axis | result |
 |---|---|
 | 法條涵蓋 (19 scorable cases) | **pass 11 / partial 5 / miss 3** — strict 58%, pass+partial 84% |
-| 誠實分級 accuracy (25) | **20/25 (80%)** |
+| 誠實分級 accuracy (25) | **21/25 (84%)** |
 | 前提偵測 accuracy (25, Gate 5) | **25/25 (100%)** |
-| out-of-scope refusal (5 cases) | 4/5 short-circuited to `insufficient` (see gap below) |
+| out-of-scope refusal (5 cases) | **5/5** short-circuited to `insufficient` |
 
 Coverage gaps (each missing statute was neither retrieved top-5 nor cited):
 in-04 缺§3(定義條), in-05 缺§9, in-06 缺§195, in-12 缺§793, ts-01 缺§6;
 mg-02 / wp-02 / wp-03 全缺。These are retrieval-recall gaps on sparse fact
 wording — the documented next step is hybrid (dense) retrieval.
 
-Tier misses: the 3 borderline probes (mg-01/02/03) scored BM25 15.4–29.4,
-far above the 1.5 threshold → graded `normal`, not `marginal`; and **oos-01
-(漏水) leaked past the honesty gate** (top BM25 3.89 → `normal`) — the one
-out-of-scope case not refused.
+Tier misses: the 3 borderline probes (mg-01/02/03) and wp-03 scored BM25
+15.4–29.4, interleaved with true in-scope cases → graded `normal`, not
+`marginal`. (A previous fourth miss — **oos-01 漏水 leaking past the honesty
+gate at top BM25 3.89** — is fixed by the calibrated `insufficient` floor
+below.)
 
 **What the golden set caught while being built:** out-of-scope questions
 initially matched half the corpus through single-character function-word
@@ -58,12 +59,18 @@ all tests green after the fix.
 
 `python -m legal_agent.evaluation.calibrate evals/golden_noise_v1.json`
 
-Sweep over all decision boundaries the 25 observed top-scores allow:
-default threshold 1.5 → 80% tier accuracy; **best possible single threshold →
-also 80%**. The misgraded cases (probes at 15.4–29.4, leak at 3.89, with true
-in-scope cases interleaved) are not linearly separable by one BM25 cutoff —
-quantified evidence that tier quality needs a better relevance signal
-(hybrid retrieval / score normalization), not more threshold tuning.
+The score distribution shows a clean gap at the bottom: the out-of-scope leak
+(oos-01) tops out at BM25 **3.89** while the weakest in-scope case scores
+**9.65**. `honesty.INSUFFICIENT_SCORE_THRESHOLD = 6.0` (the geometric midpoint)
+now short-circuits anything below it as `insufficient` — out-of-scope refusal
+5/5, no in-scope case affected.
+
+Above that floor the sweep is unchanged: default marginal threshold 1.5 → 84%
+tier accuracy; **best possible marginal threshold → also 84%**. The remaining
+misses (marginal probes at 15.4–29.4, interleaved with true in-scope cases)
+are not linearly separable by any BM25 cutoff — quantified evidence that the
+marginal/normal distinction needs a better relevance signal (hybrid retrieval
+/ score normalization), not more threshold tuning.
 
 ## 4. Ablation — bare (憑記憶引用) vs gated (五閘門), per model
 

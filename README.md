@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-143%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-147%20passing-brightgreen)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
@@ -104,15 +104,16 @@ per-run data in `evals/ablation_raw.json`. Headlines:
 |---|---|
 | Verifier catch rate on 31 seeded errors (fake statute / ghost article / wrong amount / out-of-force) | **31/31 (100%), 0/10 false positives** |
 | Golden-set statute coverage (25 cases, llama3.1 8B, gated) | **84% pass+partial** (58% strict) |
-| Honesty-tier accuracy / anti-sycophancy premise detection | **80% / 100%** |
-| Out-of-scope questions refused instead of answered | **4/5** (the 1 leak is documented) |
+| Honesty-tier accuracy / anti-sycophancy premise detection | **84% / 100%** |
+| Out-of-scope questions refused instead of answered | **5/5** (the last leak fixed by a calibrated floor) |
 | Bare model (no pipeline): memory-cited statutes traceable to a vetted source | **0–5%** (llama3.1 / qwen3) |
 | Gated: every citation checked; small-model over-reach flagged inline with the verbatim article | **30–40% flagged** — *the model errs; the user knows* |
 
-The golden set also caught a real retriever defect while being built
-(single-character function-word tokens matched everything → fixed, tests
-added), and the threshold-calibration sweep proved the current honesty signal
-saturates at 80% — quantified motivation for the hybrid-retrieval roadmap item.
+The golden set keeps earning its keep: it caught a real retriever defect while
+being built (single-character function-word tokens matched everything → fixed),
+and its score distribution calibrated the `insufficient` floor that closed the
+last out-of-scope leak. The remaining tier misses are provably not separable by
+any BM25 cutoff — quantified motivation for the hybrid-retrieval roadmap item.
 
 ---
 
@@ -129,7 +130,7 @@ python -m legal_agent.cli seed
 python -m legal_agent.data.noise_seed
 python -m legal_agent.data.source_ingest corpus/noise_routing_proposal.json
 
-python -m pytest -q          # 143 passing
+python -m pytest -q          # 147 passing
 
 # (optional) scale the corpus: parse the official 全國法規資料庫 bulk XML into a
 # proposal file, review it by hand, then ingest through the same validated path
@@ -176,7 +177,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (143 tests),
+five gates → dialogue → solution ladder — is implemented and green (147 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).
@@ -189,8 +190,9 @@ missing dates, repealed history) are flagged, never guessed.
 
 Scoped on purpose: one jurisdiction (Taiwan), one scenario, a hand-verified
 corpus of 11 entries, no judgments yet. Roadmap — each item motivated by a
-measured gap: **hybrid (dense) retrieval** (coverage 84% pass+partial; honesty
-signal saturates at 80% on BM25 alone), judgment ingestion, then more scenarios
+measured gap: **hybrid (dense) retrieval** (coverage 84% pass+partial; the
+marginal/normal tier split is provably beyond any BM25 cutoff), judgment
+ingestion, then more scenarios
 and jurisdictions on the same engine.
 
 ---
