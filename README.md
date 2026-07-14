@@ -3,48 +3,60 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-134%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-143%20passing-brightgreen)
 
-> A retrieval-first legal assistant built around one hard problem: **making an LLM
-> cite statutes it cannot hallucinate.**
+> RAG systems cite sources that don't exist — and the fabrication reads exactly
+> like the real thing. This repo is a working countermeasure: **every citation is
+> machine-verified against a time-versioned corpus, and the guardrails are
+> themselves tested by injecting errors** (31/31 seeded defects caught, 0 false
+> positives). The bet is not "zero errors" — it's **errors you can see.**
 
-A 2025 Stanford study measured hallucination rates of *professional* legal AI at
-17–33% — funded products, with RAG. This project is an experiment in the opposite
-discipline: a **retrieval-first** pipeline where the model may only cite what was
-retrieved, every citation is verified against a **time-versioned** corpus, and
-**when the system errs, the user is told exactly where.**
+A 2025 Stanford study measured *professional* legal AI tools hallucinating
+17–33% of the time — funded products, with RAG. This project takes the hardest
+version of the problem (CJK legal text, versioned statutes, high stakes) and
+builds the discipline the numbers demand: the model may only cite what was
+retrieved, and nothing reaches the user unchecked.
 
-The pipeline is **jurisdiction-agnostic** — the corpus, retriever, and verifier
-know nothing about which country's law they hold. The **reference implementation**
-covers **Taiwan (R.O.C.)** law, scoped to one scenario (住宅噪音糾紛 / residential
-noise disputes) so the corpus is small enough to hand-verify every article. Adding
-a jurisdiction means adding data, not rewriting the engine.
+The reference corpus is **Taiwan (R.O.C.) law**, scoped to one scenario
+(住宅噪音糾紛 / residential noise disputes) so every article is hand-verified.
+The engine is **jurisdiction-agnostic** — swap the data, keep the gates.
 
 ---
 
-## Why it's interesting (engineering highlights)
+## Three patterns you can reuse
 
-- **Five-gate anti-hallucination pipeline.** retrieval-first prompt → citation
-  verifier (*exists + content-match + in-force*) → three-tier honesty (answer /
-  "marginal, for reference only" / "not in my corpus") → statute-vs-analysis
-  separation → anti-sycophancy (correct a wrong premise instead of agreeing).
-- **Time-sliced statute schema.** Primary key is `(statute_id, article_no,
-  effective_from)` — a *time slice*, not an article number. The point-in-time
-  filter runs **before** ranking, so a repealed version is never even a
-  candidate. Answers *"for a dispute in 2023, which version applied?"*
-- **Three swappable LLM backends behind one `str -> str` seam.** `manual` (free,
-  paste into any chat you already have), `ollama` (free, local), `anthropic`
-  (paid). Dependency-injected — the whole pipeline runs against a fake model in
-  tests, no network, no key.
-- **Clinic-style dialogue.** An LLM-driven intake collects facts conversationally,
-  then retrieval fires **exactly once** on the complete fact set (multi-turn
-  re-retrieval is the documented cause of RAG degradation) — enforced by a test.
-- **Measured, not vibed.** A 25-case golden set, a seeded-error mutation test
-  (verifier catch rate **31/31, 0 false positives**), a bare-vs-gated ablation
-  across local models, and a data-driven honesty-threshold calibration — all
-  reproducible offline for $0. Numbers in [`evals/RESULTS.md`](evals/RESULTS.md).
-- **134 tests**, layered architecture, spec-driven. Full design in
-  [`SPEC.md`](SPEC.md).
+Each stands alone; dependencies are stdlib + SQLite.
+
+**1. Citation verification as code — not another LLM call.**
+[`anti_hallucination/verifier.py`](legal_agent/anti_hallucination/verifier.py)
+is a pure function that checks every citation in an answer on three axes:
+*does the article exist* / *does the claim match its verbatim text* / *was it
+in force at the relevant date*. It targets the RAG-era failure shape — citing a
+**real** document but misreading it (transposed amounts, repealed versions,
+typo'd statute names) — and on failure it attaches the verbatim source next to
+the flagged claim instead of silently deleting. No LLM judging an LLM.
+
+**2. Mutation-test your guardrails.**
+How do you know a verifier actually catches anything? Break answers on purpose.
+[`evaluation/mutation.py`](legal_agent/evaluation/mutation.py) injects 31
+seeded defects (fabricated statute, ghost article number, wrong amount,
+out-of-force citation) into otherwise-correct answers and measures the catch
+rate: **31/31 caught, 0/10 false positives on clean answers**. A guardrail
+without this number is decoration.
+
+**3. Time-sliced retrieval for versioned sources.**
+[`data/schema.sql`](legal_agent/data/schema.sql) keys statutes by
+`(statute_id, article_no, effective_from)` — a *time slice*, not an article
+number — and [`retrieval/retriever.py`](legal_agent/retrieval/retriever.py)
+applies the point-in-time filter **before** ranking, so a repealed version is
+never even a candidate. Answers *"for a dispute in 2023, which version
+applied?"* Works for anything versioned: statutes, policies, contracts, specs.
+
+These three sit inside a five-gate pipeline — retrieval-first prompting →
+citation verifier → three-tier honesty (answer / "for reference only" / "not
+in my corpus, ask a lawyer") → statute-vs-analysis separation →
+anti-sycophancy (correct a wrong premise instead of agreeing with it). Full
+design rationale in [`SPEC.md`](SPEC.md).
 
 ---
 
@@ -54,15 +66,14 @@ a jurisdiction means adding data, not rewriting the engine.
   <img src="docs/demo.svg" alt="Live demo: the verifier flags statutes the model hallucinated" width="840">
 </p>
 
-A live run against a **free local `llama3.1` (8B)** model. The user describes the
-problem in plain language; the model drives the intake, then answers under all
-five gates. Being a small model, it over-reached (it even typo'd 公寓→公寀) —
-and the verifier caught every citation.
-**Every one was flagged.** That is the entire thesis: *the model errs; the user
-knows.* A stronger model (or the paid API) errs less — the gates work identically
-regardless of backend.
+A live run against a **free local `llama3.1` (8B)** model. The user describes
+the problem in plain language; the model drives the intake, then answers under
+all five gates. Being a small model, it over-reached (it even typo'd 公寓→公寀)
+— and the verifier caught every citation. **Every one was flagged.** That is
+the entire thesis: *the model errs; the user knows.* A stronger model errs
+less — the gates work identically regardless of backend.
 
-**Try it yourself** — the same catch, interactive, no key needed:
+**Try the same catch yourself** — interactive, no key needed:
 
 ```bash
 python app.py   # Gradio demo: paste any "AI legal answer", watch the verifier flag it
@@ -74,13 +85,13 @@ python app.py   # Gradio demo: paste any "AI legal answer", watch the verifier f
 
 The first tab is the product: a clinic-style consultation — describe the
 problem, answer the intake checklist, and on fact-completion the system
-retrieves ONCE and returns the applicable statutes (verbatim, relevance-ranked),
-the graded explanation, and the low-cost-first action ladder, with citation
-verification as a quiet status line under the answer. Stages 1–2 and everything
-deterministic run with no model at all; a local Ollama adds the 分析研判
-narrative. Remaining tabs: the citation-check tool (pre-filled with a 3-defect
-answer), the retrieval/time-slice explorer, and the measured numbers. Free
-hosting recipe: [`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
+retrieves ONCE and returns the applicable statutes (verbatim,
+relevance-ranked), the graded explanation, and the low-cost-first action
+ladder, with citation verification as a quiet status line under the answer.
+Everything deterministic runs with no model at all; a local Ollama adds the
+分析研判 narrative. Remaining tabs: the citation-check tool (pre-filled with a
+3-defect answer), the retrieval/time-slice explorer, and the measured numbers.
+Free hosting recipe: [`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
 
 ---
 
@@ -147,14 +158,18 @@ Each layer maps to one package under `legal_agent/`:
 
 | Layer | Package | What it does |
 |---|---|---|
-| Data | `data/` | time-sliced SQLite corpus + hand-entry / ingest tooling |
+| Data | `data/` | time-sliced SQLite corpus + hand-entry / official-XML ingest tooling |
 | Retrieval | `retrieval/` | BM25 (jieba + CJK bigrams); point-in-time filter before ranking |
 | Anti-hallucination | `anti_hallucination/` | the five gates (verifier / honesty / structure / sycophancy) |
 | Dialogue | `dialogue/` | four-stage clinic flow; LLM-driven + rule-based intake; solution ladder |
-| Evaluation | `evaluation/` | golden-set runner (auto-scored coverage/tier/premise) + batch hallucination check + seeded-error mutation test + bare-vs-gated ablation + threshold calibration |
+| Evaluation | `evaluation/` | golden-set runner + batch hallucination check + seeded-error mutation test + bare-vs-gated ablation + threshold calibration |
 
-The runtime backends live in `dialogue/{manual,ollama,stage3}_llm` and are chosen
-by `config.LLM_PROVIDER`. Nothing above the data layer is jurisdiction-specific.
+Two design choices worth naming. **The LLM sits behind a `str -> str` seam**
+with three swappable backends — `manual` (free, paste into any chat), `ollama`
+(free, local), `anthropic` (paid) — so the whole pipeline tests against a fake
+model: no network, no key. **Retrieval fires exactly once per consultation**,
+on the complete fact set after intake (multi-turn re-retrieval is the
+documented cause of RAG degradation) — enforced by a test, not a convention.
 
 ---
 
@@ -162,12 +177,11 @@ by `config.LLM_PROVIDER`. Nothing above the data layer is jurisdiction-specific.
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
 five gates → dialogue → solution ladder — is implemented and green (143 tests),
-runs end-to-end for free on a local model, ships an interactive demo (`app.py`),
-and carries a reproducible evaluation suite with published numbers
-([`evals/RESULTS.md`](evals/RESULTS.md)): 25-case golden set, seeded-error
-verifier test, bare-vs-gated ablation, honesty-threshold calibration.
+runs end-to-end for free on a local model, ships an interactive demo
+(`app.py`), and carries a reproducible evaluation suite with published numbers
+([`evals/RESULTS.md`](evals/RESULTS.md)).
 
-Corpus growth is now unblocked: a streaming importer
+Corpus growth is unblocked: a streaming importer
 ([`data/moj_xml.py`](legal_agent/data/moj_xml.py)) parses the official
 全國法規資料庫 bulk XML into human-reviewed proposal files — the reviewer stays
 in the loop, and laws the importer can't represent honestly (unknown tier,
@@ -183,9 +197,9 @@ and jurisdictions on the same engine.
 
 ## Disclaimer
 
-A personal-use engineering experiment. **Not legal advice**, not a substitute for
-a lawyer, and not affiliated with any government body. Reference statute text is
-quoted verbatim from official public sources.
+A personal-use engineering experiment. **Not legal advice**, not a substitute
+for a lawyer, and not affiliated with any government body. Reference statute
+text is quoted verbatim from official public sources.
 
 ## License
 
