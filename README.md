@@ -3,12 +3,12 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-149%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-152%20passing-brightgreen)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
 > machine-verified against a time-versioned corpus, and the guardrails are
-> themselves tested by injecting errors** (33/33 seeded defects caught, 0 false
+> themselves tested by injecting errors** (43/43 seeded defects caught, 0 false
 > positives). The bet is not "zero errors" — it's **errors you can see.**
 
 A 2025 Stanford study measured *professional* legal AI tools hallucinating
@@ -38,13 +38,15 @@ the flagged claim instead of silently deleting. No LLM judging an LLM.
 
 **2. Mutation-test your guardrails.**
 How do you know a verifier actually catches anything? Break answers on purpose.
-[`evaluation/mutation.py`](legal_agent/evaluation/mutation.py) injects 33
-seeded defects (fabricated statute, ghost article number, wrong amount,
-flipped 以下/以上 direction word, out-of-force citation) into otherwise-correct
-answers and measures the catch rate: **33/33 caught, 0/10 false positives on
-clean answers**. The newest mutation type started at 0/2 — it exposed a real
-blind spot in the verifier, which is precisely the point. A guardrail without
-this number is decoration.
+[`evaluation/mutation.py`](legal_agent/evaluation/mutation.py) injects 43
+seeded defects (fabricated statute, ghost article number, invented 之X
+sub-article, wrong amount, flipped 以下/以上 direction word, out-of-force
+citation) into otherwise-correct answers and measures the catch rate: **43/43
+caught, 0/10 false positives on clean answers**. The two newest mutation types
+each started at 0% — one exposed an amounts-only content match, the other a
+regex that laundered invented 之X sub-articles into their real parent article.
+Finding your own blind spots is precisely the point. A guardrail without this
+number is decoration.
 
 **3. Time-sliced retrieval for versioned sources.**
 [`data/schema.sql`](legal_agent/data/schema.sql) keys statutes by
@@ -179,7 +181,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (149 tests),
+five gates → dialogue → solution ladder — is implemented and green (152 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).

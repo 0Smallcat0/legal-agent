@@ -12,6 +12,7 @@ Mutation types (one citation per generated answer):
     control              correct citation, correct amount   -> must NOT flag
     nonexistent_article  real statute, article_no shifted    -> must flag (exists)
     fake_statute         invented statute name               -> must flag (exists)
+    ghost_suffix         real article + 之99 suffix           -> must flag (exists)
     wrong_amount         real citation, amount x10           -> must flag (content)
     direction_flip       real amount, 以下<->以上 flipped     -> must flag (content)
     out_of_force         real citation, as_of before 生效日   -> must flag (in-force)
@@ -156,6 +157,15 @@ def run_mutation_test(conn: sqlite3.Connection) -> MutationReport:
             outcomes.append(_judge(
                 "nonexistent_article", ghost,
                 f"依{ghost},住戶應負相關義務。", expect_flag=True, conn=conn,
+            ))
+
+        # ghost_suffix — a 「之X」 variant that does NOT exist (民法第793條之99).
+        # LLMs love inventing 之X sub-articles; a parser that silently drops the
+        # suffix launders the ghost into the REAL parent article.
+        if num_match:
+            outcomes.append(_judge(
+                "ghost_suffix", f"{ref}之99",
+                f"依{ref}之99,住戶得請求排除侵害。", expect_flag=True, conn=conn,
             ))
 
         # wrong_amount — real citation, unsupported amount in the claim sentence.
