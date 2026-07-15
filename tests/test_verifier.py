@@ -55,6 +55,51 @@ def superseded_conn(tmp_path):
     conn.close()
 
 
+@pytest.fixture
+def suffix_conn(tmp_path):
+    """INVENTED corpus: 測試法 has 第9條 and the DISTINCT sub-article 第9-1條
+    (the corpus-normalized form of 第9條之1 — data/moj_xml.py convention)."""
+    db = tmp_path / "sx.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    conn.executemany(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("測試法", "第9條", "本條為母條。", "2010-01-01", None, "法律", "http://x/9"),
+            ("測試法", "第9-1條", "本條為之一條。", "2010-01-01", None, "法律", "http://x/9-1"),
+        ],
+    )
+    conn.commit()
+    yield conn
+    conn.close()
+
+
+def test_suffix_citation_resolves_to_hyphen_form(suffix_conn):
+    # 「第9條之1」 must hit the corpus row stored as 「第9-1條」 — not the parent.
+    r = verify_answer("依測試法第9條之1,應予處理。", [], conn=suffix_conn)[0]
+    assert r.citation.article_no == "第9-1條"
+    assert r.exists is True
+    assert r.verbatim_source == "本條為之一條。"
+
+
+def test_hyphen_citation_parses_directly(suffix_conn):
+    # The corpus-form spelling 「第9-1條」 in an answer must also verify.
+    r = verify_answer("依測試法第9-1條,應予處理。", [], conn=suffix_conn)[0]
+    assert r.citation.article_no == "第9-1條"
+    assert r.exists is True
+
+
+def test_ghost_suffix_not_laundered_into_parent(suffix_conn):
+    # 「第9條之2」 does NOT exist; dropping 之2 would launder it into the real
+    # 第9條 — the exact blind spot the ghost_suffix mutation exposed.
+    r = verify_answer("依測試法第9條之2,應予處理。", [], conn=suffix_conn)[0]
+    assert r.citation.article_no == "第9-2條"
+    assert r.exists is False
+    assert r.flagged is True
+
+
 def test_fabricated_article_number_flagged(real_conn):
     # 噪音管制法 exists but 第99條 does not.
     answer = "依噪音管制法第99條,住戶製造噪音應受處罰。"

@@ -70,10 +70,12 @@ def _parse_number(text: str) -> int | None:
 
 # ── citation extraction ──────────────────────────────────────────────────────
 _NUM = r"[0-9０-９〇零一二三四五六七八九十百千萬兩]+"
-# (1) 統名 + 第X條 [+ 項/款]
+# (1) 統名 + 第X[-Y]條 [之Z] [+ 項/款]. The 之Z suffix is a DISTINCT article
+# (民法第800條之1 ≠ 第800條) — it must survive into article_no, never be
+# silently dropped, or a ghost 之X citation gets laundered into its real parent.
 _CITATION_RE = re.compile(
-    r"(?P<name>[一-鿿]+?)第(?P<article>" + _NUM + r")條"
-    r"(?:之" + _NUM + r")?"
+    r"(?P<name>[一-鿿]+?)第(?P<article>" + _NUM + r"(?:-" + _NUM + r")?)條"
+    r"(?:之(?P<suffix>" + _NUM + r"))?"
     r"(?:第(?P<paragraph>" + _NUM + r")項)?"
     r"(?:第(?P<item>" + _NUM + r")款)?"
 )
@@ -211,17 +213,35 @@ def _fmt(group: str | None, suffix: str) -> str | None:
     return f"第{n}{suffix}" if n is not None else None
 
 
+def _canonical_article(article: str, suffix: str | None) -> str | None:
+    """Normalize a cited 條號 to the corpus form (data/moj_xml.py convention):
+    「第800條之1」 and 「第800-1條」 both -> 「第800-1條」; plain -> 「第X條」.
+    A malformed double form (「第800-1條之2」) keeps every part — it can only
+    fail lookup, never collapse into a real article. None = unparseable."""
+    main, _, hyphen_sub = article.partition("-")
+    main_n = _parse_number(main)
+    if main_n is None:
+        return None
+    subs = [p for p in (hyphen_sub, suffix) if p]
+    sub_ns = [_parse_number(p) for p in subs]
+    if any(n is None for n in sub_ns):
+        return None
+    if not sub_ns:
+        return f"第{main_n}條"
+    return f"第{main_n}-{'-'.join(str(n) for n in sub_ns)}條"
+
+
 def _iter_citations(answer_text: str, known_ids: set[str]):
     """Yield (Citation, start_pos) for both 條-style and 文號-style references."""
     for m in _CITATION_RE.finditer(answer_text):
-        article_num = _parse_number(m.group("article"))
-        if article_num is None:
+        article_no = _canonical_article(m.group("article"), m.group("suffix"))
+        if article_no is None:
             continue
         yield (
             Citation(
                 raw=m.group(0),
                 statute_id=_resolve_id(m.group("name"), known_ids),
-                article_no=f"第{article_num}條",
+                article_no=article_no,
                 paragraph=_fmt(m.group("paragraph"), "項"),
                 item=_fmt(m.group("item"), "款"),
             ),

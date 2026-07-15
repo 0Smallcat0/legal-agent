@@ -21,19 +21,30 @@ correct controls. `python -m legal_agent.evaluation.mutation`
 |---|---|---|---|
 | control (correct citation + correct amount) | 10 | — | **0 false positives** |
 | nonexistent_article (第X+500條) | 10 | 10 | exists-axis |
+| ghost_suffix (真條號+之99) | 10 | 10 | exists-axis |
 | wrong_amount (×10 金額) | 10 | 10 | content-match axis |
 | direction_flip (同金額,以下↔以上) | 2 | 2 | content-match axis |
 | out_of_force (as-of 生效日前一天) | 10 | 10 | in-force axis |
 | fake_statute (虛構法名) | 1 | 1 | exists-axis |
-| **total mutations** | **33** | **33 (100%)** | false-positive rate **0%** |
+| **total mutations** | **43** | **43 (100%)** | false-positive rate **0%** |
 
-The `direction_flip` row is the harness working as intended: added 2026-07-15,
-it initially scored **0/2** — the v1 content match compared amounts only, so
-「一萬元**以下**」 cited as 「一萬元**以上**」 sailed through. The verifier
-then gained a conservative direction check (fires only when BOTH the claim and
-the verbatim article bind a direction word to the SAME amount, so paraphrases
-stay unflagged), restoring 100% with false positives still 0. Known unplanted
-gap, stated honestly: subject swaps and deleted preconditions still pass the
+Two of these rows are the harness catching the verifier's own blind spots —
+each started at 0% and forced a fix:
+
+- `direction_flip` (2026-07-15): **0/2** at first — the v1 content match
+  compared amounts only, so 「一萬元**以下**」 cited as 「一萬元**以上**」
+  sailed through. Fix: a conservative direction check that fires only when
+  BOTH the claim and the verbatim article bind a direction word to the SAME
+  amount (paraphrases stay unflagged).
+- `ghost_suffix` (2026-07-16): **0/10** at first — the citation regex silently
+  dropped the 之X suffix, laundering an invented 「民法第793條**之99**」 into
+  the real 第793條 (LLMs love inventing 之X sub-articles). Fix: the suffix now
+  survives into `article_no`, normalized to the corpus form
+  (「第800條之1」≡「第800-1條」), so a ghost variant can only fail lookup —
+  never collapse into its real parent.
+
+Both fixes restored 100% with false positives still 0. Known unplanted gap,
+stated honestly: subject swaps and deleted preconditions still pass the
 lexical pass — that class needs semantic checking, not more regex.
 
 ## 2. Tier-1 golden set — llama3.1 8B through the full gated pipeline
