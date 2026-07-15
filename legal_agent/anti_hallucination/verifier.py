@@ -88,6 +88,13 @@ _HEADINGS_AFTER_LAW = ("實務見解", "分析研判")
 # ── monetary amounts (for the conservative content-match pass) ───────────────
 _YUAN_RE = re.compile(r"([0-9０-９,，零〇一二三四五六七八九十百千萬億兩]+)\s*元")
 _CURRENCY_RE = re.compile(r"(?:新臺幣|新台幣|NT\$|NTD|＄|\$)\s*([0-9０-９,，]+)")
+# Suffix-form direction word bound to an amount (「六千元以下」). Only the
+# suffix form is checked — prefix forms (逾/未滿 X 元) are rarer and riskier
+# to attribute, and a conservative pass must never flag a good answer.
+_AMOUNT_DIR_RE = re.compile(
+    r"([0-9０-９,，零〇一二三四五六七八九十百千萬億兩]+)\s*元(以上|以下|以內|未滿)"
+)
+_DOWNWARD = {"以下", "以內", "未滿"}
 _SENTENCE_BOUNDARY = "。！？!?\n；;"
 
 
@@ -109,6 +116,20 @@ def _sentence_around(text: str, start: int, end: int) -> str:
     return text[left + 1: right + 1]
 
 
+def _amount_directions(text: str) -> dict[int, set[str]]:
+    """amount -> the suffix direction words bound to it (「六千元以下」-> {以下})."""
+    directions: dict[int, set[str]] = {}
+    for match in _AMOUNT_DIR_RE.finditer(text):
+        value = _parse_number(match.group(1))
+        if value is not None:
+            directions.setdefault(value, set()).add(match.group(2))
+    return directions
+
+
+def _dir_class(word: str) -> str:
+    return "down" if word in _DOWNWARD else "up"
+
+
 def _content_consistent(claim_scope: str, verbatim: str) -> tuple[bool, str]:
     claimed = _amounts(claim_scope)
     supported = _amounts(verbatim)
@@ -117,6 +138,24 @@ def _content_consistent(claim_scope: str, verbatim: str) -> tuple[bool, str]:
         return False, (
             f"主張金額 {sorted(unsupported)} 元未見於條文"
             f"(條文金額 {sorted(supported) if supported else '無'})"
+        )
+
+    # Direction check (the mutation test's direction_flip blind spot): the
+    # amount is real, but 以下 was flipped to 以上 (or vice versa). Only fires
+    # when BOTH sides bind a direction word to the SAME amount and the
+    # direction classes share nothing — paraphrases without a direction word
+    # are left alone.
+    claim_dirs = _amount_directions(claim_scope)
+    source_dirs = _amount_directions(verbatim)
+    for amount, claim_words in claim_dirs.items():
+        source_words = source_dirs.get(amount)
+        if not source_words:
+            continue
+        if {_dir_class(w) for w in claim_words} & {_dir_class(w) for w in source_words}:
+            continue
+        return False, (
+            f"方向詞不符:主張 {amount}元{sorted(claim_words)[0]},"
+            f"條文為 {amount}元{sorted(source_words)[0]}"
         )
     return True, ""
 

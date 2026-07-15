@@ -13,6 +13,7 @@ Mutation types (one citation per generated answer):
     nonexistent_article  real statute, article_no shifted    -> must flag (exists)
     fake_statute         invented statute name               -> must flag (exists)
     wrong_amount         real citation, amount x10           -> must flag (content)
+    direction_flip       real amount, 以下<->以上 flipped     -> must flag (content)
     out_of_force         real citation, as_of before 生效日   -> must flag (in-force)
 
 Run:  python -m legal_agent.evaluation.mutation
@@ -24,10 +25,15 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from legal_agent.anti_hallucination.verifier import _amounts, verify_answer
+from legal_agent.anti_hallucination.verifier import _amounts, _parse_number, verify_answer
 
 _ARTICLE_NUM_RE = re.compile(r"第(\d+)條")
 _FAKE_ANSWER = "依台灣安寧保障法第3條,住戶應保持安寧。"
+# Suffix-form amount + direction word, as statutes write penalty bounds.
+_AMOUNT_DIR_RE = re.compile(
+    r"([0-9０-９,，零〇一二三四五六七八九十百千萬億兩]+)\s*元(以上|以下|以內|未滿)?"
+)
+_DOWNWARD = {"以下", "以內", "未滿"}
 
 
 @dataclass(frozen=True)
@@ -158,6 +164,20 @@ def run_mutation_test(conn: sqlite3.Connection) -> MutationReport:
             "wrong_amount", ref,
             f"依{ref},違者可處新臺幣{bad_amt}元罰鍰。", expect_flag=True, conn=conn,
         ))
+
+        # direction_flip — keep a REAL amount, flip its suffix direction word
+        # (「六千元以下罰鍰」 -> claim 「六千元以上」). The amount itself checks
+        # out, so an amounts-only content match is blind to this.
+        dir_match = _AMOUNT_DIR_RE.search(content)
+        if dir_match and dir_match.group(2):
+            real_amt = _parse_number(dir_match.group(1))
+            flipped = "以上" if dir_match.group(2) in _DOWNWARD else "以下"
+            if real_amt is not None:
+                outcomes.append(_judge(
+                    "direction_flip", ref,
+                    f"依{ref},違者可處新臺幣{real_amt}元{flipped}罰鍰。",
+                    expect_flag=True, conn=conn,
+                ))
 
         # out_of_force — cite the article at a date BEFORE its effective_from.
         day_before = (date.fromisoformat(eff) - timedelta(days=1)).isoformat()

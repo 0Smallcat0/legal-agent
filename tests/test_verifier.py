@@ -100,6 +100,26 @@ def test_correct_in_force_faithful_citation_not_flagged(real_conn):
     assert r.reason == ""
 
 
+def test_direction_flip_flagged(real_conn):
+    # Corpus §72 says 一萬元以下; claiming the SAME amount 以上 is the
+    # direction_flip blind spot the mutation test exposed — must flag.
+    answer = "依社會秩序維護法第72條,製造噪音可處新臺幣一萬元以上罰鍰。"
+    r = verify_answer(answer, [], conn=real_conn)[0]
+    assert r.exists is True
+    assert r.content_match is False
+    assert r.flagged is True
+    assert "方向詞不符" in r.reason
+
+
+def test_amount_without_direction_word_not_flagged(real_conn):
+    # Paraphrase that keeps the amount but drops the direction word: the
+    # conservative pass has nothing to compare — must NOT flag.
+    answer = "依社會秩序維護法第72條,罰鍰上限為新臺幣一萬元。"
+    r = verify_answer(answer, [], conn=real_conn)[0]
+    assert r.content_match is True
+    assert r.flagged is False
+
+
 def test_supported_amount_is_not_flagged(real_conn):
     # Stating the CORRECT amount (一萬元) must NOT trip the content check.
     answer = "依社會秩序維護法第72條,製造噪音可處新臺幣一萬元以下罰鍰。"
