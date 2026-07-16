@@ -43,9 +43,20 @@ each started at 0% and forced a fix:
   (「第800條之1」≡「第800-1條」), so a ghost variant can only fail lookup —
   never collapse into its real parent.
 
-Both fixes restored 100% with false positives still 0. Known unplanted gap,
-stated honestly: subject swaps and deleted preconditions still pass the
-lexical pass — that class needs semantic checking, not more regex.
+Both fixes restored 100% with false positives still 0.
+
+**The semantic class now has an axis (2026-07-17, optional).** Subject swaps
+(「土地所有人」 cited as 「承租人」) pass every lexical check by construction —
+that class needs a model, not more regex. `verify_answer(...,
+semantic_llm=...)` adds an injected-LLM 4th axis: off by default (the
+structural verifier stays pure code), conservative on every failure path
+(unreachable model / garbage output → NOT flagged), and spent only on
+citations the structural axes already passed. The harness grades the checker
+itself: `python -m legal_agent.evaluation.mutation --semantic` wires a local
+Ollama and plants 3 hand-written subject_swap cases (plus the 10 controls,
+which must still produce zero false positives). With an injected reference
+model the full suite is **46/46, 0 FP**; real-model catch rates vary by model
+— measure yours with `--semantic`, that's the point.
 
 ## 2. Tier-1 golden set — llama3.1 8B through the full gated pipeline
 

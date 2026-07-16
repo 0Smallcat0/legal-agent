@@ -37,6 +37,7 @@ class VerificationResult:
     verbatim_source: str | None
     flagged: bool
     reason: str
+    semantic_ok: bool = True     # optional 4th axis; True when the axis is off
 
 
 # ── numerals: Arabic / full-width / Chinese ──────────────────────────────────
@@ -260,9 +261,15 @@ def verify_answer(
     retrieved_context: list[Statute],
     as_of_date: str | None = None,
     conn: sqlite3.Connection | None = None,
+    semantic_llm=None,
 ) -> list[VerificationResult]:
     """Verify every citation (條式 + 文號式) in `answer_text` against the corpus.
     Also flags a 實務見解-tier source placed inside the 「法律明文」 section (位階誤植).
+
+    `semantic_llm` (optional, Callable[[str], str]): enables the 4th axis —
+    semantic consistency of the claim sentence against the verbatim article
+    (subject swaps, dropped preconditions). None = pure-code verifier,
+    behaviour unchanged. Runs only on citations the structural axes passed.
     """
     if as_of_date is not None:
         try:
@@ -300,6 +307,14 @@ def verify_answer(
             and source.hierarchy_level in _PRACTICE_TIER_LEVELS
         )
 
+        # Optional 4th axis — only spend the model on structurally clean citations.
+        semantic_ok, sem_reason = True, ""
+        if semantic_llm is not None and content_match and in_force:
+            from legal_agent.anti_hallucination.semantic_check import semantic_consistent
+            semantic_ok, sem_reason = semantic_consistent(
+                claim_scope, source.content, semantic_llm
+            )
+
         reasons: list[str] = []
         if not content_match:
             reasons.append(cm_reason)
@@ -308,14 +323,17 @@ def verify_answer(
                 f"引用非現行有效版本(as_of={as_of_date or '現行'}; "
                 f"effective_to={source.effective_to})"
             )
+        if not semantic_ok:
+            reasons.append(sem_reason)
         if misplaced:
             reasons.append(
                 f"位階誤植:{source.hierarchy_level}(實務見解層級)不應列於「法律明文」"
             )
-        flagged = (not (content_match and in_force)) or misplaced
+        flagged = (not (content_match and in_force and semantic_ok)) or misplaced
         results.append(VerificationResult(
             citation, exists=True, content_match=content_match, in_force=in_force,
             verbatim_source=source.content, flagged=flagged, reason="；".join(reasons),
+            semantic_ok=semantic_ok,
         ))
 
     return results

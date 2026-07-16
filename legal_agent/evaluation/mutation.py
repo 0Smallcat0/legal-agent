@@ -16,8 +16,13 @@ Mutation types (one citation per generated answer):
     wrong_amount         real citation, amount x10           -> must flag (content)
     direction_flip       real amount, 以下<->以上 flipped     -> must flag (content)
     out_of_force         real citation, as_of before 生效日   -> must flag (in-force)
+    subject_swap         right article, wrong 行為主體        -> must flag (semantic)
+                         (generated ONLY when a semantic_llm is provided — the
+                         structural axes provably cannot catch this class)
 
-Run:  python -m legal_agent.evaluation.mutation
+Run:  python -m legal_agent.evaluation.mutation [--semantic]
+      --semantic wires a local Ollama (fmt=json) as the 4th-axis checker and
+      plants the subject_swap cases, so the LLM axis is GRADED, not trusted.
 """
 from __future__ import annotations
 
@@ -122,8 +127,10 @@ def _condition_articles(conn: sqlite3.Connection) -> list[sqlite3.Row]:
 
 
 def _judge(kind: str, ref: str, answer: str, expect_flag: bool,
-           conn: sqlite3.Connection, as_of_date: str | None = None) -> MutationOutcome:
-    results = verify_answer(answer, [], as_of_date=as_of_date, conn=conn)
+           conn: sqlite3.Connection, as_of_date: str | None = None,
+           semantic_llm=None) -> MutationOutcome:
+    results = verify_answer(answer, [], as_of_date=as_of_date, conn=conn,
+                            semantic_llm=semantic_llm)
     if not results:   # extraction failure counts as a miss for mutations
         return MutationOutcome(kind, ref, answer, as_of_date,
                                flagged=False, expect_flag=expect_flag,
@@ -135,7 +142,24 @@ def _judge(kind: str, ref: str, answer: str, expect_flag: bool,
                            ok=flagged == expect_flag, reason=reason)
 
 
-def run_mutation_test(conn: sqlite3.Connection) -> MutationReport:
+# Subject swaps: the cited article is REAL and every structural axis passes —
+# only the 行為主體 is wrong. Hand-written against hand-verified corpus rows.
+_SUBJECT_SWAPS = [
+    ("民法", "第793條",
+     "依民法第793條,承租人於他人土地之喧囂侵入時,得禁止之。"),      # 條文主體:土地所有人
+    ("公寓大廈管理條例", "第16條",
+     "依公寓大廈管理條例第16條,房東不得任意發生喧囂、振動行為。"),   # 條文主體:住戶
+    ("噪音管制法", "第6條",
+     "依噪音管制法第6條,不具持續性之噪音由環境主管機關依法處理之。"),  # 條文主體:警察機關
+]
+
+
+def run_mutation_test(
+    conn: sqlite3.Connection,
+    semantic_llm=None,
+) -> MutationReport:
+    """Run the seeded-error suite. With `semantic_llm` set, the 4th axis is on
+    and the subject_swap cases are planted (grading the LLM checker itself)."""
     outcomes: list[MutationOutcome] = []
     for row in _condition_articles(conn):
         sid, ano, content, eff = row[0], row[1], row[2], row[3]
@@ -149,7 +173,10 @@ def run_mutation_test(conn: sqlite3.Connection) -> MutationReport:
             control = f"依{ref},法定金額為{amt}元。"
         else:
             control = f"依{ref},其規範內容如條文所示。"
-        outcomes.append(_judge("control", ref, control, expect_flag=False, conn=conn))
+        # with the semantic axis on, controls ALSO pass through it — the 0-FP
+        # bar applies to the LLM checker too, or it doesn't ship.
+        outcomes.append(_judge("control", ref, control, expect_flag=False,
+                               conn=conn, semantic_llm=semantic_llm))
 
         # nonexistent_article — same statute, shifted article number.
         if num_match:
@@ -200,15 +227,45 @@ def run_mutation_test(conn: sqlite3.Connection) -> MutationReport:
     outcomes.append(_judge(
         "fake_statute", "台灣安寧保障法第3條", _FAKE_ANSWER, expect_flag=True, conn=conn,
     ))
+
+    # subject_swap — semantic-axis cases: structurally perfect, wrong 主體.
+    if semantic_llm is not None:
+        for sid, ano, answer in _SUBJECT_SWAPS:
+            present = conn.execute(
+                "SELECT 1 FROM statutes WHERE statute_id = ? AND article_no = ? "
+                "AND effective_to IS NULL", (sid, ano),
+            ).fetchone()
+            if present:
+                outcomes.append(_judge(
+                    "subject_swap", f"{sid}{ano}", answer,
+                    expect_flag=True, conn=conn, semantic_llm=semantic_llm,
+                ))
     return MutationReport(outcomes)
 
 
-if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation
+if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation [--semantic]
+    import argparse
+
     from legal_agent.config import DB_PATH
     from legal_agent.data.database import connect
 
+    _parser = argparse.ArgumentParser(prog="python -m legal_agent.evaluation.mutation")
+    _parser.add_argument(
+        "--semantic", action="store_true",
+        help="開啟第四軸語意檢查(本地 Ollama, fmt=json)並種入 subject_swap 錯",
+    )
+    _args = _parser.parse_args()
+
+    _semantic_llm = None
+    if _args.semantic:
+        from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
+
+        if not ollama_available():
+            raise SystemExit("Ollama 未啟動 — 語意軸需要本地模型(先 `ollama serve`)")
+        _semantic_llm = ollama_llm(fmt="json")
+
     _conn = connect(DB_PATH)
     try:
-        print(run_mutation_test(_conn).render())
+        print(run_mutation_test(_conn, semantic_llm=_semantic_llm).render())
     finally:
         _conn.close()

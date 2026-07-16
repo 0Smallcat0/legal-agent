@@ -100,6 +100,44 @@ def test_ghost_suffix_not_laundered_into_parent(suffix_conn):
     assert r.flagged is True
 
 
+def _sem(consistent: bool):
+    import json as _json
+    return lambda p: _json.dumps({"consistent": consistent, "reason": "測試"})
+
+
+def test_semantic_axis_flags_on_explicit_false(real_conn):
+    answer = "依民法第793條,承租人於他人土地之喧囂侵入時,得禁止之。"
+    r = verify_answer(answer, [], conn=real_conn, semantic_llm=_sem(False))[0]
+    assert r.semantic_ok is False
+    assert r.flagged is True
+    assert "語意檢查" in r.reason
+
+
+def test_semantic_axis_passes_on_true_and_stays_conservative_on_garbage(real_conn):
+    answer = "依民法第793條,土地所有人於喧囂侵入時得禁止之。"
+    ok = verify_answer(answer, [], conn=real_conn, semantic_llm=_sem(True))[0]
+    assert ok.semantic_ok is True and ok.flagged is False
+    # garbage output / infrastructure error -> NOT flagged (conservative)
+    garbage = verify_answer(answer, [], conn=real_conn, semantic_llm=lambda p: "呃")[0]
+    assert garbage.semantic_ok is True and garbage.flagged is False
+    def boom(p):
+        raise ConnectionError("model down")
+    down = verify_answer(answer, [], conn=real_conn, semantic_llm=boom)[0]
+    assert down.semantic_ok is True and down.flagged is False
+
+
+def test_semantic_axis_skips_structurally_flagged_citations(real_conn):
+    # wrong amount already flags on the structural axes — the model must NOT
+    # be spent on it (and a lying "consistent" must not unflag it).
+    calls = []
+    def spy(p):
+        calls.append(p)
+        return '{"consistent": true}'
+    answer = "依社會秩序維護法第72條,可處新臺幣十萬元以下罰鍰。"
+    r = verify_answer(answer, [], conn=real_conn, semantic_llm=spy)[0]
+    assert r.flagged is True and calls == []
+
+
 def test_fabricated_article_number_flagged(real_conn):
     # 噪音管制法 exists but 第99條 does not.
     answer = "依噪音管制法第99條,住戶製造噪音應受處罰。"

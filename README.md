@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-152%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-155%20passing-brightgreen)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
@@ -34,7 +34,11 @@ is a pure function that checks every citation in an answer on three axes:
 in force at the relevant date*. It targets the RAG-era failure shape — citing a
 **real** document but misreading it (transposed amounts, repealed versions,
 typo'd statute names) — and on failure it attaches the verbatim source next to
-the flagged claim instead of silently deleting. No LLM judging an LLM.
+the flagged claim instead of silently deleting. The three structural axes need
+no LLM; an **optional** fourth axis (semantic consistency, for subject swaps
+the lexical passes provably can't see) does inject one — off by default,
+conservative on every failure path, and graded by the same mutation harness
+before it's trusted.
 
 **2. Mutation-test your guardrails.**
 How do you know a verifier actually catches anything? Break answers on purpose.
@@ -181,7 +185,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (152 tests),
+five gates → dialogue → solution ladder — is implemented and green (155 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).
