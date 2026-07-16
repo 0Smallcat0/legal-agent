@@ -55,8 +55,20 @@ citations the structural axes already passed. The harness grades the checker
 itself: `python -m legal_agent.evaluation.mutation --semantic` wires a local
 Ollama and plants 3 hand-written subject_swap cases (plus the 10 controls,
 which must still produce zero false positives). With an injected reference
-model the full suite is **46/46, 0 FP**; real-model catch rates vary by model
-— measure yours with `--semantic`, that's the point.
+model the full suite is **46/46, 0 FP**.
+
+**Measured with a real model (llama3.1 8B, 2026-07-17) — and it failed the
+bar, which is the finding.** Catch was never the problem: subject_swap **3/3
+across every run**. False positives were: the first prompt ("is the claim
+consistent?") flagged **8/10 controls** — the 8B model treated *not
+restating* the subject as *contradicting* it. Rewriting the prompt to a
+contradiction-only standard (omission/summary = consistent) cut that to
+**1/10 and 3/10 across two runs** (unpinned temperature; catch stayed 46/46
+in both). Conclusion, stated plainly: an 8B checker catches every planted
+swap but still cries wolf 10–30% of the time, so it stays **off by default**
+— now by measurement, not by assumption. A stronger model can re-take the
+same exam with one command; pinning temperature for run-to-run stability is
+a known next step.
 
 ## 2. Tier-1 golden set — llama3.1 8B through the full gated pipeline
 

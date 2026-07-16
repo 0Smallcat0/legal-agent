@@ -28,11 +28,14 @@ from typing import Callable
 # The claim sentence and the verbatim article both go in; the model answers a
 # single yes/no. The reply is parsed, never shown verbatim to the user.
 _PROMPT_TEMPLATE = (
-    "你是法條引用一致性檢查器。只依提供的逐字條文判斷,不得依記憶補充。\n"
+    "你是法條引用檢查器。只依提供的逐字條文判斷,不得依記憶補充。\n"
     "逐字條文:\n{verbatim}\n\n"
     "答案中的主張:\n{claim}\n\n"
-    "問題:此主張的「行為主體、對象、要件」是否與條文一致?"
-    "金額與日期已由其他檢查器處理,不必考慮。\n"
+    "問題:此主張是否與條文「明確牴觸」?判斷標準:\n"
+    "- 只有當主張把權利或義務歸給與條文明顯不同的主體(例如條文規範甲,主張卻說乙),"
+    "或明確改寫條文的要件時,才算牴觸(consistent: false)。\n"
+    "- 主張省略主體、未提及要件、或只是籠統摘要條文,一律視為一致(consistent: true)。\n"
+    "- 金額與日期已由其他檢查器處理,不必考慮。\n"
     "只回傳 JSON,格式:{{\"consistent\": true 或 false, \"reason\": \"一句話\"}}"
 )
 
