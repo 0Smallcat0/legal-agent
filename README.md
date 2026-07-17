@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-155%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-158%20passing-brightgreen)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
@@ -185,7 +185,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (155 tests),
+five gates → dialogue → solution ladder — is implemented and green (158 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).
@@ -197,10 +197,13 @@ in the loop, and laws the importer can't represent honestly (unknown tier,
 missing dates, repealed history) are flagged, never guessed.
 
 Scoped on purpose: one jurisdiction (Taiwan), one scenario, a hand-verified
-corpus of 11 entries, no judgments yet. Roadmap — each item motivated by a
-measured gap: **hybrid (dense) retrieval** (coverage 84% pass+partial; the
-marginal/normal tier split is provably beyond any BM25 cutoff), judgment
-ingestion, then more scenarios
+corpus of 11 entries; judgments have an importer
+([`data/judicial_json.py`](legal_agent/data/judicial_json.py): 裁判書開放API
+JSON → rows, citations extracted by the verifier's own grammar) but are
+reference material only — not yet retrieval candidates. Roadmap — each item
+motivated by a measured gap: **hybrid (dense) retrieval** (coverage 84%
+pass+partial; the marginal/normal tier split is provably beyond any BM25
+cutoff), judgment-aware answers, then more scenarios
 and jurisdictions on the same engine.
 
 ---
