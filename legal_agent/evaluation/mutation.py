@@ -252,7 +252,11 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation [--seman
     _parser = argparse.ArgumentParser(prog="python -m legal_agent.evaluation.mutation")
     _parser.add_argument(
         "--semantic", action="store_true",
-        help="開啟第四軸語意檢查(本地 Ollama, fmt=json)並種入 subject_swap 錯",
+        help="開啟第四軸語意檢查(本地 Ollama, fmt=json, temperature=0)並種入 subject_swap 錯",
+    )
+    _parser.add_argument(
+        "--model", default=None, metavar="OLLAMA_MODEL",
+        help="語意軸用的 Ollama 模型(預設 config.OLLAMA_MODEL)— 讓不同模型考同一份考卷",
     )
     _args = _parser.parse_args()
 
@@ -262,7 +266,7 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation [--seman
 
         if not ollama_available():
             raise SystemExit("Ollama 未啟動 — 語意軸需要本地模型(先 `ollama serve`)")
-        _semantic_llm = ollama_llm(fmt="json")
+        _semantic_llm = ollama_llm(model=_args.model, fmt="json", temperature=0.0)
 
     _conn = connect(DB_PATH)
     try:
