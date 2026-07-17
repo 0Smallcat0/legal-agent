@@ -49,5 +49,6 @@ def init_db(db_path: str | Path) -> None:
 #   - point-in-time slice queries live in retrieval/retriever.py (_load_in_force).
 #   - the statute importer lives in data/moj_xml.py (official bulk XML ->
 #     human-reviewed proposal JSON -> data/source_ingest.py).
-# TODO (still open):
-#   - the judgment importer (opendata.judicial.gov.tw JSON -> rows).
+#   - the judgment importer lives in data/judicial_json.py (裁判書開放API
+#     JSON -> judgments rows; cited_articles via the verifier's grammar).
+# (no open TODOs — every importer in the spec's data layer is built)
