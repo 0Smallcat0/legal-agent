@@ -21,13 +21,14 @@ from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
 
 
 @pytest.fixture
-def real_conn():
-    """Connection to the real corpus, guaranteed seeded (idempotent)."""
-    from legal_agent.config import DB_PATH
+def real_conn(tmp_path):
+    """Isolated copy of the hand-verified noise corpus (tests never write the
+    live DB — that habit polluted it once corpus v2 outgrew these 11 rows)."""
     from legal_agent.data.noise_seed import load_noise_statutes
 
-    init_db(DB_PATH)
-    conn = connect(DB_PATH)
+    db = tmp_path / "t.db"
+    init_db(db)
+    conn = connect(db)
     seed_source_hierarchy(conn)
     load_noise_statutes(conn)
     yield conn

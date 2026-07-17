@@ -90,6 +90,16 @@ def test_unknown_nature_is_skipped_with_warning_not_guessed():
     assert any("自治條例" in w for w in warnings)
 
 
+def test_9999_sentinel_falls_back_to_last_change_date():
+    # MOJ writes 生效日期=9999-12-31 for "amendment not yet in force" — taking
+    # it literally would date-exclude the whole law from every point-in-time
+    # query. Must fall back to 最新異動日期, with a warning.
+    proposals, warnings = parse_moj_xml(FIXTURE)
+    law = _by_law(proposals)["測試尚未施行法"]
+    assert law[0]["effective_from"] == "2025-01-01"
+    assert any("測試尚未施行法" in w and "9999" in w for w in warnings)
+
+
 def test_strict_mode_raises_instead_of_warning():
     with pytest.raises(MojXmlError, match="自治條例"):
         parse_moj_xml(FIXTURE, strict=True)
@@ -137,5 +147,5 @@ def test_cli_writes_proposal_json(tmp_path, capsys):
     assert written == reference
 
     stdout = capsys.readouterr().out
-    assert "3 部法規" in stdout          # 噪音管制法 + 管制標準 + 已廢止法
+    assert "4 部法規" in stdout   # 噪音管制法 + 管制標準 + 已廢止法 + 尚未施行法
     assert "source_ingest" in stdout     # tells the human the next step

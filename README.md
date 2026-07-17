@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-158%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-159%20passing-brightgreen)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
@@ -106,7 +106,13 @@ Free hosting recipe: [`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
 ## Measured results (local models, $0)
 
 Full tables and method notes in [`evals/RESULTS.md`](evals/RESULTS.md); raw
-per-run data in `evals/ablation_raw.json`. Headlines:
+per-run data in `evals/ablation_raw.json`. **Corpus note:** the table below
+was measured on the original 11-article corpus; the corpus is now **2 561
+articles across 11 everyday-law statutes** (official-XML import, hand-typed
+golden sample matched character-for-character), the full-corpus mutation run
+holds **9 833/9 833 caught, 0/2 560 false positives**, and golden-set
+re-baselining is in progress — the honest details, including which numbers
+moved and why, are in RESULTS.md §0. Headlines:
 
 | what | number |
 |---|---|
@@ -132,10 +138,11 @@ Requires **Python 3.10+**.
 ```bash
 pip install -r requirements.txt
 
-# build the SQLite schema + load the hand-verified reference corpus
+# build the SQLite schema + load the corpus (2 561 articles across 11 statutes
+# of everyday law, imported from the official 全國法規資料庫 bulk XML)
 python -c "from legal_agent.data.database import init_db; from legal_agent.config import DB_PATH; init_db(DB_PATH)"
 python -m legal_agent.cli seed
-python -m legal_agent.data.noise_seed
+python -m legal_agent.data.source_ingest corpus/moj_bulk_v1_proposal.json
 python -m legal_agent.data.source_ingest corpus/noise_routing_proposal.json
 
 python -m pytest -q          # 149 passing
@@ -196,8 +203,11 @@ Corpus growth is unblocked: a streaming importer
 in the loop, and laws the importer can't represent honestly (unknown tier,
 missing dates, repealed history) are flagged, never guessed.
 
-Scoped on purpose: one jurisdiction (Taiwan), one scenario, a hand-verified
-corpus of 11 entries; judgments have an importer
+Scope today: one jurisdiction (Taiwan), a **2 561-article corpus covering 11
+everyday-law statutes** (rent, labor, traffic, consumer, family-violence,
+noise — imported from the official bulk XML, with the original hand-verified
+11 articles as the character-for-character golden sample), one fully built
+consultation scenario (noise); judgments have an importer
 ([`data/judicial_json.py`](legal_agent/data/judicial_json.py): 裁判書開放API
 JSON → rows, citations extracted by the verifier's own grammar) but are
 reference material only — not yet retrieval candidates. Roadmap — each item

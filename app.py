@@ -27,7 +27,6 @@ from legal_agent import config
 from legal_agent.anti_hallucination.honesty import grade_honesty
 from legal_agent.anti_hallucination.verifier import verify_answer
 from legal_agent.data.database import connect, init_db
-from legal_agent.data.noise_seed import load_noise_statutes
 from legal_agent.data.seed import seed_source_hierarchy
 from legal_agent.data.source_ingest import load_proposals
 from legal_agent.dialogue.flow import SessionState, Stage, advance_to_stage3, handle_turn
@@ -157,10 +156,13 @@ def ensure_db() -> None:
     conn = connect(config.DB_PATH)
     try:
         seed_source_hierarchy(conn)
-        load_noise_statutes(conn)
-        proposals = config.CORPUS_DIR / "noise_routing_proposal.json"
-        if proposals.exists():
-            load_proposals(proposals, conn)
+        # Corpus source of truth = official-XML proposals (2 561 articles across
+        # 11 statutes). The old hand-typed noise_seed is superseded — loading it
+        # here would create duplicate current slices next to the XML rows.
+        for proposal_name in ("moj_bulk_v1_proposal.json", "noise_routing_proposal.json"):
+            proposal_path = config.CORPUS_DIR / proposal_name
+            if proposal_path.exists():
+                load_proposals(proposal_path, conn)
     finally:
         conn.close()
 

@@ -178,18 +178,36 @@ def run_mutation_test(
         outcomes.append(_judge("control", ref, control, expect_flag=False,
                                conn=conn, semantic_llm=semantic_llm))
 
-        # nonexistent_article — same statute, shifted article number.
+        # nonexistent_article — same statute, shifted article number, VERIFIED
+        # absent first: in a 1439-article code (民法), 第X+500條 can be a real
+        # article — planting it would grade a correct verifier as a miss.
         if num_match:
-            ghost = f"{sid}第{int(num_match.group(1)) + 500}條"
-            outcomes.append(_judge(
-                "nonexistent_article", ghost,
-                f"依{ghost},住戶應負相關義務。", expect_flag=True, conn=conn,
-            ))
+            base_no = int(num_match.group(1))
+            ghost_no = next(
+                (
+                    f"第{base_no + off}條" for off in (500, 1000, 5000, 9999)
+                    if not conn.execute(
+                        "SELECT 1 FROM statutes WHERE statute_id = ? AND article_no = ?",
+                        (sid, f"第{base_no + off}條"),
+                    ).fetchone()
+                ),
+                None,
+            )
+            if ghost_no:
+                ghost = f"{sid}{ghost_no}"
+                outcomes.append(_judge(
+                    "nonexistent_article", ghost,
+                    f"依{ghost},住戶應負相關義務。", expect_flag=True, conn=conn,
+                ))
 
         # ghost_suffix — a 「之X」 variant that does NOT exist (民法第793條之99).
         # LLMs love inventing 之X sub-articles; a parser that silently drops the
-        # suffix launders the ghost into the REAL parent article.
-        if num_match:
+        # suffix launders the ghost into the REAL parent article. Same
+        # verified-absent guard: the canonical form 第X-99條 must not be real.
+        if num_match and not conn.execute(
+            "SELECT 1 FROM statutes WHERE statute_id = ? AND article_no = ?",
+            (sid, f"第{num_match.group(1)}-99條"),
+        ).fetchone():
             outcomes.append(_judge(
                 "ghost_suffix", f"{ref}之99",
                 f"依{ref}之99,住戶得請求排除侵害。", expect_flag=True, conn=conn,
@@ -204,17 +222,26 @@ def run_mutation_test(
 
         # direction_flip — keep a REAL amount, flip its suffix direction word
         # (「六千元以下罰鍰」 -> claim 「六千元以上」). The amount itself checks
-        # out, so an amounts-only content match is blind to this.
-        dir_match = _AMOUNT_DIR_RE.search(content)
-        if dir_match and dir_match.group(2):
-            real_amt = _parse_number(dir_match.group(1))
-            flipped = "以上" if dir_match.group(2) in _DOWNWARD else "以下"
-            if real_amt is not None:
-                outcomes.append(_judge(
-                    "direction_flip", ref,
-                    f"依{ref},違者可處新臺幣{real_amt}元{flipped}罰鍰。",
-                    expect_flag=True, conn=conn,
-                ))
+        # out, so an amounts-only content match is blind to this. Only amounts
+        # whose direction is UNAMBIGUOUS in the article are planted: in range
+        # wording (「六百元以上一千八百元以下…一千八百元以上…」) the same
+        # amount legitimately carries BOTH directions, so a flip is consistent
+        # and a correct verifier would be graded as a miss.
+        amount_dirs: dict[int, set[str]] = {}
+        for m in _AMOUNT_DIR_RE.finditer(content):
+            value = _parse_number(m.group(1))
+            if value is not None and m.group(2):
+                amount_dirs.setdefault(value, set()).add(
+                    "down" if m.group(2) in _DOWNWARD else "up"
+                )
+        unique = next((a for a, d in amount_dirs.items() if len(d) == 1), None)
+        if unique is not None:
+            flipped = "以上" if amount_dirs[unique] == {"down"} else "以下"
+            outcomes.append(_judge(
+                "direction_flip", ref,
+                f"依{ref},違者可處新臺幣{unique}元{flipped}罰鍰。",
+                expect_flag=True, conn=conn,
+            ))
 
         # out_of_force — cite the article at a date BEFORE its effective_from.
         day_before = (date.fromisoformat(eff) - timedelta(days=1)).isoformat()
