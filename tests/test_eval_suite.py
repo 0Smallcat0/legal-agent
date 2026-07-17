@@ -37,11 +37,15 @@ STUB_ANSWER = "「法律明文」:(無)\n「實務見解」:(無)\n「分析研�
 
 
 @pytest.fixture
-def real_conn():
-    from legal_agent.config import DB_PATH
-
-    init_db(DB_PATH)
-    conn = connect(DB_PATH)
+def real_conn(tmp_path):
+    # ISOLATED copy of the hand-verified noise corpus. This fixture used to
+    # open config.DB_PATH directly — once the live DB grew past the 11-article
+    # noise scope (corpus v2), every run polluted it with duplicate current
+    # slices and the suite's small-corpus assertions silently depended on
+    # whatever the live DB held. Tests never touch the live DB.
+    db = tmp_path / "eval.db"
+    init_db(db)
+    conn = connect(db)
     seed_source_hierarchy(conn)
     load_noise_statutes(conn)
     yield conn

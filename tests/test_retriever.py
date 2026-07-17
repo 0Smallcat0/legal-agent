@@ -84,18 +84,18 @@ def test_bad_as_of_date_raises(fake_conn):
         retrieve("貓咪", as_of_date="2015/06/01", conn=fake_conn)
 
 
-def test_real_corpus_noise_query():
-    """Smoke test over the REAL corpus: a noise complaint surfaces the noise statutes."""
-    from legal_agent.config import DB_PATH
+def test_real_corpus_noise_query(tmp_path):
+    """Smoke test over the hand-verified noise corpus (isolated copy — tests
+    never write the live DB)."""
     from legal_agent.data.noise_seed import load_noise_statutes
 
-    init_db(DB_PATH)                       # ensure the real corpus is present
-    seed_conn = connect(DB_PATH)
+    db = tmp_path / "t.db"
+    init_db(db)
+    seed_conn = connect(db)
     seed_source_hierarchy(seed_conn)
-    load_noise_statutes(seed_conn)         # idempotent: skips if already loaded
-    seed_conn.close()
+    load_noise_statutes(seed_conn)
 
-    results = retrieve("鄰居半夜製造噪音")  # as_of_date=None (all 9 are in force), K=5
+    results = retrieve("鄰居半夜製造噪音", conn=seed_conn)  # as_of_date=None, K=5
     assert results, "real corpus should return noise-related statutes"
 
     pairs = {(r.statute_id, r.article_no) for r in results}

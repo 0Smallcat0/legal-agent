@@ -101,13 +101,20 @@ def _law_to_proposals(law: ET.Element) -> tuple[list[dict], list[str]]:
         )
 
     # 生效日期 when the file carries one, else the last-change date.
+    warnings: list[str] = []
     raw_effective = (law.findtext("生效日期") or "").strip()
+    # MOJ sentinel: 9999-12-31 means "latest amendment NOT yet in force". Taking
+    # it literally would date-exclude the whole law from every point-in-time
+    # query (found live on 民法) — fall back to the last-change date instead.
+    if raw_effective.replace("-", "") == "99991231":
+        warnings.append(
+            f"「{name}」生效日期為 9999(修正尚未施行)— 改用最新異動日期"
+        )
+        raw_effective = ""
     effective_from = _parse_moj_date(
         raw_effective or law.findtext("最新異動日期"),
         f"「{name}」的 {'生效日期' if raw_effective else '最新異動日期'}",
     )
-
-    warnings: list[str] = []
     effective_to: str | None = None
     if (law.findtext("廢止註記") or "").strip():
         effective_to = effective_from

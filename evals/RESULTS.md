@@ -11,6 +11,40 @@ claim the statute doesn't exist in the real world.
 
 ---
 
+## 0. Corpus v2 (2026-07-18) — 11 → 2 561 articles, and what the numbers did
+
+The corpus grew 233× in one day: 11 statutes of everyday law (民法, 中華民國
+刑法, 消保法, 勞基法, 道交條例, 公寓大廈條例, 噪音管制法, 社維法, 租賃住宅
+條例, 家暴法, 社維法處理辦法) imported from the official 全國法規資料庫 bulk
+XML via `data/moj_xml.py`. Importer verified against a golden sample: all 9
+articles previously typed in by hand match the XML text **character for
+character**. Two official-data traps were caught live and fixed: the
+`生效日期=9999-12-31` sentinel ("amendment not yet in force" — taken literally
+it date-excludes 民法 entirely), and duplicate current slices from the old
+hand-typed seed (plus seven test fixtures that wrote to the LIVE DB — now
+isolated; tests never touch it again).
+
+What re-measurement honestly showed:
+
+- **The out-of-scope cases stopped being out of scope — that's the point.**
+  oos-02 (遺產), oos-03 (網購), oos-04 (欠薪) now retrieve real 民法/消保法/
+  勞基法 articles. Golden-set expectations written for an 11-article corpus
+  are obsolete; golden v2 with re-scoped expectations is the next task.
+- **BM25 magnitudes rescaled** (top scores 20–84 vs the old 4–42): the
+  calibrated insufficient floor no longer separates anything → re-calibrate
+  against golden v2.
+- **Noise-scenario coverage diluted** (pass 11 → 4 of 19 scorable): recall on
+  sparse fact wording degrades in a 2 561-article corpus — hybrid (dense)
+  retrieval is no longer a roadmap nicety; it is measured necessity.
+- **The mutation exam adapted to scale**: planted "nonexistent" articles are
+  now verified absent before planting (in a 1 439-article 民法, 第X+500條 can
+  be real), and direction flips only target amounts whose direction is
+  unambiguous (range wording carries both directions legitimately). Full-corpus
+  run: **9 833/9 833 mutations caught (100%), 0/2 560 false positives.**
+
+Numbers in the sections below predate corpus v2 (measured on the 11-article
+corpus) and are kept as the baseline; re-baselining is in progress.
+
 ## 1. Verifier mutation test — catch rate on planted errors
 
 Deterministic (no LLM). Answers are generated from real corpus rows with one
