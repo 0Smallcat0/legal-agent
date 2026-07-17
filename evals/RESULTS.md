@@ -57,18 +57,26 @@ Ollama and plants 3 hand-written subject_swap cases (plus the 10 controls,
 which must still produce zero false positives). With an injected reference
 model the full suite is **46/46, 0 FP**.
 
-**Measured with a real model (llama3.1 8B, 2026-07-17) — and it failed the
-bar, which is the finding.** Catch was never the problem: subject_swap **3/3
-across every run**. False positives were: the first prompt ("is the claim
-consistent?") flagged **8/10 controls** — the 8B model treated *not
-restating* the subject as *contradicting* it. Rewriting the prompt to a
-contradiction-only standard (omission/summary = consistent) cut that to
-**1/10 and 3/10 across two runs** (unpinned temperature; catch stayed 46/46
-in both). Conclusion, stated plainly: an 8B checker catches every planted
-swap but still cries wolf 10–30% of the time, so it stays **off by default**
-— now by measurement, not by assumption. A stronger model can re-take the
-same exam with one command; pinning temperature for run-to-run stability is
-a known next step.
+**Measured with real local models (2026-07-17/18, temperature pinned to 0 —
+two identical back-to-back runs confirm determinism). None passes both bars;
+that is the finding.**
+
+| model (`--model`) | subject_swap catch | control false positives |
+|---|---|---|
+| llama3.1 8B | **3/3** | 1/10 |
+| qwen3 8B | 1/3 | **0/10** |
+| qwen3.5 | 0/3 | **0/10** |
+
+A perfect recall/precision trade with no winner: llama3.1 catches every
+planted swap but still cries wolf once; the qwen models never cry wolf but
+wave the swaps through. (Prompt iteration mattered — the first "is it
+consistent?" wording had llama3.1 flagging **8/10** controls because *not
+restating* the subject read as *contradicting* it; the contradiction-only
+rewrite fixed that class.) Conclusion, stated plainly: at the local-8B tier
+the semantic axis cannot meet the 0-FP bar the structural axes hold, so it
+stays **off by default — by measurement, not assumption**. A stronger model
+re-takes the same exam with one command:
+`python -m legal_agent.evaluation.mutation --semantic --model <name>`.
 
 ## 2. Tier-1 golden set — llama3.1 8B through the full gated pipeline
 
