@@ -33,6 +33,7 @@ from datetime import date
 import jieba
 from rank_bm25 import BM25Okapi
 
+from legal_agent import config
 from legal_agent.config import DB_PATH
 from legal_agent.data.database import connect
 from legal_agent.data.models import Statute
@@ -151,7 +152,47 @@ def _retrieve_scored(
 
     scores = BM25Okapi(doc_tokens).get_scores(query_tokens)
     matches.sort(key=lambda i: scores[i], reverse=True)
-    return [(candidates[i], float(scores[i])) for i in matches][:k]
+    ranked = [(candidates[i], float(scores[i])) for i in matches]
+
+    fused = _dense_fuse(query, candidates, ranked)
+    return (fused if fused is not None else ranked)[:k]
+
+
+def _dense_fuse(
+    query: str,
+    candidates: list[Statute],
+    bm25_ranked: list[tuple[Statute, float]],
+) -> list[tuple[Statute, float]] | None:
+    """Hybrid re-ranking (config.DENSE_RETRIEVAL="auto"): RRF-fuse the BM25
+    ranking with the cached bge-m3 dense ranking (retrieval/dense.py).
+
+    Contract: BM25 scores are UNTOUCHED — the honesty floor keeps its meaning;
+    a dense-only candidate (the vocabulary-gap case) carries its honest lexical
+    score of 0.0. Returns None — pure BM25, behaviour unchanged — when the
+    feature is off, the index is unbuilt, or Ollama is unreachable."""
+    if getattr(config, "DENSE_RETRIEVAL", "off") == "off":
+        return None
+    try:
+        from legal_agent.retrieval import dense
+        index_keys, matrix = dense.load_index()
+        dense_keys = dense.dense_rank(query, index_keys, matrix)
+    except Exception:
+        return None
+
+    def key_of(s: Statute) -> tuple[str, str, str]:
+        return (s.statute_id, s.article_no, s.effective_from)
+
+    bm25_by_key = {key_of(s): (s, sc) for s, sc in bm25_ranked}
+    candidate_by_key = {key_of(c): c for c in candidates}
+    fused_keys = dense.rrf_fuse([list(bm25_by_key), dense_keys[:50]])
+
+    out: list[tuple[Statute, float]] = []
+    for fkey in fused_keys:
+        if fkey in bm25_by_key:
+            out.append(bm25_by_key[fkey])
+        elif fkey in candidate_by_key:          # dense-only: lexically unmatched
+            out.append((candidate_by_key[fkey], 0.0))
+    return out
 
 
 def retrieve(

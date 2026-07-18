@@ -81,10 +81,18 @@ optional like every model here), embedding model chosen by exam, not fashion:
 nomic-embed-text failed Traditional-Chinese legal text outright (even with its
 task prefixes) and was rejected; **bge-m3** is the shipped default. RRF fusion
 (rank-based, no tuned weights) keeps BM25's exact-term strength while dense
-closes the paraphrase gap. Not yet wired into Stage 3 — next step: a config
-flag + full golden-v2 re-measurement before the pipeline switches over. The
-加班費 row shows honest headroom: statutory phrasing sits far from everyday
-wording even for bge-m3.
+closes the paraphrase gap. The 加班費 row shows honest headroom: statutory
+phrasing sits far from everyday wording even for bge-m3.
+
+**Wired into the pipeline (config `DENSE_RETRIEVAL="auto"`).** Contract: RRF
+only re-orders and widens candidates; BM25 scores are untouched, so the
+honesty floor keeps its meaning, and a dense-only candidate carries its honest
+lexical score of 0.0. Any failure (flag off, index unbuilt, Ollama down, CI)
+silently degrades to pure BM25 — tests pin both paths. Golden v2 re-measured
+with the live hybrid: coverage **miss 11 → 9, partial 10 → 12** (pass+partial
+58% → 65% of 26 scorable), tier unchanged at 23/30 — recall improved, honesty
+untouched, exactly as designed. Rebuild the index after corpus changes with
+`python -m legal_agent.retrieval.dense`.
 
 Numbers in the sections below predate corpus v2 (measured on the 11-article
 corpus) and are kept as the baseline.
