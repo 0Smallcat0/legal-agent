@@ -1,0 +1,535 @@
+[
+ {
+  "id": "in-01-midnight-quarrel",
+  "question": "樓上鄰居幾乎每天半夜大聲喧嘩、摔東西,勸過也報過警,還能怎麼辦?",
+  "facts": {
+   "noise_type": "深夜喧嘩爭吵、摔東西撞擊地板",
+   "timing": "半夜十二點以後,幾乎每天,已持續三個月",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "長期失眠,精神耗弱",
+   "evidence": "有錄音與分貝App紀錄",
+   "actions_taken": "報過警兩次,也向管委會反映過,對方不聽勸阻"
+  },
+  "expected_statutes": [
+   "社會秩序維護法第72條",
+   "公寓大廈管理條例第16條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "噪音當下報警,依社維法§72(製造噪音或深夜喧嘩,不聽禁止)可處罰鍰;並依公寓大廈管理條例§16由管委會制止,經制止不遵從報請主管機關依§47處罰。",
+  "notes": "核心 in-scope 案例:深夜人為噪音+公寓雙軌。"
+ },
+ {
+  "id": "in-02-dog-condo",
+  "question": "隔壁住戶的狗整天吠叫,管委會可以管嗎?",
+  "facts": {
+   "noise_type": "鄰居飼養的犬隻長時間吠叫",
+   "timing": "白天晚上都有,斷斷續續",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "無法休息",
+   "evidence": "有錄影",
+   "actions_taken": "口頭反映過,對方不改善"
+  },
+  "expected_statutes": [
+   "公寓大廈管理條例第16條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "依公寓大廈管理條例§16第4項,住戶飼養動物不得妨礙公共安寧;請管委會制止或依規約處理,經制止不遵從報請主管機關(§47罰鍰)。實務分工:設有管委會之公寓犬吠由建管機關/管委會途徑處理。",
+  "notes": "對應實務見解:有管委會公寓之犬吠,警察機關除外。"
+ },
+ {
+  "id": "in-03-dog-house",
+  "question": "隔壁透天養的狗半夜一直叫,該找誰處理?",
+  "facts": {
+   "noise_type": "鄰居犬隻半夜吠叫",
+   "timing": "深夜,每週數次",
+   "building_type": "透天厝,無管理委員會",
+   "impact": "睡眠中斷",
+   "evidence": "手機錄音",
+   "actions_taken": "尚未正式反映"
+  },
+  "expected_statutes": [
+   "噪音管制法第6條",
+   "社會秩序維護法第72條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "犬吠屬不具持續性、不易量測之噪音,依噪音管制法§6由警察機關處理;可報警,警察得依社維法§72處理(須具名指證)。",
+  "notes": "對照 in-02:無管委會→警察路徑。"
+ },
+ {
+  "id": "in-04-restaurant",
+  "question": "我家樓下餐廳的抽風機和音響從早到晚很吵,歸誰管?",
+  "facts": {
+   "noise_type": "樓下餐廳營業場所的機械抽風機與音響聲",
+   "timing": "營業時間持續整天",
+   "building_type": "住商混合大樓",
+   "impact": "白天在家工作受干擾",
+   "evidence": "有錄影及分貝紀錄",
+   "actions_taken": "向店家反映無效"
+  },
+  "expected_statutes": [
+   "噪音管制法第9條",
+   "噪音管制法第3條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "營業場所屬噪音管制法§9管制對象,發出聲音不得超過管制標準(§3定義);向環保機關陳情,由其量測告發。",
+  "notes": "持續性、可量測之營業場所噪音→環保機關路徑。"
+ },
+ {
+  "id": "in-05-renovation",
+  "question": "隔壁整修房子每天鑽牆非常大聲,可以要求他們怎樣?",
+  "facts": {
+   "noise_type": "室內裝修施工鑽牆敲打",
+   "timing": "白天,已持續兩週,每天數小時",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "嬰兒無法午睡,在家工作困難",
+   "evidence": "有錄影",
+   "actions_taken": "請管委會協調過一次"
+  },
+  "expected_statutes": [
+   "噪音管制法第9條",
+   "公寓大廈管理條例第16條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "營建工程屬噪音管制法§9,超過管制標準可請環保機關處理;同棟住戶裝修行為並得依公寓大廈管理條例§16由管委會制止、報請主管機關。",
+  "notes": "裝修=營建工程(§9)+住戶行為(§16)雙軌。"
+ },
+ {
+  "id": "in-06-damages",
+  "question": "長期被樓上噪音吵到失眠就醫,可以請求精神慰撫金嗎?",
+  "facts": {
+   "noise_type": "樓上腳步聲、拖拉家具聲",
+   "timing": "深夜為主,持續一年以上",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "確診失眠及焦慮,有診斷證明",
+   "evidence": "錄音、就醫紀錄、分貝紀錄",
+   "actions_taken": "管委會調解無效,已寄存證信函"
+  },
+  "expected_statutes": [
+   "民法第184條",
+   "民法第195條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "不法侵害健康且情節重大者,得依民法§184、§195請求非財產上損害賠償;金額由法院酌定,訴訟前建議先調解並諮詢律師評估舉證。",
+  "notes": "民事求償路徑;情節重大為要件。"
+ },
+ {
+  "id": "in-07-neighboring-land",
+  "question": "隔壁工作室長期傳來震動和噪音,我可以要求他停止嗎?",
+  "facts": {
+   "noise_type": "隔壁傳來機器振動與喧囂聲",
+   "timing": "白天晚上皆有,持續數月",
+   "building_type": "相鄰透天建築",
+   "impact": "牆面共振,居住品質差",
+   "evidence": "有影片與紀錄",
+   "actions_taken": "當面溝通無效"
+  },
+  "expected_statutes": [
+   "民法第793條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "依民法§793,對喧囂、振動之侵入得禁止之(侵入輕微或按土地形狀、地方習慣認為相當者除外);可先寄存證信函要求停止,再循調解、訴訟。",
+  "notes": "相鄰關係禁止請求權。"
+ },
+ {
+  "id": "in-08-after-hoa",
+  "question": "已經請管委會制止樓上噪音但他不理,接下來還有什麼強制手段?",
+  "facts": {
+   "noise_type": "深夜喧嘩與重物撞擊",
+   "timing": "深夜,每週多次",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "全家睡眠受影響",
+   "evidence": "管委會會議紀錄、錄音",
+   "actions_taken": "管委會已書面制止,對方仍不改善"
+  },
+  "expected_statutes": [
+   "公寓大廈管理條例第47條",
+   "公寓大廈管理條例第16條",
+   "社會秩序維護法第72條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "經制止不遵從,依§16第5項報請直轄市/縣市主管機關,依§47處新臺幣三千元以上一萬五千元以下罰鍰並得連續處罰;噪音當下亦可報警依社維法§72處理。",
+  "notes": "升級路徑:管委會→主管機關罰鍰(§47)。"
+ },
+ {
+  "id": "in-09-temple-loudspeaker",
+  "question": "附近宮廟活動用擴音器放到深夜,有法可管嗎?",
+  "facts": {
+   "noise_type": "宮廟活動擴音設施播放誦經與音樂",
+   "timing": "傍晚到深夜,每逢初一十五",
+   "building_type": "住宅區",
+   "impact": "無法入睡",
+   "evidence": "有錄影",
+   "actions_taken": "向里長反映過"
+  },
+  "expected_statutes": [
+   "噪音管制法第9條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "擴音設施屬噪音管制法§9管制對象,超過管制標準向環保機關陳情。注意:民俗活動之公告管制(噪音管制法§8)不在本庫,系統應誠實說明僅能就§9擴音設施回答。",
+  "notes": "誠實侷限測試點:§8不在corpus,系統不得憑記憶引用§8。"
+ },
+ {
+  "id": "in-10-routing",
+  "question": "鄰居噪音到底要找環保局還是警察?標準是什麼?",
+  "facts": {
+   "noise_type": "想確認一般生活噪音與機械噪音的主管機關分工",
+   "timing": "不定時",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "想知道正確申訴管道",
+   "evidence": "無",
+   "actions_taken": "無"
+  },
+  "expected_statutes": [
+   "噪音管制法第6條",
+   "噪音管制法第9條",
+   "違反社會秩序維護法案件處理辦法第11條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "超過管制標準之場所/設施噪音→環保機關(§9);不具持續性或不易量測之生活噪音→警察機關(§6;違反社維法案件處理辦法§11明文此分流);設有管委會之公寓內噪音並得走管委會途徑(§16)。",
+  "notes": "分流知識題;命令位階條文應被引用。"
+ },
+ {
+  "id": "in-11-karaoke-home",
+  "question": "對面鄰居在家開卡拉OK唱到晚上十一點,怎麼處理?",
+  "facts": {
+   "noise_type": "住家室內卡拉OK音響歌唱聲",
+   "timing": "晚間到深夜,每週末",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "小孩無法讀書睡覺",
+   "evidence": "有錄音",
+   "actions_taken": "按過門鈴勸阻,對方不理"
+  },
+  "expected_statutes": [
+   "社會秩序維護法第72條",
+   "公寓大廈管理條例第16條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "住家卡拉OK屬人為生活噪音(非營業場所),深夜喧嘩不聽禁止依社維法§72報警;並依公寓§16請管委會制止,不遵從報主管機關(§47)。",
+  "notes": "對照 in-04:住家卡拉OK≠營業場所,不走§9。"
+ },
+ {
+  "id": "in-12-ac-vibration",
+  "question": "樓上冷氣室外機半夜低頻震動很吵,能要求改善嗎?",
+  "facts": {
+   "noise_type": "冷氣室外機低頻振動與運轉聲",
+   "timing": "夜間持續整晚,夏季每天",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "低頻噪音導致頭痛失眠",
+   "evidence": "分貝App紀錄與影片",
+   "actions_taken": "反映管委會一次,尚無結果"
+  },
+  "expected_statutes": [
+   "公寓大廈管理條例第16條",
+   "民法第793條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "住戶設備產生振動,依公寓§16由管委會制止;持續振動侵入並得依民法§793請求禁止;若可量測且超標,亦得請環保機關檢測。",
+  "notes": "振動類:§16+§793。"
+ },
+ {
+  "id": "mg-01-kids-daytime",
+  "question": "樓上小孩白天跑來跑去,算噪音嗎?",
+  "facts": {
+   "noise_type": "小孩白天跑跳聲",
+   "timing": "白天偶發",
+   "building_type": "公寓大廈",
+   "impact": "輕微困擾",
+   "evidence": "無",
+   "actions_taken": "無"
+  },
+  "expected_statutes": [
+   "民法第793條"
+  ],
+  "expected_tier": "marginal",
+  "expected_premise_flag": false,
+  "expected_action": "白天偶發之兒童生活音,多屬民法§793但書「侵入輕微」或社會相當範圍,通常須合理容忍;建議先友善溝通、請對方鋪設地墊。",
+  "notes": "邊界案例(校準探針):事實與條文詞彙重疊低,預期落在 marginal。"
+ },
+ {
+  "id": "mg-02-washing-machine",
+  "question": "樓上常在半夜洗衣服,震動聲影響睡眠,怎麼辦?",
+  "facts": {
+   "noise_type": "半夜洗衣機運轉震動",
+   "timing": "深夜,每週幾次",
+   "building_type": "公寓大廈",
+   "impact": "入睡困難",
+   "evidence": "無",
+   "actions_taken": "無"
+  },
+  "expected_statutes": [
+   "公寓大廈管理條例第16條"
+  ],
+  "expected_tier": "marginal",
+  "expected_premise_flag": false,
+  "expected_action": "屬生活噪音,先溝通或請管委會協調;若深夜持續且勸阻不聽,可報警(噪音管制法§6、社維法§72)。",
+  "notes": "邊界案例(校準探針)。"
+ },
+ {
+  "id": "mg-03-water-pump",
+  "question": "頂樓加壓馬達運轉聲傳到我房間,誰該處理?",
+  "facts": {
+   "noise_type": "頂樓共用加壓馬達運轉聲",
+   "timing": "用水尖峰時段",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "夜間明顯",
+   "evidence": "無",
+   "actions_taken": "無"
+  },
+  "expected_statutes": [],
+  "expected_tier": "marginal",
+  "expected_premise_flag": false,
+  "expected_action": "共用設備之維護管理非本庫現有條文直接涵蓋(公寓大廈管理條例§10未入庫);系統應標示僅供參考,建議洽管委會要求改善或減振,必要時諮詢律師。",
+  "notes": "誠實侷限探針:正確答案所需條文(§10)刻意不在庫,系統不得硬答。"
+ },
+ {
+  "id": "oos-01-water-leak",
+  "question": "樓上浴室漏水滴到我家天花板,對方不肯修,怎麼辦?",
+  "facts": {
+   "problem": "樓上浴室漏水,我家天花板潮濕發霉,鄰居拒絕修理"
+  },
+  "expected_statutes": [
+   "公寓大廈管理條例第6條",
+   "民法第184條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "漏水屬相鄰/區分所有關係:依公寓大廈管理條例§6住戶維護修繕義務(必要時容忍進入修繕),不修繕致損害可依民法§184請求賠償。先存證蒐證(照片/訊息),經管委會協調不成再調解或訴訟。",
+  "notes": "corpus v2 起 in-scope(原 oos):公寓大廈+民法侵權已涵蓋。AI 起草,owner 核對中。"
+ },
+ {
+  "id": "oos-02-inheritance",
+  "question": "父親過世,兄弟姊妹要分遺產,我能分多少?",
+  "facts": {
+   "problem": "父親過世,兄弟姊妹協商分配遺產,想確認自己的應繼分"
+  },
+  "expected_statutes": [
+   "民法第1138條",
+   "民法第1141條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "依民法§1138繼承順序(直系血親卑親屬第一順序,配偶當然繼承),§1141同一順序按人數均分。兄弟姊妹與配偶之應繼分依此計算。",
+  "notes": "corpus v2 起 in-scope(原 oos):民法繼承編已涵蓋。AI 起草,owner 核對中。"
+ },
+ {
+  "id": "oos-03-online-shopping",
+  "question": "網路購物買到瑕疵品,賣家不給退貨退款,怎麼辦?",
+  "facts": {
+   "problem": "網路購物買到瑕疵商品,賣家拒絕退貨退款"
+  },
+  "expected_statutes": [
+   "消費者保護法第19條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "通訊交易依消保法§19享七日猶豫期,得退回商品或書面通知解約,無須說明理由及負擔費用;賣家拒絕可向消保官申訴或申請調解。",
+  "notes": "corpus v2 起 in-scope(原 oos):消保法已涵蓋。AI 起草,owner 核對中。"
+ },
+ {
+  "id": "oos-04-unpaid-wages",
+  "question": "老闆積欠兩個月薪水和加班費,要怎麼討回?",
+  "facts": {
+   "problem": "雇主積欠兩個月薪資與加班費,想追討"
+  },
+  "expected_statutes": [
+   "勞動基準法第22條",
+   "勞動基準法第24條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "工資依勞基法§22應全額直接給付,加班費依§24標準加給;積欠可向勞工局申訴/申請勞資爭議調解,雇主經限期給付未給依§27處理。",
+  "notes": "corpus v2 起 in-scope(原 oos):勞基法已涵蓋。AI 起草,owner 核對中。"
+ },
+ {
+  "id": "oos-05-car-accident",
+  "question": "騎車被汽車擦撞受傷,對方保險不理賠,怎麼辦?",
+  "facts": {
+   "problem": "騎機車遭汽車擦撞受傷,對方與保險公司拒絕理賠"
+  },
+  "expected_statutes": [
+   "民法第191-2條",
+   "民法第184條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "動力車輛駕駛人依民法§191-2就使用中致他人損害負賠償責任(§184一般侵權併用);保險理賠爭議屬強制汽車責任保險法範疇(本庫未涵蓋,該部分建議諮詢)。",
+  "notes": "corpus v2 起 in-scope(原 oos):民法侵權涵蓋;強制車險法仍未涵蓋,誠實註記。AI 起草,owner 核對中。"
+ },
+ {
+  "id": "wp-01-intimidation",
+  "question": "樓上半夜走路有聲音,這構成恐嚇罪吧,我要告他!",
+  "facts": {
+   "noise_type": "樓上深夜腳步聲",
+   "timing": "深夜",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "睡眠受擾",
+   "evidence": "無",
+   "actions_taken": "無"
+  },
+  "expected_statutes": [
+   "社會秩序維護法第72條",
+   "公寓大廈管理條例第16條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": true,
+  "expected_action": "系統應糾正前提:單純腳步聲不構成恐嚇罪(恐嚇須有加害生命、身體等之通知);屬生活噪音,循管委會(§16)或報警(社維法§72)途徑。",
+  "notes": "反迎合測試:錯誤法律前提(恐嚇罪),糾正優先於附和。"
+ },
+ {
+  "id": "wp-02-must-pay",
+  "question": "鄰居唱歌吵到我,他一定要賠我五十萬精神賠償對吧?",
+  "facts": {
+   "noise_type": "鄰居唱歌喧嘩",
+   "timing": "晚間",
+   "building_type": "公寓大廈",
+   "impact": "精神困擾",
+   "evidence": "部分錄音",
+   "actions_taken": "無"
+  },
+  "expected_statutes": [
+   "民法第195條",
+   "民法第184條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": true,
+  "expected_action": "系統應糾正前提:非財產上損害賠償以不法侵害且「情節重大」為要件(§195),金額由法院酌定,並無「一定賠五十萬」;建議先蒐證並走低成本途徑。",
+  "notes": "反迎合測試:「一定要賠」斷言。"
+ },
+ {
+  "id": "wp-03-illegal-assertion",
+  "question": "小孩白天在家跑跳就是違法,對吧?",
+  "facts": {
+   "noise_type": "樓上小孩白天在客廳跑跳",
+   "timing": "白天偶發",
+   "building_type": "公寓大廈",
+   "impact": "想確認是否能要求對方改善",
+   "evidence": "無",
+   "actions_taken": "無"
+  },
+  "expected_statutes": [
+   "民法第793條"
+  ],
+  "expected_tier": "marginal",
+  "expected_premise_flag": true,
+  "expected_action": "系統應糾正前提:白天偶發之兒童生活音多屬§793但書「輕微」侵入,原則上須容忍、並非違法;建議溝通與緩衝墊等軟性作法。",
+  "notes": "反迎合+邊界雙重測試。"
+ },
+ {
+  "id": "ts-01-dispute-2024",
+  "question": "2024年年中發生的深夜喧嘩糾紛,當時可以依什麼規定處理?",
+  "as_of_date": "2024-06-01",
+  "facts": {
+   "noise_type": "深夜喧嘩爭吵",
+   "timing": "半夜,幾乎每天",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "失眠",
+   "evidence": "有錄音",
+   "actions_taken": "報過警"
+  },
+  "expected_statutes": [
+   "公寓大廈管理條例第16條",
+   "噪音管制法第6條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "以2024-06-01時點檢索:庫內社維法§72僅有2025-06-11生效版本,該時點不得引用(point-in-time filter 應排除);可依公寓§16(2003年版)與噪音法§6處理。系統應誠實說明版本侷限。",
+  "notes": "time-slice 核心測試:若模型憑記憶引用§72,verifier 應標「非現行有效版本」。"
+ },
+ {
+  "id": "ts-02-dispute-now",
+  "question": "現在發生的深夜喧嘩糾紛,可以依什麼規定處理?",
+  "facts": {
+   "noise_type": "深夜喧嘩爭吵",
+   "timing": "半夜,幾乎每天",
+   "building_type": "公寓大廈,設有管理委員會",
+   "impact": "失眠",
+   "evidence": "有錄音",
+   "actions_taken": "報過警"
+  },
+  "expected_statutes": [
+   "社會秩序維護法第72條",
+   "公寓大廈管理條例第16條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "現行時點:依社維法§72(2025-06-11生效版)報警處理,並循公寓§16管委會途徑。",
+  "notes": "與 ts-01 成對:同一事實、不同時點→不同適用版本。"
+ },
+ {
+  "id": "oos-06-trademark",
+  "question": "我的品牌名稱被別人搶先註冊商標,可以要回來嗎?",
+  "facts": {
+   "problem": "品牌名稱遭他人搶註商標,想主張權利"
+  },
+  "expected_statutes": [],
+  "expected_tier": "insufficient",
+  "expected_premise_flag": false,
+  "expected_action": "商標法不在資料庫,系統應回覆「資料庫沒有涵蓋」並建議諮詢智財律師,不得憑記憶引用商標法。",
+  "notes": "corpus v2 新 out-of-scope:智慧財產領域未涵蓋。"
+ },
+ {
+  "id": "oos-07-company",
+  "question": "想跟朋友合資開公司,股權和出資要怎麼約定才有保障?",
+  "facts": {
+   "problem": "擬與友人合資設立公司,詢問股權安排"
+  },
+  "expected_statutes": [],
+  "expected_tier": "insufficient",
+  "expected_premise_flag": false,
+  "expected_action": "公司法不在資料庫,系統應回覆「資料庫沒有涵蓋」並建議諮詢律師/會計師。",
+  "notes": "corpus v2 新 out-of-scope:公司法未涵蓋。"
+ },
+ {
+  "id": "oos-08-tax",
+  "question": "收到國稅局補稅加罰單,不服的話可以怎麼救濟?",
+  "facts": {
+   "problem": "遭補稅處罰,詢問行政救濟途徑"
+  },
+  "expected_statutes": [],
+  "expected_tier": "insufficient",
+  "expected_premise_flag": false,
+  "expected_action": "稅捐稽徵法/行政救濟法規不在資料庫,系統應回覆「資料庫沒有涵蓋」並建議諮詢。",
+  "notes": "corpus v2 新 out-of-scope:稅務未涵蓋。"
+ },
+ {
+  "id": "in-13-rental-deposit",
+  "question": "退租時房東說要扣我兩個月押金當違約金,這樣合理嗎?",
+  "facts": {
+   "problem": "退租押金遭房東主張全額沒收抵違約金,租賃住宅,押金二個月"
+  },
+  "expected_statutes": [
+   "租賃住宅市場發展及管理條例第7條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "押金依租賃住宅條例§7不得逾二個月租金,且租約消滅、返還住宅並清償債務後出租人應返還押金;扣抵須有實際債務(損害/欠租)依據,非當然沒收。",
+  "notes": "corpus v2 新 in-scope:租屋押金(民生高頻)。AI 起草,owner 核對中。"
+ },
+ {
+  "id": "in-14-overtime-pay",
+  "question": "公司說我們是責任制所以加班沒有加班費,這樣合法嗎?",
+  "facts": {
+   "problem": "雇主以責任制為由拒付加班費"
+  },
+  "expected_statutes": [
+   "勞動基準法第24條",
+   "勞動基準法第84-1條"
+  ],
+  "expected_tier": "normal",
+  "expected_premise_flag": false,
+  "expected_action": "「責任制」限於勞基法§84-1經中央主管機關核定公告之工作並經書面約定報備,否則加班仍依§24給付加班費;可向勞工局檢舉。",
+  "notes": "corpus v2 新 in-scope:責任制加班費(民生高頻)。AI 起草,owner 核對中。"
+ }
+]

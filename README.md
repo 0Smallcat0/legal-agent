@@ -154,8 +154,8 @@ python -m legal_agent.data.source_ingest proposals.json
 
 # measure it (no key, no cost — see evals/RESULTS.md for current numbers)
 python -m legal_agent.evaluation.mutation                               # verifier catch rate
-python -m legal_agent.evaluation.golden_set evals/golden_noise_v1.json  # Tier-1 golden set
-python -m legal_agent.evaluation.calibrate evals/golden_noise_v1.json   # threshold sweep
+python -m legal_agent.evaluation.golden_set evals/golden_v2.json  # Tier-1 golden set (30 cases)
+python -m legal_agent.evaluation.calibrate evals/golden_v2.json   # threshold sweep
 
 # talk to it (default backend: free local Ollama — https://ollama.com)
 #   ollama pull llama3.1     # once

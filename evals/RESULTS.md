@@ -42,8 +42,30 @@ What re-measurement honestly showed:
   unambiguous (range wording carries both directions legitimately). Full-corpus
   run: **9 833/9 833 mutations caught (100%), 0/2 560 false positives.**
 
+**Golden set v2 (`evals/golden_v2.json`, 30 cases) re-baselines the suite.**
+The five old out-of-scope cases are re-scoped as in-scope with real expected
+statutes (their topics are now covered — the point of the pivot), three new
+genuinely-uncovered domains join (商標/公司/稅務), and two new everyday
+in-scope cases (租屋押金, 責任制加班費). Deterministic re-run (fake LLM,
+retrieval+tier only):
+
+- **The pain-point route works**: all five re-scoped cases retrieve their law
+  at `normal` tier — 押金 case top-BM25 94.2 hits 租賃住宅條例§7, 繼承 67.4
+  hits 民法§1138/1141, 網購 43.2 hits 消保法§19.
+- **Honest negative: absolute BM25 cannot detect out-of-scope at this corpus
+  size.** The three new oos cases score 21.1–32.9 — interleaved with true
+  in-scope cases (weakest: 19.1). In 2 561 articles, every query finds a
+  generic-token match (民法§184 sticks to everything). The insufficient floor
+  stays at 6.0 (still guards pure lexical noise; no data supports another
+  constant) and out-of-scope detection moves to the hybrid/semantic-signal
+  roadmap item — measured, not assumed.
+- Tier 23/30 (77%): misses = the 3 new oos (above) + the 4 marginal probes
+  (unchanged verdict: not separable by any BM25 cutoff).
+- Coverage pass 5 / partial 10 / miss 11 of 26 scorable — recall dilution is
+  now the single largest measured gap → hybrid retrieval.
+
 Numbers in the sections below predate corpus v2 (measured on the 11-article
-corpus) and are kept as the baseline; re-baselining is in progress.
+corpus) and are kept as the baseline.
 
 ## 1. Verifier mutation test — catch rate on planted errors
 
