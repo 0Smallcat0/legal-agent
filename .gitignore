@@ -28,3 +28,5 @@ evals/golden_case_lines.txt
 Thumbs.db
 .idea/
 .vscode/
+db/*.npy
+db/*.keys.json
