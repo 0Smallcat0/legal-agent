@@ -101,6 +101,23 @@ def ensure_index(
     return keys, matrix
 
 
+def load_index(
+    stem: Path | str = _DEFAULT_STEM,
+) -> tuple[list[tuple[str, str, str]], np.ndarray]:
+    """Load the cached index WITHOUT touching the DB or Ollama — the runtime
+    path. Raises FileNotFoundError when no index has been built yet (callers
+    fall back to BM25); rebuild explicitly with:
+        python -m legal_agent.retrieval.dense
+    A stale index degrades smoothly: keys that no longer exist simply never
+    match a live candidate, and new articles just miss the dense boost."""
+    stem = Path(stem)
+    npy, keys_json = stem.with_suffix(".npy"), stem.with_suffix(".keys.json")
+    if not (npy.exists() and keys_json.exists()):
+        raise FileNotFoundError(f"dense index not built: {stem}")
+    keys = [tuple(k) for k in json.loads(keys_json.read_text(encoding="utf-8"))]
+    return keys, np.load(npy)
+
+
 def dense_rank(
     query: str,
     keys: list[tuple[str, str, str]],
@@ -124,3 +141,14 @@ def rrf_fuse(
         for rank, key in enumerate(ranking, start=1):
             scores[key] = scores.get(key, 0.0) + 1.0 / (k + rank)
     return sorted(scores, key=lambda key: (-scores[key], key))
+
+
+if __name__ == "__main__":  # python -m legal_agent.retrieval.dense  (build/refresh index)
+    import sqlite3 as _sqlite3
+
+    _conn = _sqlite3.connect(config.DB_PATH)
+    try:
+        _keys, _matrix = ensure_index(_conn)
+    finally:
+        _conn.close()
+    print(f"dense index ready: {len(_keys)} slices @ {_DEFAULT_STEM}.npy ({EMBED_MODEL})")

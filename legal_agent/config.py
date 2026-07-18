@@ -42,6 +42,13 @@ LLM_PROVIDER = "ollama"
 OLLAMA_HOST = "http://localhost:11434"
 OLLAMA_MODEL = "llama3.1:latest"   # 你本機已有;要更好的繁中可換 qwen3:latest 等
 
+# Hybrid retrieval (retrieval/dense.py): "auto" fuses BM25 with local-Ollama
+# bge-m3 embeddings via RRF when the index/daemon is available, and silently
+# falls back to pure BM25 on ANY failure; "off" = pure BM25 always.
+# BM25 scores still drive the honesty tier either way (the floor keeps its
+# meaning); dense only improves the ORDERING and recall of candidates.
+DENSE_RETRIEVAL = "auto"
+
 # When the provider is a real model (ollama/anthropic), let the model DRIVE the
 # intake conversation (natural, understands free-form input) instead of the
 # rule-based checklist. Ignored in "manual" mode (per-turn paste is impractical).
