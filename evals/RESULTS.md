@@ -64,6 +64,28 @@ retrieval+tier only):
 - Coverage pass 5 / partial 10 / miss 11 of 26 scorable — recall dilution is
   now the single largest measured gap → hybrid retrieval.
 
+**Hybrid retrieval groundwork (2026-07-18, `retrieval/dense.py`).** Live
+simulation supplied the smoking gun for BM25's vocabulary gap: the overtime
+query 「雇主不給加班費」 cannot reach 勞基法§24, whose text says
+「延長工作時間之工資」 — zero lexical overlap, BM25 rank >20 (top-5 even
+surfaced 刑法§201). Dense embeddings via local Ollama (zero new Python deps,
+optional like every model here), embedding model chosen by exam, not fashion:
+
+| 4-query everyday benchmark (target-article rank) | bm25 | nomic-embed-text | bge-m3 dense | hybrid (RRF) |
+|---|---|---|---|---|
+| 網購退貨 → 消保§19 | none | 925 | **1** | **1** |
+| 遺產怎麼分 → 民法§1138 | 20 | 1524 | **1** | 5 |
+| 押金不還 → 租賃條例§7 | 1 | 28 | 2 | **1** |
+| 加班費 → 勞基§24 | none | 408 | 37 | 58 |
+
+nomic-embed-text failed Traditional-Chinese legal text outright (even with its
+task prefixes) and was rejected; **bge-m3** is the shipped default. RRF fusion
+(rank-based, no tuned weights) keeps BM25's exact-term strength while dense
+closes the paraphrase gap. Not yet wired into Stage 3 — next step: a config
+flag + full golden-v2 re-measurement before the pipeline switches over. The
+加班費 row shows honest headroom: statutory phrasing sits far from everyday
+wording even for bge-m3.
+
 Numbers in the sections below predate corpus v2 (measured on the 11-article
 corpus) and are kept as the baseline.
 
