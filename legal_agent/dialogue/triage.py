@@ -9,8 +9,12 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-# One discriminating question (spec §3.2) for vague openings.
-DISCRIMINATING_QUESTION = "主要困擾是噪音、漏水、占用空間,還是言語衝突?"
+# One discriminating question (spec §3.2) for vague openings. Corpus v2 covers
+# far more than neighbour disputes — the options must not suggest otherwise.
+DISCRIMINATING_QUESTION = (
+    "可以多說一點嗎?例如:這是租屋、勞資、消費、車禍、家事,"
+    "還是鄰里(噪音/漏水)類的問題?發生了什麼事?"
+)
 
 # Keyword rules (lowercased; Chinese is unaffected by lower()). Noise is checked
 # FIRST because it is the built scenario (e.g. 狗吠/很吵 -> noise, not pets).
