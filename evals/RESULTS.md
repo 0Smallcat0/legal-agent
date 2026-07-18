@@ -94,6 +94,17 @@ with the live hybrid: coverage **miss 11 → 9, partial 10 → 12** (pass+partia
 untouched, exactly as designed. Rebuild the index after corpus changes with
 `python -m legal_agent.retrieval.dense`.
 
+**Dense-query focusing (generic flow only).** Process facts are semantic
+noise for the dense half: 勞基§24 ranks **34** against the full fact string
+but **5** against problem+goal alone. Stage 3 now sends the focused
+problem+goal text to the dense half for GENERIC cases while BM25 keeps the
+full fact string. Scenario checklists deliberately don't focus — measured
+first: focusing noise-case fields dropped golden coverage (「報過警」/
+「管委會」 are content there, not process). Net golden effect: generic cases
+gain, noise cases unchanged. Honest residue: in-14 (責任制加班費, a
+single-fact golden case) still misses §24 at k=5 — k=8 was measured and does
+NOT help; the everyday-vs-statutory phrasing distance remains the frontier.
+
 Numbers in the sections below predate corpus v2 (measured on the 11-article
 corpus) and are kept as the baseline.
 

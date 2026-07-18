@@ -70,6 +70,26 @@ def assemble_fact_query(collected_facts: dict) -> str:
     return "  ".join(str(v).strip() for v in collected_facts.values() if str(v).strip())
 
 
+# GENERIC-flow content fields carry the semantic core; process facts
+# (timeline, actions_taken) are dense noise — measured: 勞基§24 ranks 34 on
+# the full fact string, 5 on problem+goal alone. Scenario checklists (noise)
+# deliberately DON'T focus: there 「報過警」/「管委會」 are content, and
+# focusing measurably hurt golden coverage — their dense half keeps the full
+# fact string (assemble returns None).
+_DENSE_QUERY_FIELDS = ("problem", "goal")
+
+
+def assemble_dense_query(collected_facts: dict) -> str | None:
+    """Focused text for the dense half of hybrid retrieval; None -> the full
+    fact query is used for both halves (nothing focused to offer)."""
+    parts = [
+        str(collected_facts[f]).strip()
+        for f in _DENSE_QUERY_FIELDS
+        if str(collected_facts.get(f) or "").strip()
+    ]
+    return "  ".join(parts) or None
+
+
 def _render_articles(retrieved: list[Statute]) -> str:
     if not retrieved:
         return "(未檢索到任何法源)"
@@ -142,7 +162,10 @@ def run_stage3(
     an asserted premise (Mech 5). Flagged citations are NOT deleted/regenerated (§2.3).
     """
     fact_query = assemble_fact_query(collected_facts)
-    scored = retriever.retrieve_scored(fact_query, as_of_date, conn=conn)  # EXACTLY ONCE
+    scored = retriever.retrieve_scored(
+        fact_query, as_of_date, conn=conn,
+        dense_query=assemble_dense_query(collected_facts),
+    )  # EXACTLY ONCE
     retrieved = [s for s, _ in scored]
     scores = [sc for _, sc in scored]
 
