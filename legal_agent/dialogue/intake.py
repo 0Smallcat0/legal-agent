@@ -60,12 +60,50 @@ NOISE_CHECKLIST: list[list[IntakeField]] = [
 
 ALL_FIELD_KEYS: list[str] = [f.key for batch in NOISE_CHECKLIST for f in batch]
 
+# Generic fallback checklist (spec §3.4: non-noise problems get a shallower
+# flow instead of a dead end). Two batches, four facts — enough for one good
+# retrieval query, honest about being thinner than a scenario checklist.
+GENERIC_CHECKLIST: list[list[IntakeField]] = [
+    [
+        IntakeField(
+            "problem",
+            "發生了什麼事?對方是誰(例:房東、雇主、賣家、鄰居)?",
+            "鎖定法律關係與爭點",
+        ),
+        IntakeField(
+            "goal",
+            "你希望達成什麼結果(例:拿回款項、要求停止、請求賠償)?",
+            "決定救濟方向",
+        ),
+    ],
+    [
+        IntakeField(
+            "timeline",
+            "事情何時發生?持續多久了?",
+            "確認時效與事實時點",
+        ),
+        IntakeField(
+            "actions_taken",
+            "已經採取過哪些行動(例:溝通、存證、申訴)?",
+            "決定下一步升級",
+        ),
+    ],
+]
+
+
+def _checklist(session_state) -> list[list[IntakeField]]:
+    """noise keeps its hand-designed checklist; everything else gets the
+    generic fallback (problem_type is duck-typed off the session state)."""
+    if getattr(session_state, "problem_type", None) == "noise":
+        return NOISE_CHECKLIST
+    return GENERIC_CHECKLIST
+
 
 def next_questions(session_state) -> list[IntakeField]:
     """Return the next batch of still-unanswered fields (2-3), or [] when the
     whole checklist is complete. Reads session_state.collected_facts (duck-typed
     to avoid a circular import with flow)."""
-    for batch in NOISE_CHECKLIST:
+    for batch in _checklist(session_state):
         unanswered = [f for f in batch if f.key not in session_state.collected_facts]
         if unanswered:
             return unanswered

@@ -150,6 +150,47 @@ def _is_specific_venue(noise_type: str) -> bool:
     return any(kw in nt for kw in _SPECIFIC_VENUE)
 
 
+GENERIC_NOTE = (
+    "通用流程:主管機關依問題領域而異(勞資→勞工局、消費→消保官/消基會、"
+    "租屋→地方政府住宅主管機關、車禍→鄉鎮市調解委員會/法院)。"
+    "本階梯為一般順序,個案請以檢索到的法條與主管機關指引為準。"
+)
+
+
+def build_generic_ladder(collected_facts: dict) -> SolutionLadder:
+    """Generic escalation ladder for non-noise problems (spec §3.4 fallback):
+    same cheapest-first shape, no scenario-specific statutes baked in — the
+    legal basis for a generic case is whatever Stage 3 retrieved."""
+    rungs = [
+        Rung(
+            "evidence", "蒐證與書面紀錄",
+            "保存契約/對話紀錄/單據/照片,整理時間軸", (),
+            "免費", "隨時", "低", "把事實與證據整理成一頁時間軸", False, True,
+        ),
+        Rung(
+            "negotiate", "正式溝通與存證信函",
+            "以書面(LINE/email/存證信函)明確提出請求與期限", (),
+            "低", "數天", "低", "寄出書面請求,保留送達證明", False, False,
+        ),
+        Rung(
+            "mediate", "調解",
+            "鄉鎮市(區)調解委員會或主管機關調解,免費且具執行力", (),
+            "免費", "數週", "中", "向所在地調解委員會聲請調解", False, False,
+        ),
+        Rung(
+            "authority", "主管機關申訴/檢舉",
+            "向該領域主管機關申訴(勞工局/消保官/住宅主管機關等)", (),
+            "免費", "數週", "中", "備妥證據向主管機關提出申訴", False, False,
+        ),
+        Rung(
+            "litigation", "民事訴訟(最後手段)",
+            "小額/簡易/通常程序,依金額與案情選擇", (),
+            "中~高", "數月以上", "高", "評估金額與勝算,必要時諮詢律師", False, False,
+        ),
+    ]
+    return SolutionLadder(rungs=rungs, note=GENERIC_NOTE)
+
+
 def build_solution_ladder(collected_facts: dict, retrieved=None) -> SolutionLadder:
     """Build the ranked 住宅噪音 escalation ladder from the collected facts.
 

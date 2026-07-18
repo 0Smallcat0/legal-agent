@@ -32,6 +32,7 @@ class SessionState:
     collected_facts: dict[str, str] = field(default_factory=dict)
     pending_questions: list[str] = field(default_factory=list)  # field keys asked last turn
     user_text: str | None = None   # the opening complaint (fed to Mechanism 5)
+    asked_discriminating: bool = False  # the one ambiguous-case question was used
 
 
 @dataclass
@@ -81,9 +82,21 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
             batch = intake.next_questions(state)
             state.pending_questions = [f.key for f in batch]
             return "好的,聽起來是住宅噪音問題。\n" + _render_batch(batch), state
-        if result.kind == "other":
-            state.problem_type = result.problem_type
-            return result.message, state
+        if result.kind == "other" or state.asked_discriminating:
+            # Generic fallback (spec §3.4): non-noise problems get the shallow
+            # intake instead of a dead end — the corpus covers far more than
+            # noise now. Keep the finer other:* label when triage produced one.
+            state.problem_type = result.problem_type or "generic"
+            state.stage = Stage.INTAKE
+            if state.collected_facts.get("problem") is None:
+                # seed with the ORIGINAL complaint plus this turn's clarifying
+                # reply (when they differ) — nothing the user typed is dropped
+                parts = [p.strip() for p in (state.user_text, user_message) if p and p.strip()]
+                state.collected_facts["problem"] = " / ".join(dict.fromkeys(parts))
+            batch = intake.next_questions(state)
+            state.pending_questions = [f.key for f in batch]
+            return "好的,先幫我補齊幾個關鍵事實。\n" + _render_batch(batch), state
+        state.asked_discriminating = True
         return result.question, state
 
     if state.stage is Stage.INTAKE:
@@ -115,7 +128,10 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         state.collected_facts, llm=llm, as_of_date=as_of_date, conn=conn,
         user_text=state.user_text,
     )
-    ladder = solution.build_solution_ladder(state.collected_facts, retrieved=s3.retrieved)
+    if state.problem_type == "noise":
+        ladder = solution.build_solution_ladder(state.collected_facts, retrieved=s3.retrieved)
+    else:
+        ladder = solution.build_generic_ladder(state.collected_facts)
     return PipelineResult(
         answer=s3.answer,
         honesty_tier=s3.honesty_tier,
