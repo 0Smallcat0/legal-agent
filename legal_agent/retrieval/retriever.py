@@ -113,6 +113,7 @@ def _retrieve_scored(
     as_of_date: str | None,
     k: int,
     conn: sqlite3.Connection | None,
+    dense_query: str | None = None,
 ) -> list[tuple[Statute, float]]:
     """Shared core for retrieve() and retrieve_scored(): point-in-time filter ->
     BM25 -> lexical-overlap inclusion -> BM25 ordering -> top-k (Statute, score)."""
@@ -154,7 +155,7 @@ def _retrieve_scored(
     matches.sort(key=lambda i: scores[i], reverse=True)
     ranked = [(candidates[i], float(scores[i])) for i in matches]
 
-    fused = _dense_fuse(query, candidates, ranked)
+    fused = _dense_fuse(dense_query or query, candidates, ranked)
     return (fused if fused is not None else ranked)[:k]
 
 
@@ -225,7 +226,14 @@ def retrieve_scored(
     as_of_date: str | None = None,
     k: int = DEFAULT_K,
     conn: sqlite3.Connection | None = None,
+    dense_query: str | None = None,
 ) -> list[tuple[Statute, float]]:
     """Same as retrieve() but returns (Statute, BM25 score) pairs, ranked. The
-    score is the relevance signal for Stage 3's Mechanism-3 honesty tier."""
-    return _retrieve_scored(query, as_of_date, k, conn)
+    score is the relevance signal for Stage 3's Mechanism-3 honesty tier.
+
+    dense_query: optional FOCUSED text for the dense half of the hybrid (the
+    semantic core — problem/goal), while `query` (the full fact set) still
+    drives BM25's exact-term matching. Measured: the overtime target 勞基§24
+    ranks 34 on the full fact string but 5 on problem+goal alone — process
+    facts (「持續一年」「問過人資被拒」) are semantic noise. None = use `query`."""
+    return _retrieve_scored(query, as_of_date, k, conn, dense_query=dense_query)
