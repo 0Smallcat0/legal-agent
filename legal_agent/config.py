@@ -49,6 +49,13 @@ OLLAMA_MODEL = "llama3.1:latest"   # 你本機已有;要更好的繁中可換 qw
 # meaning); dense only improves the ORDERING and recall of candidates.
 DENSE_RETRIEVAL = "auto"
 
+# Query expansion (retrieval/lexicon.py): "on" appends hand-curated statutory
+# vocabulary when everyday trigger words appear (「精神賠償」 -> 「非財產上之
+# 損害」), bridging the gap between how people speak and how statutes are
+# written. Retrieval-side only — the answer, citations and verifier are
+# untouched. "off" = raw user wording only.
+QUERY_EXPANSION = "on"
+
 # When the provider is a real model (ollama/anthropic), let the model DRIVE the
 # intake conversation (natural, understands free-form input) instead of the
 # rule-based checklist. Ignored in "manual" mode (per-turn paste is impractical).

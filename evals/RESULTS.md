@@ -101,9 +101,45 @@ problem+goal text to the dense half for GENERIC cases while BM25 keeps the
 full fact string. Scenario checklists deliberately don't focus — measured
 first: focusing noise-case fields dropped golden coverage (「報過警」/
 「管委會」 are content there, not process). Net golden effect: generic cases
-gain, noise cases unchanged. Honest residue: in-14 (責任制加班費, a
-single-fact golden case) still misses §24 at k=5 — k=8 was measured and does
-NOT help; the everyday-vs-statutory phrasing distance remains the frontier.
+gain, noise cases unchanged.
+
+**口語→法條語彙 expansion (2026-07-19, `retrieval/lexicon.py`) — the frontier
+moved.** People name the HARM (「失眠」「精神困擾」「網購退貨」); statutes name
+the LEGAL CONCEPT (「不法侵害他人之身體、健康」「非財產上之損害」「通訊交易…
+解除契約」). A hand-curated table appends the statutory wording when everyday
+triggers appear; every statutory term is copied verbatim from a corpus article
+(pinned by a test that greps the live corpus), and expansion only ever ADDS.
+
+| golden v2, k=8 | pass | partial | miss | pass+partial | tier |
+|---|---|---|---|---|---|
+| expansion off | 5 | 12 | 9 | 65% | 23/30 |
+| **expansion on** | **13** | 10 | **3** | **88%** | 23/30 |
+
+Honesty is untouched (tier identical; out-of-scope cases carry no triggers, so
+they are never widened).
+
+**The false positive that shaped the design.** A first version fed expanded
+terms into the lexical-overlap INCLUSION test as well. It scored higher — and
+was wrong: 「同一順序之繼承人」, added for an inheritance question, collided
+with 民法§195's 「不得讓與或繼承」 and turned an out-of-scope question into a
+confident answer. Fixed by splitting the two roles: **the user's own words
+decide match / no-match, expanded terms only decide ORDER.** The measured gain
+survived the fix (96% → 88%, still up from 65%) and the out-of-scope guard came
+back.
+
+**Correction to a previously published number.** This session's earlier claim
+that "k=8 was measured and does not help" was produced by a broken experiment:
+`retrieve_scored`'s `k=DEFAULT_K` default binds at definition time, so
+reassigning the module constant changed nothing. Re-run properly, k moves
+partial→pass (k=5: 11 pass, k=8: 13, k=12: 14) at a flat 88% pass+partial;
+`DEFAULT_K` is now **8** — everyday problems legitimately span several statutes,
+and a 5-slot window truncated correct answers.
+
+Remaining honest misses: 民法§184/§195 in a pure-noise fact pattern (the
+generic tort articles stay outranked by the on-point noise statutes), and
+ts-01, which asks about a **2024** dispute while the corpus holds only the
+current 噪音管制法 slice (effective 2025-12-26) — the point-in-time filter
+correctly refuses it. That is a corpus-history gap, not a retrieval bug.
 
 Numbers in the sections below predate corpus v2 (measured on the 11-article
 corpus) and are kept as the baseline.
