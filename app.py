@@ -34,7 +34,10 @@ from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
 from legal_agent.retrieval.retriever import retrieve_scored
 
 # ── content ──────────────────────────────────────────────────────────────────
-GREETING = "請描述你遇到的問題。例:樓上鄰居半夜持續喧嘩,報警後仍未改善。"
+GREETING = (
+    "請描述你遇到的問題。例:退租後房東不退押金、公司用責任制不給加班費、"
+    "網購瑕疵品賣家不退款、樓上半夜噪音。"
+)
 
 # A deliberately-broken sample answer: one wrong amount, one statute not in the
 # corpus, and one TYPO'd statute name (公寀≠公寓) — mirrors what the live 8B
@@ -47,14 +50,40 @@ SAMPLE_GOOD_ANSWER = (
     "依社會秩序維護法第72條,製造噪音或深夜喧嘩妨害公眾安寧、不聽禁止者,"
     "可處新臺幣一萬元以下罰鍰。"
 )
+# A second broken sample, from the everyday-law side of the corpus. BOTH
+# defects are ones the verifier actually catches — a demo must not advertise
+# a catch it cannot make: an invented fine (§7 caps the deposit and prescribes
+# no 罰鍰) and a nonexistent article number.
+SAMPLE_BAD_ANSWER_2 = (
+    "依租賃住宅市場發展及管理條例第7條,房東不退押金可處新臺幣五萬元罰鍰;"
+    "另依消費者保護法第99條,網購商品得無條件退貨。"
+)
+# Retrieval tab default: a noise complaint, because that tab demonstrates the
+# POINT-IN-TIME filter and 社維法§72's current slice took effect 2025-06-11.
 DEFAULT_QUERY = "深夜喧嘩爭吵 半夜 幾乎每天 公寓大廈 管理委員會"
+# Everyday queries for the same tab — they show corpus breadth (rent, labor,
+# consumer, inheritance), where the date makes no difference.
+RETRIEVAL_EXAMPLES = [
+    ["退租後房東不退押金,說要抵違約金"],
+    ["公司說責任制,加班沒有加班費"],
+    ["網購買到瑕疵品,賣家不讓退貨"],
+    ["父親過世,兄弟姊妹要分遺產"],
+]
 
+# Intake field keys → 中文 labels. Covers BOTH checklists: the 住宅噪音
+# scenario and the generic flow every other problem falls through to.
 _FIELD_ZH = {
+    # 通用流程
+    "problem": "問題與對象",
+    "goal": "希望的結果",
+    "timeline": "時間與經過",
+    # 住宅噪音情境
     "noise_type": "噪音類型",
     "timing": "時段與頻率",
     "building_type": "建物型態",
     "impact": "影響",
     "evidence": "證據",
+    # 兩者共用
     "actions_taken": "已採取行動",
 }
 
@@ -139,13 +168,14 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">134 項測試通過 · 植入錯誤抓取率 31/31 · 不需任何 API 金鑰</p>
+  <p class="meta">173 項測試通過 · 植入錯誤抓取率 9,833/9,833(零誤報) · 不需任何 API 金鑰</p>
 </div>
 """
 
 FOOTER = """
-<p class="disclaimer">工程實驗,非法律意見,不能取代律師。法源為官方公開資料逐字節錄;
-現僅涵蓋「住宅噪音」單一情境(11 筆,全數人工核對)。</p>
+<p class="disclaimer">工程實驗,非法律意見,不能取代律師。法源為全國法規資料庫官方
+公開資料逐字匯入(11 部民生法規、2,561 條);「住宅噪音」有專屬問診流程,
+其他問題走通用流程。資料庫未涵蓋的領域,系統會直接說不知道。</p>
 """
 
 
@@ -405,8 +435,8 @@ def compare_timeslice(query: str) -> str:
 # ── 評測結果 ─────────────────────────────────────────────────────────────────
 STATS = """
 <div class="statgrid">
-  <div class="stat"><div class="num">31/31</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
-  <div class="stat"><div class="num">84%</div><div class="lbl">法條涵蓋率(含部分命中)</div></div>
+  <div class="stat"><div class="num">9,833/9,833</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
+  <div class="stat"><div class="num">88%</div><div class="lbl">法條涵蓋率(含部分命中)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(25/25)</div></div>
   <div class="stat"><div class="num">0–5%</div><div class="lbl">裸模型引用可回溯率(對照組)</div></div>
 </div>
@@ -437,12 +467,15 @@ with gr.Blocks(title="Legal Agent") as demo:
                     btn_reset = gr.Button("重新開始")
                 gr.Examples(
                     examples=[
+                        ["退租後房東說房子有損耗,要扣我兩個月押金,合理嗎?"],
+                        ["公司說我們是責任制,加班都沒有加班費,這樣合法嗎?"],
+                        ["網購買到瑕疵品,賣家不讓我退貨退款,怎麼辦?"],
                         ["樓上鄰居半夜一直搬東西敲打,幾乎每天,我有錄影,報過警但沒用"],
-                        ["隔壁住戶的狗整天吠叫,管委會可以管嗎"],
                         ["樓上半夜有腳步聲,這構成恐嚇罪吧,我要告他!"],
+                        ["我的品牌名稱被別人搶先註冊商標,可以要回來嗎?"],
                     ],
                     inputs=[msg_in],
-                    label="範例開場",
+                    label="範例開場(最後一則資料庫未涵蓋,系統應誠實說不知道)",
                 )
             with gr.Column(scale=7):
                 consult_out = gr.HTML(label="諮詢結果")
@@ -456,7 +489,12 @@ with gr.Blocks(title="Legal Agent") as demo:
         btn_reset.click(consult_reset, [], [chat, consult_state, consult_out, msg_in])
 
     with gr.Tab("引用查核"):
-        gr.Markdown("獨立工具:檢驗任一 AI 法律回答的引用能否回溯至資料庫。預設範例含三處錯誤。")
+        gr.Markdown(
+            "獨立工具:檢驗任一 AI 法律回答的引用能否回溯至資料庫 —— "
+            "條號是否存在、內容與逐字條文是否相符、在基準日是否仍有效。"
+            "預設範例含三處錯誤(金額誇大、條號不存在、法規名稱錯字);"
+            "第二則是民生法規版(押金罰鍰虛構、消保法條號不存在)。"
+        )
         with gr.Row():
             with gr.Column(scale=5):
                 ans_in = gr.Textbox(value=SAMPLE_BAD_ANSWER, lines=5, label="回答內容")
@@ -465,23 +503,29 @@ with gr.Blocks(title="Legal Agent") as demo:
                 gr.Examples(
                     examples=[
                         [SAMPLE_BAD_ANSWER, ""],
+                        [SAMPLE_BAD_ANSWER_2, ""],
                         [SAMPLE_GOOD_ANSWER, ""],
                         [SAMPLE_GOOD_ANSWER, "2024-06-01"],
                     ],
                     inputs=[ans_in, asof_1],
-                    label="範例:錯誤回答 / 正確回答 / 正確條文但 2024 時點尚未生效",
+                    label="範例:噪音錯誤版 / 民生錯誤版 / 正確版 / 正確條文但 2024 時點尚未生效",
                 )
             with gr.Column(scale=7):
                 out_check = gr.HTML()
         btn_check.click(check_citations, [ans_in, asof_1], out_check)
 
     with gr.Tab("法規檢索"):
-        gr.Markdown("同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。")
+        gr.Markdown(
+            "資料庫收錄 11 部民生法規、2,561 條條文(民法、刑法、消保法、勞基法、"
+            "道交條例、公寓大廈、租賃住宅、家暴法、噪音管制、社維法)。\n\n"
+            "同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。"
+        )
         q_in = gr.Textbox(value=DEFAULT_QUERY, label="事實描述")
         with gr.Row():
             asof_2 = gr.Textbox(value="", label="基準日", placeholder="YYYY-MM-DD,留空為現行", scale=3)
             btn_retr = gr.Button("檢索", variant="primary", scale=1)
             btn_cmp = gr.Button("現行與 2024-06-01 對照", scale=2)
+        gr.Examples(examples=RETRIEVAL_EXAMPLES, inputs=[q_in], label="其他民生範例")
         out_retr = gr.HTML()
         btn_retr.click(explore_retrieval, [q_in, asof_2], out_retr)
         btn_cmp.click(compare_timeslice, [q_in], out_retr)
