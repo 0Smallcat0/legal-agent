@@ -193,7 +193,12 @@ def run_stage3(
         honesty_label = MARGINAL_PREFIX
         answer = MARGINAL_PREFIX + "\n" + answer
 
-    verifications = verifier.verify_answer(answer, retrieved, as_of_date)
+    # Verified against what was RETRIEVED (retrieval-first) — `corpus_conn` is
+    # diagnosis only: it lets a flag say "real article, just not retrieved this
+    # time" instead of wrongly implying the source does not exist.
+    verifications = verifier.verify_answer(
+        answer, retrieved, as_of_date, corpus_conn=conn
+    )
     flagged = sum(1 for v in verifications if v.flagged)
 
     law_section, practice_section, analysis_section = split_sections(answer)

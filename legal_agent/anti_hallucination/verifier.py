@@ -199,6 +199,24 @@ def _slices(statute_id, article_no, retrieved_context, conn):
             if s.statute_id == statute_id and s.article_no == article_no]
 
 
+def _missing_reason(citation: Citation, corpus_conn: sqlite3.Connection | None) -> str:
+    """Why a citation failed the exists axis, told accurately.
+
+    Without a corpus connection the verifier genuinely cannot tell a fabricated
+    article from a real one the retriever missed, so it says the weaker thing.
+    """
+    ref = f"{citation.statute_id}{citation.article_no}"
+    if corpus_conn is not None and corpus_conn.execute(
+        "SELECT 1 FROM statutes WHERE statute_id = ? AND article_no = ?",
+        (citation.statute_id, citation.article_no),
+    ).fetchone():
+        return (
+            f"{ref} 未出現在本次檢索結果中 — 模型可能憑記憶補充。"
+            "該條文確實存在於資料庫,但本次未被檢索到,故不採信此段引用"
+        )
+    return f"未出現在本次檢索結果中,且 corpus 查無此法源:{ref}"
+
+
 def _in_force(s: Statute, as_of_date: str | None) -> bool:
     if as_of_date is None:
         return s.effective_to is None
@@ -262,6 +280,7 @@ def verify_answer(
     as_of_date: str | None = None,
     conn: sqlite3.Connection | None = None,
     semantic_llm=None,
+    corpus_conn: sqlite3.Connection | None = None,
 ) -> list[VerificationResult]:
     """Verify every citation (條式 + 文號式) in `answer_text` against the corpus.
     Also flags a 實務見解-tier source placed inside the 「法律明文」 section (位階誤植).
@@ -279,17 +298,24 @@ def verify_answer(
                 f"as_of_date must be ISO 'YYYY-MM-DD', got {as_of_date!r}"
             ) from exc
 
-    known = _known_ids(retrieved_context, conn)
+    # Name resolution may use the corpus even in retrieval-first mode: knowing
+    # which statute names EXIST only helps strip leading particles (依/按/及)
+    # correctly. It never makes an un-retrieved citation count as retrieved.
+    known = _known_ids(retrieved_context, conn or corpus_conn)
     law_span = _law_section_span(answer_text)
     results: list[VerificationResult] = []
 
     for citation, pos in _iter_citations(answer_text, known):
         slices = _slices(citation.statute_id, citation.article_no, retrieved_context, conn)
         if not slices:
+            # Retrieval-first is NOT relaxed — exists stays False and the claim
+            # stays flagged. But the two failures mean very different things to
+            # a reader, so say which one it is instead of always claiming the
+            # source does not exist.
             results.append(VerificationResult(
                 citation, exists=False, content_match=False, in_force=False,
                 verbatim_source=None, flagged=True,
-                reason=f"corpus 查無此法源:{citation.statute_id}{citation.article_no}",
+                reason=_missing_reason(citation, corpus_conn),
             ))
             continue
 

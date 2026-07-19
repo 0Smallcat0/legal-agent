@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-170%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
@@ -145,7 +145,7 @@ python -m legal_agent.cli seed
 python -m legal_agent.data.source_ingest corpus/moj_bulk_v1_proposal.json
 python -m legal_agent.data.source_ingest corpus/noise_routing_proposal.json
 
-python -m pytest -q          # 149 passing
+python -m pytest -q          # 173 passing
 
 # (optional) scale the corpus: parse the official 全國法規資料庫 bulk XML into a
 # proposal file, review it by hand, then ingest through the same validated path
@@ -192,7 +192,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (158 tests),
+five gates → dialogue → solution ladder — is implemented and green (173 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).

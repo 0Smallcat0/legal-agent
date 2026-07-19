@@ -184,6 +184,31 @@ def test_correct_in_force_faithful_citation_not_flagged(real_conn):
     assert r.reason == ""
 
 
+def test_unretrieved_but_real_article_says_so(real_conn):
+    # retrieval-first is NOT relaxed: a citation outside the retrieved set is
+    # still exists=False and flagged. But the REASON must not claim the corpus
+    # has no such article when it plainly does — that misleads the reader.
+    answer = "依社會秩序維護法第72條,可處罰鍰。"
+    r = verify_answer(answer, [], conn=None, corpus_conn=real_conn)[0]
+    assert r.exists is False and r.flagged is True
+    assert "未出現在本次檢索結果中" in r.reason
+    assert "確實存在於資料庫" in r.reason
+
+
+def test_fabricated_article_is_named_as_absent_from_corpus(real_conn):
+    answer = "依台灣安寧保障法第3條,住戶應保持安寧。"
+    r = verify_answer(answer, [], conn=None, corpus_conn=real_conn)[0]
+    assert r.exists is False and r.flagged is True
+    assert "corpus 查無此法源" in r.reason
+
+
+def test_without_corpus_conn_the_weaker_claim_is_made(real_conn):
+    # no corpus connection -> the verifier genuinely cannot tell the two apart
+    r = verify_answer("依社會秩序維護法第72條,可處罰鍰。", [])[0]
+    assert r.flagged is True
+    assert "確實存在於資料庫" not in r.reason
+
+
 def test_direction_flip_flagged(real_conn):
     # Corpus §72 says 一萬元以下; claiming the SAME amount 以上 is the
     # direction_flip blind spot the mutation test exposed — must flag.

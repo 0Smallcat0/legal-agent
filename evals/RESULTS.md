@@ -135,6 +135,16 @@ partial→pass (k=5: 11 pass, k=8: 13, k=12: 14) at a flat 88% pass+partial;
 `DEFAULT_K` is now **8** — everyday problems legitimately span several statutes,
 and a 5-slot window truncated correct answers.
 
+**A flag that lied, found by simulation.** Running a real noise-damages
+consultation through llama3.1, the verifier flagged 社維§72 with 「corpus
+查無此法源」 — but that article is in the corpus; it simply was not retrieved
+that turn. Retrieval-first is unchanged (an un-retrieved citation is still
+`exists=False` and still flagged — the model went outside its sources), but
+the reason now distinguishes the two cases: **「未出現在本次檢索結果中 — 模型
+可能憑記憶補充。該條文確實存在於資料庫」** vs 「corpus 查無此法源」 for a truly
+fabricated one. Without a corpus connection the verifier says the weaker thing,
+because it genuinely cannot tell. Mutation suite unaffected (9 833/9 833, 0 FP).
+
 Remaining honest misses: 民法§184/§195 in a pure-noise fact pattern (the
 generic tort articles stay outranked by the on-point noise statutes), and
 ts-01, which asks about a **2024** dispute while the corpus holds only the
