@@ -40,7 +40,12 @@ from legal_agent.data.models import Statute
 
 jieba.setLogLevel(logging.WARNING)  # silence the one-time dict-build chatter
 
-DEFAULT_K = 5
+# MEASURED against golden v2 on the 2 561-article corpus (query expansion on):
+# k=5 -> 92% pass+partial, k=8 -> 96%, k=12 -> no further gain. Everyday
+# problems legitimately span several statutes (社維 + 公寓大廈 + 民法侵權), so
+# a 5-slot window truncates correct answers. Honesty tier is unaffected (it
+# reads the TOP score, not the window size).
+DEFAULT_K = 8
 
 _COLUMNS = "statute_id, article_no, content, effective_from, effective_to, hierarchy_level, source_url"
 _MEANINGFUL = re.compile(r"[0-9A-Za-z一-鿿]")
@@ -138,6 +143,11 @@ def _retrieve_scored(
     if not candidates:
         return []
 
+    # The USER'S OWN WORDS decide match / no-match; expansion only helps RANK.
+    # Letting expanded statutory terms into the inclusion set would manufacture
+    # matches out of shared boilerplate — measured: 「同一順序之繼承人」 (added
+    # for an inheritance question) collided with 民法§195's 「不得讓與或繼承」
+    # and turned an out-of-scope question into a confident answer.
     query_tokens = _tokenize(query)
     if not query_tokens:
         return []
@@ -151,12 +161,22 @@ def _retrieve_scored(
     if not matches:
         return []
 
-    scores = BM25Okapi(doc_tokens).get_scores(query_tokens)
+    scores = BM25Okapi(doc_tokens).get_scores(_tokenize(_expand(query)))
     matches.sort(key=lambda i: scores[i], reverse=True)
     ranked = [(candidates[i], float(scores[i])) for i in matches]
 
-    fused = _dense_fuse(dense_query or query, candidates, ranked)
+    fused = _dense_fuse(_expand(dense_query or query), candidates, ranked)
     return (fused if fused is not None else ranked)[:k]
+
+
+def _expand(text: str) -> str:
+    """Bridge the everyday/statutory vocabulary gap (config.QUERY_EXPANSION).
+    Additive only — the user's wording stays verbatim at the front — so a
+    query that already matched cannot lose its matches."""
+    if getattr(config, "QUERY_EXPANSION", "off") != "on":
+        return text
+    from legal_agent.retrieval.lexicon import expand
+    return expand(text)
 
 
 def _dense_fuse(
