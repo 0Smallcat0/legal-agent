@@ -45,6 +45,58 @@ def test_parse_falls_back_when_no_json():
     assert t.facts == {"x": "y"}
 
 
+def test_generic_prompt_lists_generic_fields_only():
+    prompt = si.build_intake_prompt([], {}, problem_type="generic")
+    assert "problem" in prompt and "goal" in prompt
+    assert "noise_type" not in prompt
+    assert "民生法律諮詢" in prompt and "問診助理" in prompt
+    # the noise prompt is untouched by the generalisation
+    assert si.INTAKE_SYSTEM_PROMPT == si.build_system_prompt("noise")
+    assert "住宅噪音" in si.INTAKE_SYSTEM_PROMPT
+
+
+def test_parse_uses_the_active_checklists_whitelist():
+    t = si.parse_intake_response(
+        '{"reply":"ok","facts":{"goal":"退還押金","noise_type":"x"},"ready":false}',
+        {}, problem_type="generic",
+    )
+    assert t.facts == {"goal": "退還押金"}   # noise keys are not generic fields
+
+
+def test_smart_conversation_generic_opening_reaches_diagnosis(real_conn):
+    prompts = []
+
+    def fake_llm(prompt):
+        prompts.append(prompt)
+        if "問診助理" in prompt:
+            return (
+                '```json\n{"reply":"了解,我幫你看押金問題","facts":{'
+                '"problem":"退租後房東拒退押金","goal":"拿回押金",'
+                '"timeline":"上個月退租","actions_taken":"打過電話催討"},"ready":true}\n```'
+            )
+        return (
+            "法律明文:(無)\n"
+            "實務見解:以下為主管機關實務見解/處理原則,非法律明文,僅供參考。(無)\n"
+            "分析研判:僅供參考。"
+        )
+
+    inputs = iter(["房東退租不還我押金,怎麼辦?"])
+
+    def fake_input(prompt=""):
+        try:
+            return next(inputs)
+        except StopIteration:
+            raise EOFError
+
+    outputs = []
+    run.run_smart_conversation(fake_llm, real_conn, input_fn=fake_input, output_fn=outputs.append)
+
+    text = "\n".join(outputs)
+    assert "了解,我幫你看押金問題" in text          # generic intake reply surfaced
+    assert "資訊已足夠" in text                       # ready with FOUR generic fields
+    assert any("民生法律諮詢" in p for p in prompts)  # generic prompt was used
+
+
 def test_run_smart_intake_turn_calls_llm_once():
     calls = {"n": 0}
 

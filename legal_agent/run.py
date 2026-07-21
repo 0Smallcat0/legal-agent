@@ -176,14 +176,15 @@ def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
     to `llm`) can be a JSON-constrained backend so a small local model extracts
     facts reliably. Injectable IO for tests.
     """
-    from legal_agent.dialogue.intake import ALL_FIELD_KEYS
-    from legal_agent.dialogue.smart_intake import run_smart_intake_turn
+    from legal_agent.dialogue.smart_intake import field_keys, run_smart_intake_turn
+    from legal_agent.dialogue.triage import classify
 
     intake_llm = intake_llm or llm
     output_fn(_WELCOME_SMART)
     history: list[dict] = []
     facts: dict = {}
     user_text: str | None = None
+    problem_type = "generic"
     turns = 0
     while True:
         try:
@@ -200,21 +201,28 @@ def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
 
         if user_text is None:
             user_text = msg
+            # Same coarse triage as the rule-based flow: the built noise
+            # scenario keeps its deep checklist; everything else (incl.
+            # ambiguous openings — the LLM asks its own follow-ups) gets the
+            # generic four-field intake instead of a noise questionnaire.
+            problem_type = "noise" if classify(msg).kind == "noise" else "generic"
         history.append({"role": "user", "content": msg})
         turns += 1
 
-        turn = run_smart_intake_turn(history, facts, intake_llm)
+        turn = run_smart_intake_turn(history, facts, intake_llm, problem_type)
         facts = turn.facts
         history.append({"role": "assistant", "content": turn.reply})
         output_fn(turn.reply)
 
         done_signal = msg.strip() in _DONE_WORDS or any(p in msg for p in _DONE_PHRASES)
-        ready = turn.ready or done_signal or all(k in facts for k in ALL_FIELD_KEYS) or turns >= max_turns
+        ready = (turn.ready or done_signal
+                 or all(k in facts for k in field_keys(problem_type))
+                 or turns >= max_turns)
         if ready:
             output_fn("\n(資訊已足夠——開始檢索法條並診斷;這一步只檢索一次)")
             state = flow.SessionState(
                 stage=flow.Stage.READY_FOR_STAGE3,
-                problem_type="noise",
+                problem_type=problem_type,
                 collected_facts=facts,
                 user_text=user_text,
             )
