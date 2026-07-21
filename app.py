@@ -39,9 +39,11 @@ GREETING = (
     "網購瑕疵品賣家不退款、樓上半夜噪音。"
 )
 
-# A deliberately-broken sample answer: one wrong amount, one statute not in the
-# corpus, and one TYPO'd statute name (公寀≠公寓) — mirrors what the live 8B
-# model actually did in the README demo. Every defect must be flagged.
+# A deliberately-broken sample answer mirroring the live 8B model's README-demo
+# output: one wrong amount and one TYPO'd statute name (公寀≠公寓) must be
+# flagged, while 噪音管制法第8條 must PASS — it was out of corpus in the
+# 11-article era but corpus v2 carries the full statute, so it is now a correct
+# citation (re-verified 2026-07-21; the tab copy must not promise three flags).
 SAMPLE_BAD_ANSWER = (
     "依社會秩序維護法第72條,深夜喧嘩可處新臺幣六萬元以下罰鍰。"
     "另依噪音管制法第8條及公寀大廈管理條例第16條,亦有相關管制。"
@@ -168,13 +170,13 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">173 項測試通過 · 植入錯誤抓取率 9,833/9,833(零誤報) · 不需任何 API 金鑰</p>
+  <p class="meta">177 項測試通過 · 植入錯誤抓取率 9,833/9,833(零誤報) · 不需任何 API 金鑰</p>
 </div>
 """
 
 FOOTER = """
 <p class="disclaimer">工程實驗,非法律意見,不能取代律師。法源為全國法規資料庫官方
-公開資料逐字匯入(11 部民生法規、2,561 條);「住宅噪音」有專屬問診流程,
+公開資料逐字匯入(11 部民生法規 2,560 條+警察分工實務指引);「住宅噪音」有專屬問診流程,
 其他問題走通用流程。資料庫未涵蓋的領域,系統會直接說不知道。</p>
 """
 
@@ -186,8 +188,9 @@ def ensure_db() -> None:
     conn = connect(config.DB_PATH)
     try:
         seed_source_hierarchy(conn)
-        # Corpus source of truth = official-XML proposals (2 561 articles across
-        # 11 statutes). The old hand-typed noise_seed is superseded — loading it
+        # Corpus source of truth = official-XML proposals (2 560 articles across
+        # 11 statutes, plus the police routing note and one capped historical
+        # slice). The old hand-typed noise_seed is superseded — loading it
         # here would create duplicate current slices next to the XML rows.
         for proposal_name in ("moj_bulk_v1_proposal.json", "noise_routing_proposal.json"):
             proposal_path = config.CORPUS_DIR / proposal_name
@@ -492,7 +495,8 @@ with gr.Blocks(title="Legal Agent") as demo:
         gr.Markdown(
             "獨立工具:檢驗任一 AI 法律回答的引用能否回溯至資料庫 —— "
             "條號是否存在、內容與逐字條文是否相符、在基準日是否仍有效。"
-            "預設範例含三處錯誤(金額誇大、條號不存在、法規名稱錯字);"
+            "預設範例三筆引用中兩處錯誤(金額誇大、法規名稱錯字)會被標記,"
+            "另一筆(噪音管制法第8條)為正確引用,應通過查核 —— 抓錯也不誤殺;"
             "第二則是民生法規版(押金罰鍰虛構、消保法條號不存在)。"
         )
         with gr.Row():
@@ -516,7 +520,7 @@ with gr.Blocks(title="Legal Agent") as demo:
 
     with gr.Tab("法規檢索"):
         gr.Markdown(
-            "資料庫收錄 11 部民生法規、2,561 條條文(民法、刑法、消保法、勞基法、"
+            "資料庫收錄 11 部民生法規、2,560 條條文(民法、刑法、消保法、勞基法、"
             "道交條例、公寓大廈、租賃住宅、家暴法、噪音管制、社維法)。\n\n"
             "同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。"
         )

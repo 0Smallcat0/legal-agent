@@ -3,13 +3,14 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-177%20passing-brightgreen)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
 > machine-verified against a time-versioned corpus, and the guardrails are
-> themselves tested by injecting errors** (43/43 seeded defects caught, 0 false
-> positives). The bet is not "zero errors" — it's **errors you can see.**
+> themselves tested by injecting errors** (9,833/9,833 seeded defects caught
+> across the full corpus, 0 false positives). The bet is not "zero errors" —
+> it's **errors you can see.**
 
 A 2025 Stanford study measured *professional* legal AI tools hallucinating
 17–33% of the time — funded products, with RAG. This project takes the hardest
@@ -42,15 +43,19 @@ before it's trusted.
 
 **2. Mutation-test your guardrails.**
 How do you know a verifier actually catches anything? Break answers on purpose.
-[`evaluation/mutation.py`](legal_agent/evaluation/mutation.py) injects 43
-seeded defects (fabricated statute, ghost article number, invented 之X
-sub-article, wrong amount, flipped 以下/以上 direction word, out-of-force
-citation) into otherwise-correct answers and measures the catch rate: **43/43
-caught, 0/10 false positives on clean answers**. The two newest mutation types
-each started at 0% — one exposed an amounts-only content match, the other a
-regex that laundered invented 之X sub-articles into their real parent article.
-Finding your own blind spots is precisely the point. A guardrail without this
-number is decoration.
+[`evaluation/mutation.py`](legal_agent/evaluation/mutation.py) injects seeded
+defects (fabricated statute, ghost article number, invented 之X sub-article,
+wrong amount, flipped 以下/以上 direction word, out-of-force citation) into
+otherwise-correct answers over every article in the corpus and measures the
+catch rate: **9,833/9,833 caught, 0/2,560 false positives on clean answers**.
+Two earlier mutation types each started at 0% — one exposed an amounts-only
+content match, the other a regex that laundered invented 之X sub-articles into
+their real parent article — and a 2026-07 re-verification run caught the
+harness itself assuming single-version articles (a capped historical slice
+legitimately covers "the day before the current version"; the mutation now
+dates its citation before the article's *earliest* slice). Finding your own
+blind spots is precisely the point. A guardrail without this number is
+decoration.
 
 **3. Time-sliced retrieval for versioned sources.**
 [`data/schema.sql`](legal_agent/data/schema.sql) keys statutes by
@@ -107,12 +112,14 @@ Free hosting recipe: [`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
 
 Full tables and method notes in [`evals/RESULTS.md`](evals/RESULTS.md); raw
 per-run data in `evals/ablation_raw.json`. **Corpus note:** the table below
-was measured on the original 11-article corpus; the corpus is now **2 561
-articles across 11 everyday-law statutes** (official-XML import, hand-typed
-golden sample matched character-for-character), the full-corpus mutation run
-holds **9 833/9 833 caught, 0/2 560 false positives**, and golden-set
-re-baselining is in progress — the honest details, including which numbers
-moved and why, are in RESULTS.md §0. Headlines:
+was measured on the original 11-article corpus; the corpus is now **2 560
+articles across 11 everyday-law statutes** plus a hand-verified police routing
+note and its first capped historical slice (official-XML import, hand-typed
+golden sample matched character-for-character). Current numbers: full-corpus
+mutation **9 833/9 833 caught, 0/2 560 false positives**; golden set
+re-baselined at 30 cases — **88% pass+partial statute coverage**, honesty
+tier 23/30, premise detection 30/30. The honest details, including which
+numbers moved and why, are in RESULTS.md §0. Headlines:
 
 | what | number |
 |---|---|
@@ -138,14 +145,15 @@ Requires **Python 3.10+**.
 ```bash
 pip install -r requirements.txt
 
-# build the SQLite schema + load the corpus (2 561 articles across 11 statutes
-# of everyday law, imported from the official 全國法規資料庫 bulk XML)
+# build the SQLite schema + load the corpus (2 560 articles across 11 statutes
+# of everyday law, imported from the official 全國法規資料庫 bulk XML, plus a
+# police routing note and one capped historical slice)
 python -c "from legal_agent.data.database import init_db; from legal_agent.config import DB_PATH; init_db(DB_PATH)"
 python -m legal_agent.cli seed
 python -m legal_agent.data.source_ingest corpus/moj_bulk_v1_proposal.json
 python -m legal_agent.data.source_ingest corpus/noise_routing_proposal.json
 
-python -m pytest -q          # 173 passing
+python -m pytest -q          # 177 passing
 
 # (optional) scale the corpus: parse the official 全國法規資料庫 bulk XML into a
 # proposal file, review it by hand, then ingest through the same validated path
@@ -192,7 +200,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (173 tests),
+five gates → dialogue → solution ladder — is implemented and green (177 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).
@@ -203,11 +211,14 @@ Corpus growth is unblocked: a streaming importer
 in the loop, and laws the importer can't represent honestly (unknown tier,
 missing dates, repealed history) are flagged, never guessed.
 
-Scope today: one jurisdiction (Taiwan), a **2 561-article corpus covering 11
-everyday-law statutes** (rent, labor, traffic, consumer, family-violence,
+Scope today: one jurisdiction (Taiwan), a **2 560-article corpus covering 11
+everyday-law statutes** plus a police routing note and its first capped
+historical slice (rent, labor, traffic, consumer, family-violence,
 noise — imported from the official bulk XML, with the original hand-verified
 11 articles as the character-for-character golden sample), one fully built
-consultation scenario (noise); judgments have an importer
+consultation scenario (noise) with a generic clinic flow — intake checklist,
+retrieval, low-cost-first action ladder — covering everything else; judgments
+have an importer
 ([`data/judicial_json.py`](legal_agent/data/judicial_json.py): 裁判書開放API
 JSON → rows, citations extracted by the verifier's own grammar) but are
 reference material only — not yet retrieval candidates. Roadmap — each item
@@ -215,9 +226,11 @@ motivated by a measured gap: **hybrid retrieval + 口語→法條語彙 expansio
 shipped** (golden-v2 coverage 65% → 88% pass+partial, honesty tier
 untouched; the embedding model was picked by an exam that rejected
 nomic-embed-text, and the expansion table's first design was reverted when
-it was measured manufacturing false matches), next: historical statute
-versions (the corpus holds only current slices), judgment-aware answers,
-then more scenarios and jurisdictions on the same engine.
+it was measured manufacturing false matches), next: more historical statute
+versions — the corpus carries its first (a 1992 slice capped when its 2020
+successor record took over, guarded by an ingest rule that refuses two open
+versions of the same article) — judgment-aware answers, then more scenarios
+and jurisdictions on the same engine.
 
 ---
 
