@@ -162,9 +162,21 @@ def run_stage3(
     an asserted premise (Mech 5). Flagged citations are NOT deleted/regenerated (§2.3).
     """
     fact_query = assemble_fact_query(collected_facts)
+    # The user's ORIGINAL ask carries remedy vocabulary the distilled facts
+    # drop — 「可以請求精神慰撫金嗎?」 shares 請求/賠償 tokens with 民法§195
+    # while the fact fields (噪音種類/時段/證據) share none. Appending it keeps
+    # the inclusion rule exactly what it claims to be: the user's own words.
+    # (Generic-flow cases already seed `problem` with the opening text — the
+    # containment check keeps them single-counted.)
+    ask = (user_text or "").strip()
+    if ask and ask not in fact_query:
+        fact_query = f"{fact_query}  {ask}" if fact_query else ask
+    dense_query = assemble_dense_query(collected_facts)
+    if dense_query is not None and ask and ask not in dense_query:
+        dense_query = f"{dense_query}  {ask}"
     scored = retriever.retrieve_scored(
         fact_query, as_of_date, conn=conn,
-        dense_query=assemble_dense_query(collected_facts),
+        dense_query=dense_query,
     )  # EXACTLY ONCE
     retrieved = [s for s, _ in scored]
     scores = [sc for _, sc in scored]

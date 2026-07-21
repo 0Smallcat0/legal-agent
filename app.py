@@ -442,7 +442,7 @@ def compare_timeslice(query: str) -> str:
 STATS = """
 <div class="statgrid">
   <div class="stat"><div class="num">10,435/10,435</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
-  <div class="stat"><div class="num">88%</div><div class="lbl">法條涵蓋率(含部分命中)</div></div>
+  <div class="stat"><div class="num">96%</div><div class="lbl">法條涵蓋率(含部分命中)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(25/25)</div></div>
   <div class="stat"><div class="num">0–5%</div><div class="lbl">裸模型引用可回溯率(對照組)</div></div>
 </div>
