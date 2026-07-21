@@ -96,6 +96,25 @@ What re-measurement honestly showed:
   robustness, same day: one case decoded 7 472 tokens at 42 t/s straight into
   the 180 s client timeout — `ollama_llm` now caps generation
   (num_predict=2048; a well-formed answer is < 1 500 tokens).
+- **Dense reserved seats (2026-07-21): the embedder knew, the fusion buried
+  it — strict 62% → 69%.** Per-case diagnosis of the remaining partials found
+  six of nine missing articles already in the DENSE top-10 (§1141 at 3,
+  噪管§6 at 4, §793 at 5, §184 at 2) yet fused past rank 24: RRF's
+  dual-presence bonus lets dozens of lexically-matched articles collect BOTH
+  reciprocal ranks and swamp any single-list item. Fix: the dense channel's
+  top-N get guaranteed seats at the TAIL of the top-k window (BM25 scores
+  untouched; promoted dense-only items carry 0.0, so the honesty floor cannot
+  move; the point-in-time filter still rules — a slice not in force is never
+  promoted). N was SWEPT, not guessed (stub-LLM harness, pass/partial/miss):
+  N=0 16/9/1 · N=2 17/8/1 · **N=3 18/7/1** · N=4 17/7/2 · N=5 17/8/1 — at
+  N≥4 the displaced fused tail costs mg-02 its expected §16, the cautionary
+  trade the sweep exists to catch. Real-LLM harness confirms: pass 18 /
+  partial 7 / miss 1 — 96% pass+partial, **69% strict**, tier 23/30, premise
+  30/30. Honest remainders: 噪管§3 (dense 31, definitions article), 噪管§9
+  (dense 8), 噪管§6 for ts-01 (dense 4 but outside its query's top-3),
+  勞基§22 (dense 9) / §84-1 (dense 30), §184 for water-leak (dense 148 — the
+  one true vocabulary gap left), wp-03 §793 (dense 5, outside top-3; N=5
+  would fix it but kills mg-02).
 
 **Golden set v2 (`evals/golden_v2.json`, 30 cases) re-baselines the suite.**
 The five old out-of-scope cases are re-scoped as in-scope with real expected

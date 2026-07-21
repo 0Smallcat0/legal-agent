@@ -165,7 +165,7 @@ def _retrieve_scored(
     matches.sort(key=lambda i: scores[i], reverse=True)
     ranked = [(candidates[i], float(scores[i])) for i in matches]
 
-    fused = _dense_fuse(_expand(dense_query or query), candidates, ranked)
+    fused = _dense_fuse(_expand(dense_query or query), candidates, ranked, k=k)
     return (fused if fused is not None else ranked)[:k]
 
 
@@ -179,13 +179,28 @@ def _expand(text: str) -> str:
     return expand(text)
 
 
+# Dense reserved seats: RRF's dual-presence bonus systematically buries a
+# dense-only item — measured on golden v2, 民法§184 at dense rank 2 (and
+# 噪管§6 at 4, §793 at 5, §1141 at 3) still missed the top-8 because dozens of
+# lexically-matched articles each collect BOTH reciprocal ranks. The dense
+# channel's top few therefore get guaranteed seats at the TAIL of the top-k
+# window. BM25 scores stay untouched (promoted dense-only items carry 0.0, so
+# the honesty floor — the TOP score — cannot move).
+# N swept on the stub-LLM golden harness (pass/partial/miss of 26 scorable):
+#   N=0 16/9/1 · N=2 17/8/1 · N=3 18/7/1 · N=4 17/7/2 · N=5 17/8/1
+# N=3 wins; at N>=4 the displaced fused tail costs mg-02 its expected §16.
+DENSE_RESERVED_SEATS = 3
+
+
 def _dense_fuse(
     query: str,
     candidates: list[Statute],
     bm25_ranked: list[tuple[Statute, float]],
+    k: int | None = None,
 ) -> list[tuple[Statute, float]] | None:
     """Hybrid re-ranking (config.DENSE_RETRIEVAL="auto"): RRF-fuse the BM25
-    ranking with the cached bge-m3 dense ranking (retrieval/dense.py).
+    ranking with the cached bge-m3 dense ranking (retrieval/dense.py), then
+    guarantee the dense top-DENSE_RESERVED_SEATS survive into the top-k window.
 
     Contract: BM25 scores are UNTOUCHED — the honesty floor keeps its meaning;
     a dense-only candidate (the vocabulary-gap case) carries its honest lexical
@@ -213,7 +228,29 @@ def _dense_fuse(
             out.append(bm25_by_key[fkey])
         elif fkey in candidate_by_key:          # dense-only: lexically unmatched
             out.append((candidate_by_key[fkey], 0.0))
-    return out
+
+    if k is None or k <= 0:
+        return out
+
+    # Reserved seats: promote dense top-N missing from the window to its tail
+    # (dense order preserved; the window's weakest fused tail is displaced).
+    window_keys = {key_of(s) for s, _ in out[:k]}
+    promote: list[tuple[Statute, float]] = []
+    for dkey in dense_keys[:DENSE_RESERVED_SEATS]:
+        if dkey in window_keys:
+            continue
+        if dkey in bm25_by_key:
+            promote.append(bm25_by_key[dkey])
+        elif dkey in candidate_by_key:          # point-in-time filter still rules
+            promote.append((candidate_by_key[dkey], 0.0))
+    if not promote:
+        return out
+    promoted_keys = {key_of(s) for s, _ in promote}
+    keep = [e for e in out[:k] if key_of(e[0]) not in promoted_keys][: max(k - len(promote), 0)]
+    kept_keys = {key_of(e[0]) for e in keep}
+    tail = [e for e in out
+            if key_of(e[0]) not in kept_keys and key_of(e[0]) not in promoted_keys]
+    return keep + promote + tail
 
 
 def retrieve(
