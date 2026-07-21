@@ -52,13 +52,16 @@ SAMPLE_GOOD_ANSWER = (
     "依社會秩序維護法第72條,製造噪音或深夜喧嘩妨害公眾安寧、不聽禁止者,"
     "可處新臺幣一萬元以下罰鍰。"
 )
-# A second broken sample, from the everyday-law side of the corpus. BOTH
+# A second broken sample, from the everyday-law side of the corpus. ALL THREE
 # defects are ones the verifier actually catches — a demo must not advertise
 # a catch it cannot make: an invented fine (§7 caps the deposit and prescribes
-# no 罰鍰) and a nonexistent article number.
+# no 罰鍰), the 七日 hesitation period claimed as 十四日 (catchable since the
+# period content pass, 2026-07-21 — the very defect this sample had to DROP on
+# 07-19), and a nonexistent article number.
 SAMPLE_BAD_ANSWER_2 = (
     "依租賃住宅市場發展及管理條例第7條,房東不退押金可處新臺幣五萬元罰鍰;"
-    "另依消費者保護法第99條,網購商品得無條件退貨。"
+    "依消費者保護法第19條,網購商品得於十四日內退回解約;"
+    "另依消費者保護法第99條,前述權利不得預先拋棄。"
 )
 # Retrieval tab default: a noise complaint, because that tab demonstrates the
 # POINT-IN-TIME filter and 社維法§72's current slice took effect 2025-06-11.
@@ -170,7 +173,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">177 項測試通過 · 植入錯誤抓取率 9,833/9,833(零誤報) · 不需任何 API 金鑰</p>
+  <p class="meta">180 項測試通過 · 植入錯誤抓取率 10,435/10,435(零誤報) · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -438,7 +441,7 @@ def compare_timeslice(query: str) -> str:
 # ── 評測結果 ─────────────────────────────────────────────────────────────────
 STATS = """
 <div class="statgrid">
-  <div class="stat"><div class="num">9,833/9,833</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
+  <div class="stat"><div class="num">10,435/10,435</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
   <div class="stat"><div class="num">88%</div><div class="lbl">法條涵蓋率(含部分命中)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(25/25)</div></div>
   <div class="stat"><div class="num">0–5%</div><div class="lbl">裸模型引用可回溯率(對照組)</div></div>
@@ -497,7 +500,8 @@ with gr.Blocks(title="Legal Agent") as demo:
             "條號是否存在、內容與逐字條文是否相符、在基準日是否仍有效。"
             "預設範例三筆引用中兩處錯誤(金額誇大、法規名稱錯字)會被標記,"
             "另一筆(噪音管制法第8條)為正確引用,應通過查核 —— 抓錯也不誤殺;"
-            "第二則是民生法規版(押金罰鍰虛構、消保法條號不存在)。"
+            "第二則是民生法規版(押金罰鍰虛構、七日猶豫期寫成十四日、"
+            "消保法條號不存在)。"
         )
         with gr.Row():
             with gr.Column(scale=5):

@@ -229,6 +229,56 @@ def test_amount_without_direction_word_not_flagged(real_conn):
     assert r.flagged is False
 
 
+@pytest.fixture
+def period_conn(tmp_path):
+    """INVENTED corpus: one current article stating a 七日 period (plus a
+    一個月 period), for the period-swap content pass."""
+    db = tmp_path / "p.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    conn.execute(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        ("期間測試法", "第1條",
+         "消費者得於收受商品後七日內解除契約;保存期限為一個月。",
+         "2010-01-01", None, "法律", None),
+    )
+    conn.commit()
+    yield conn
+    conn.close()
+
+
+def test_period_swap_flagged(period_conn):
+    # Corpus says 七日; claiming 十四日 is the period_swap blind spot the
+    # mutation test exposed (0/602 before the check) — must flag.
+    answer = "依期間測試法第1條,消費者得於十四日內解除契約。"
+    r = verify_answer(answer, [], conn=period_conn)[0]
+    assert r.exists is True
+    assert r.content_match is False
+    assert r.flagged is True
+    assert "主張期間" in r.reason
+
+
+def test_correct_period_not_flagged(period_conn):
+    answer = "依期間測試法第1條,消費者得於七日內解除契約。"
+    r = verify_answer(answer, [], conn=period_conn)[0]
+    assert r.content_match is True
+    assert r.flagged is False
+
+
+def test_period_in_unstated_unit_not_flagged(period_conn):
+    # The conservative rule only judges units the source itself states.
+    # 「二週」: the source carries no 週-value — nothing to compare, must NOT
+    # flag. (Known limit, documented in RESULTS: restating 一個月 as 三十日
+    # NEXT TO a 七日 rule would flag, because the source does speak in 日 —
+    # the price of catching 七日→十四日 without an LLM.)
+    answer = "依期間測試法第1條,約二週內得解除契約。"
+    r = verify_answer(answer, [], conn=period_conn)[0]
+    assert r.content_match is True
+    assert r.flagged is False
+
+
 def test_supported_amount_is_not_flagged(real_conn):
     # Stating the CORRECT amount (一萬元) must NOT trip the content check.
     answer = "依社會秩序維護法第72條,製造噪音可處新臺幣一萬元以下罰鍰。"

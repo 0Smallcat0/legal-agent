@@ -58,6 +58,22 @@ What re-measurement honestly showed:
   silently assumed single-version articles. DB rebuilt from scratch via the
   README quickstart: **9 833/9 833 caught, 0/2 560 false positives**, now on
   a corpus that actually contains a historical slice.
+- **period_swap (2026-07-21): the demo found this blind spot before the exam
+  did.** On 07-19 a demo sample had to *drop* a 七日→十四日 defect because the
+  content pass compared only monetary amounts — an advertised catch that did
+  not exist. The new mutation type plants a same-unit period swap on every
+  article that states a period (fake value verified absent for that unit):
+  **0/602 caught before the fix.** The fix mirrors the direction-word rule —
+  flag only when BOTH sides state a value in the SAME unit (日/天, 週/星期,
+  個月, 年, 小時 normalized; bare 「月」 excluded — 「三月」 is a date), so a
+  paraphrase into a unit the article never states is left alone. Controls now
+  carry a real period wherever the article states one, so the 0-FP bar
+  exercises the new pass. After: **602/602; full run 10 435/10 435 (100%),
+  0/2 560 false positives.** Known limits, unclaimed: cross-unit swaps
+  (七日→七年 where the article has no 年-value), 半年/半個月 (no numeral),
+  and a restatement INTO a unit the article does state (一個月 as 三十日 next
+  to a 七日 rule) would flag — 分析研判 should paraphrase in the article's
+  own units.
 
 **Golden set v2 (`evals/golden_v2.json`, 30 cases) re-baselines the suite.**
 The five old out-of-scope cases are re-scoped as in-scope with real expected
@@ -324,7 +340,7 @@ Reading the table:
 ## Reproduce
 
 ```bash
-python -m pytest -q                                                    # 177 tests
+python -m pytest -q                                                    # 180 tests
 python -m legal_agent.evaluation.mutation                              # full-corpus catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json       # golden v2 (30 cases)
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json        # threshold sweep

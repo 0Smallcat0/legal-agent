@@ -110,6 +110,32 @@ def _amounts(text: str) -> set[int]:
     return values
 
 
+# ── time periods (for the period-swap content pass) ──────────────────────────
+# A numeral bound to a period unit: 「七日內」「二年以下有期徒刑」「六個月」.
+# 日/天 and 週/星期 normalize to one unit. Bare 「月」 is deliberately NOT a
+# unit — 「三月」 is a date (March); only the 「X個月」 form counts. 「半年」
+# (no numeral) is skipped — conservative pass, misses documented in RESULTS.
+_PERIOD_RE = re.compile(
+    r"([0-9０-９零〇一二三四五六七八九十百千兩]+)\s*(個月|小時|星期|週|日|天|年)"
+)
+_PERIOD_UNIT_NORM = {"天": "日", "星期": "週", "個月": "月"}
+
+
+def _period_label(unit: str) -> str:
+    return "個月" if unit == "月" else unit
+
+
+def _periods(text: str) -> dict[str, set[int]]:
+    """unit -> numeric values bound to it (「七日內」 -> {"日": {7}})."""
+    values: dict[str, set[int]] = {}
+    for m in _PERIOD_RE.finditer(text):
+        value = _parse_number(m.group(1))
+        if value is not None:
+            unit = _PERIOD_UNIT_NORM.get(m.group(2), m.group(2))
+            values.setdefault(unit, set()).add(value)
+    return values
+
+
 def _sentence_around(text: str, start: int, end: int) -> str:
     left = -1
     for ch in _SENTENCE_BOUNDARY:
@@ -160,6 +186,25 @@ def _content_consistent(claim_scope: str, verbatim: str) -> tuple[bool, str]:
             f"方向詞不符:主張 {amount}元{sorted(claim_words)[0]},"
             f"條文為 {amount}元{sorted(source_words)[0]}"
         )
+
+    # Period check (the period_swap blind spot, found 2026-07-19 when the demo
+    # copy almost advertised a catch that did not exist): same conservative
+    # shape as the direction pass — only fires when BOTH sides state a value
+    # in the SAME unit. A cross-unit paraphrase (「一個月」 restated as
+    # 「三十日」) is left alone: the source has no 日-value to judge against.
+    claim_periods = _periods(claim_scope)
+    source_periods = _periods(verbatim)
+    for unit, claim_values in claim_periods.items():
+        source_values = source_periods.get(unit)
+        if not source_values:
+            continue
+        unsupported = claim_values - source_values
+        if unsupported:
+            label = _period_label(unit)
+            return False, (
+                f"主張期間 {sorted(unsupported)[0]}{label} 未見於條文"
+                f"(條文期間 {sorted(source_values)}{label})"
+            )
     return True, ""
 
 
