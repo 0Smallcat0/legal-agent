@@ -119,9 +119,11 @@ class MutationReport:
 
 def _condition_articles(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     """條-style, currently-in-force corpus rows (文號-style entries have no
-    article_no and use a different citation grammar — out of scope here)."""
+    article_no and use a different citation grammar — out of scope here).
+    One row per article: historical slices are capped, so effective_to IS NULL
+    is unique per (statute_id, article_no) — the ingest guard enforces it."""
     return conn.execute(
-        "SELECT statute_id, article_no, content, effective_from FROM statutes "
+        "SELECT statute_id, article_no, content FROM statutes "
         "WHERE article_no != '' AND effective_to IS NULL ORDER BY statute_id, article_no"
     ).fetchall()
 
@@ -161,8 +163,18 @@ def run_mutation_test(
     """Run the seeded-error suite. With `semantic_llm` set, the 4th axis is on
     and the subject_swap cases are planted (grading the LLM checker itself)."""
     outcomes: list[MutationOutcome] = []
+    # Earliest slice per article: out_of_force must date the citation before
+    # the FIRST version ever took effect. The day before the CURRENT slice is
+    # not out of force when a capped historical slice covers that date.
+    earliest_from = {
+        (r[0], r[1]): r[2]
+        for r in conn.execute(
+            "SELECT statute_id, article_no, MIN(effective_from) FROM statutes "
+            "WHERE article_no != '' GROUP BY statute_id, article_no"
+        )
+    }
     for row in _condition_articles(conn):
-        sid, ano, content, eff = row[0], row[1], row[2], row[3]
+        sid, ano, content = row[0], row[1], row[2]
         ref = f"{sid}{ano}"
         num_match = _ARTICLE_NUM_RE.search(ano)
         source_amounts = _amounts(content)
@@ -243,8 +255,10 @@ def run_mutation_test(
                 expect_flag=True, conn=conn,
             ))
 
-        # out_of_force — cite the article at a date BEFORE its effective_from.
-        day_before = (date.fromisoformat(eff) - timedelta(days=1)).isoformat()
+        # out_of_force — cite the article the day BEFORE its earliest slice.
+        day_before = (
+            date.fromisoformat(earliest_from[(sid, ano)]) - timedelta(days=1)
+        ).isoformat()
         outcomes.append(_judge(
             "out_of_force", f"{ref}@{day_before}", control, expect_flag=True,
             conn=conn, as_of_date=day_before,

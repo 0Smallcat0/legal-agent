@@ -65,6 +65,23 @@ def test_mutation_render_shows_rates(real_conn):
     assert "catch rate" in text and "false-positive" in text
 
 
+def test_mutation_out_of_force_respects_historical_slices(real_conn):
+    # Regression (2026-07-21): with a capped historical slice present, the day
+    # before the CURRENT slice is still covered by the older version — the
+    # naive mutation dated its citation there, and the verifier's CORRECT
+    # no-flag was scored as a miss. out_of_force must date the citation before
+    # the article's EARLIEST slice.
+    for eff_from, eff_to in [("1992-02-21", "2020-11-16"), ("2020-11-16", None)]:
+        real_conn.execute(
+            "INSERT INTO statutes VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("測試歷史法", "第1條", "違反者處新臺幣三千元以下罰鍰。",
+             eff_from, eff_to, "法律", None),
+        )
+    report = run_mutation_test(real_conn)
+    assert report.catch_rate == 1.0, report.render()
+    assert report.false_positive_rate == 0.0, report.render()
+
+
 # ── calibration sweep ────────────────────────────────────────────────────────
 def test_sweep_finds_a_separating_threshold():
     points = [
