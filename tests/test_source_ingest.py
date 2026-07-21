@@ -82,6 +82,56 @@ def test_unknown_hierarchy_level_is_rejected(conn, tmp_path):
     assert conn.execute("SELECT COUNT(*) FROM statutes").fetchone()[0] == 0
 
 
+def _proposal(statute_id="測試法", article_no="第1條", effective_from="2020-01-01",
+              effective_to=None, content="條文內容"):
+    return {
+        "statute_id": statute_id,
+        "article_no": article_no,
+        "content": content,
+        "effective_from": effective_from,
+        "effective_to": effective_to,
+        "hierarchy_level": "法律",
+        "source_url": None,
+    }
+
+
+def _write(tmp_path, name, proposals):
+    p = tmp_path / name
+    p.write_text(json.dumps(proposals, ensure_ascii=False), encoding="utf-8")
+    return p
+
+
+# ── Part 3: the single-open-slice invariant guard ────────────────────────────
+def test_two_open_slices_in_one_file_rejected(conn, tmp_path):
+    bad = _write(tmp_path, "two_open.json", [
+        _proposal(effective_from="1992-02-21"),
+        _proposal(effective_from="2020-11-16"),
+    ])
+    with pytest.raises(ValueError, match="兩個未封頂版本"):
+        load_proposals(bad, conn)
+    assert conn.execute("SELECT COUNT(*) FROM statutes").fetchone()[0] == 0
+
+
+def test_second_open_slice_across_files_rejected(conn, tmp_path):
+    first = _write(tmp_path, "first.json", [_proposal(effective_from="2020-11-16")])
+    load_proposals(first, conn)
+    second = _write(tmp_path, "second.json", [_proposal(effective_from="1992-02-21")])
+    with pytest.raises(ValueError, match="已有未封頂版本"):
+        load_proposals(second, conn)
+    # fail-fast: the offending file inserted nothing
+    assert conn.execute("SELECT COUNT(*) FROM statutes").fetchone()[0] == 1
+
+
+def test_capped_historical_slice_is_allowed(conn, tmp_path):
+    ok = _write(tmp_path, "history.json", [
+        _proposal(effective_from="1992-02-21", effective_to="2020-11-16"),
+        _proposal(effective_from="2020-11-16"),
+    ])
+    assert load_proposals(ok, conn) == (2, 0)
+    # idempotent re-run still passes the guard (same open slice = duplicate, not conflict)
+    assert load_proposals(ok, conn) == (0, 2)
+
+
 def test_source_ingest_main_loads_and_is_idempotent(tmp_path, monkeypatch, capsys):
     from legal_agent import config
     from legal_agent.data import source_ingest

@@ -74,17 +74,54 @@ def _to_statute(proposal: dict, index: int, valid_levels: set[str]) -> Statute:
     )
 
 
+def _check_single_open_slice(statutes: list[Statute], conn: sqlite3.Connection) -> None:
+    """Time-slice invariant: one article may carry at most ONE open slice
+    (effective_to IS NULL). Two open slices make BOTH versions "currently in
+    force", so a point-in-time lookup between their effective_from dates hits
+    the older one and out-of-force checks silently pass. The importer refuses
+    instead of guessing a close date — the reviewer must cap the older slice
+    with an explicit effective_to (found live 2026-07-21: a hand-era proposal
+    and the official-XML import both shipped the same article open).
+    """
+    open_in_file: dict[tuple[str, str], str] = {}
+    for s in statutes:
+        if s.effective_to is not None or not s.article_no:
+            continue
+        key = (s.statute_id, s.article_no)
+        if key in open_in_file and open_in_file[key] != s.effective_from:
+            raise ValueError(
+                f"{s.statute_id}{s.article_no} 在同一檔內有兩個未封頂版本"
+                f"(effective_from {open_in_file[key]} 與 {s.effective_from})——"
+                "請為較舊的版本補上 effective_to"
+            )
+        open_in_file[key] = s.effective_from
+        existing = conn.execute(
+            "SELECT effective_from FROM statutes WHERE statute_id = ? "
+            "AND article_no = ? AND effective_to IS NULL AND effective_from != ?",
+            (s.statute_id, s.article_no, s.effective_from),
+        ).fetchone()
+        if existing:
+            raise ValueError(
+                f"{s.statute_id}{s.article_no} 已有未封頂版本"
+                f"(effective_from {existing[0]}),不得再匯入另一個未封頂版本"
+                f"(effective_from {s.effective_from})——"
+                "請人工確認何者為現行版,並為較舊的版本補上 effective_to"
+            )
+
+
 def load_proposals(path, conn: sqlite3.Connection) -> tuple[int, int]:
     """Ingest a verified proposal JSON file. Returns (inserted, skipped).
 
-    Validates ALL rows first (fail-fast: an unknown level / bad field rejects the
-    whole file with a clear ValueError, before any insert), then inserts each via
-    insert_statute, skipping duplicates (IntegrityError).
+    Validates ALL rows first (fail-fast: an unknown level / bad field / a
+    duplicate open slice rejects the whole file with a clear ValueError,
+    before any insert), then inserts each via insert_statute, skipping
+    duplicates (IntegrityError).
     """
     proposals = json.loads(Path(path).read_text(encoding="utf-8"))
     valid_levels = {row[0] for row in conn.execute("SELECT level FROM source_hierarchy")}
 
     statutes = [_to_statute(p, i, valid_levels) for i, p in enumerate(proposals)]
+    _check_single_open_slice(statutes, conn)
 
     inserted = skipped = 0
     for statute in statutes:
