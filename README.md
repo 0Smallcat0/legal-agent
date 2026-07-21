@@ -118,9 +118,9 @@ articles across 11 everyday-law statutes** plus a hand-verified police routing
 note and its first capped historical slice (official-XML import, hand-typed
 golden sample matched character-for-character). Current numbers: full-corpus
 mutation **10 435/10 435 caught, 0/2 560 false positives**; golden set
-re-baselined at 30 cases — **88% pass+partial statute coverage**, honesty
-tier 23/30, premise detection 30/30. The honest details, including which
-numbers moved and why, are in RESULTS.md §0. Headlines:
+re-baselined at 30 cases — **96% pass+partial statute coverage** (65%
+strict), honesty tier 23/30, premise detection 30/30. The honest details,
+including which numbers moved and why, are in RESULTS.md §0. Headlines:
 
 | what | number |
 |---|---|
@@ -224,7 +224,10 @@ have an importer
 JSON → rows, citations extracted by the verifier's own grammar) but are
 reference material only — not yet retrieval candidates. Roadmap — each item
 motivated by a measured gap: **hybrid retrieval + 口語→法條語彙 expansion
-shipped** (golden-v2 coverage 65% → 88% pass+partial, honesty tier
+shipped** (golden-v2 coverage 65% → 88% → 96% pass+partial — the last jump
+came from joining the user's ORIGINAL ask into the retrieval query: distilled
+fact fields drop remedy vocabulary like 慰撫金/賠償, and those are the user's
+own words, exactly what the inclusion rule wants; honesty tier
 untouched; the embedding model was picked by an exam that rejected
 nomic-embed-text, and the expansion table's first design was reverted when
 it was measured manufacturing false matches), next: more historical statute

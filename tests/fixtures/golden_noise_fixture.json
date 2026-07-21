@@ -13,13 +13,13 @@
   },
   {
     "id": "noise-miss",
-    "question": "鄰居深夜卡拉OK很吵,我想請求精神損害賠償,適用什麼?",
+    "question": "鄰居深夜卡拉OK很吵,怎麼辦?",
     "facts": {
       "noise_type": "深夜喧嘩、卡拉OK",
       "building_type": "公寓大廈,有管委會"
     },
     "expected_statutes": ["民法第184條"],
     "expected_action": "情節重大時,可依民法§184、§195第1項請求損害賠償(建議先諮詢律師)。",
-    "notes": "FIXTURE (invented) — the noise facts do NOT surface 民法§184, so the harness scores MISS (a real coverage gap to flag for a human)."
+    "notes": "FIXTURE (invented) — engineered MISS: neither the facts nor the question share a single token with 民法§184 (no 損害/賠償/侵害 words), so lexical inclusion can never surface it and the harness must score MISS. (The earlier version relied on remedy words not reaching retrieval — that gap was fixed when the user's ask joined the query, which is exactly why this case must not depend on it.)"
   }
 ]

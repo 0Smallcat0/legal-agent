@@ -74,6 +74,28 @@ What re-measurement honestly showed:
   and a restatement INTO a unit the article does state (一個月 as 三十日 next
   to a 七日 rule) would flag — 分析研判 should paraphrase in the article's
   own units.
+- **The user's ask joins the retrieval query (2026-07-21): coverage 88% → 96%.**
+  Diagnosis of the four cases missing 民法§184/§195: the tort articles share
+  ZERO tokens with distilled fact fields (噪音種類/時段/證據), so they are
+  dense-only candidates — and measured, even at dense rank 2 (oos-05, expanded
+  query) RRF's dual-list bonus buries a single-list item below the top-8, while
+  §195 elsewhere sat at dense 61–108, outside the top-50 fusion cut. The real
+  root cause sat a layer higher: the fact fields DROP the user's remedy
+  vocabulary — 「可以請求精神慰撫金嗎?」 shares 請求/賠償 tokens with §195
+  verbatim, and 「賠我五十萬精神賠償」 with §184/§195 — words the user
+  actually typed. Fix: `run_stage3` appends `user_text` to both retrieval
+  halves (containment-checked; generic flow already seeds `problem` with it).
+  The inclusion rule stays exactly what it claims to be: the user's own words.
+  Stub-LLM A/B (same harness): pass 13→16, miss 3→1, zero regressions.
+  Real-LLM run: pass 17 / partial 8 / miss 1 — **96% pass+partial (65%
+  strict)**, honesty tier 23/30 and premise 30/30 untouched. Remaining honest
+  misses: §184 where the ask has no 賠償-family token (in-06 asks 慰撫金 →
+  §195 only; oos-01/05 ask 怎麼辦/不理賠), wp-03 民法§793, and the
+  noise-fixture MISS case was re-engineered to zero lexical overlap so the
+  miss-scoring path no longer depends on the gap this fix closed. Harness
+  robustness, same day: one case decoded 7 472 tokens at 42 t/s straight into
+  the 180 s client timeout — `ollama_llm` now caps generation
+  (num_predict=2048; a well-formed answer is < 1 500 tokens).
 
 **Golden set v2 (`evals/golden_v2.json`, 30 cases) re-baselines the suite.**
 The five old out-of-scope cases are re-scoped as in-scope with real expected
