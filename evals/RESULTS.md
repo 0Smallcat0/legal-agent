@@ -41,6 +41,23 @@ What re-measurement honestly showed:
   be real), and direction flips only target amounts whose direction is
   unambiguous (range wording carries both directions legitimately). Full-corpus
   run: **9 833/9 833 mutations caught (100%), 0/2 560 false positives.**
+- **Re-verification (2026-07-21): the number above briefly went stale, and the
+  reason is worth keeping.** A fresh full re-run measured 9 836/9 837 — one
+  out_of_force miss. Cause: the hand-era noise-routing proposal and the
+  official-XML import both shipped 違反社會秩序維護法案件處理辦法第11條 as an
+  OPEN slice (effective_from 1992-02-21 and 2020-11-16, both effective_to
+  NULL, content byte-identical) — so "the day before the current slice" was
+  legitimately covered by the older row, and the verifier's no-flag was
+  *correct on bad data*. Three fixes shipped: (1) the 1992 slice is capped at
+  2020-11-16 in the proposal file — the corpus's first true historical slice;
+  the cap is a record seam, not a legal amendment (the article was never
+  amended), documented in its `_review`; (2) `source_ingest` now refuses a
+  second open slice per article (fail-fast ValueError, checked in-file and
+  against the DB); (3) the mutation harness dates out_of_force citations
+  before the article's *earliest* slice, not the current one — the exam had
+  silently assumed single-version articles. DB rebuilt from scratch via the
+  README quickstart: **9 833/9 833 caught, 0/2 560 false positives**, now on
+  a corpus that actually contains a historical slice.
 
 **Golden set v2 (`evals/golden_v2.json`, 30 cases) re-baselines the suite.**
 The five old out-of-scope cases are re-scoped as in-scope with real expected
@@ -307,11 +324,21 @@ Reading the table:
 ## Reproduce
 
 ```bash
-python -m pytest -q                                                    # 134 tests
-python -m legal_agent.evaluation.mutation                              # table 1
-python -m legal_agent.evaluation.golden_set evals/golden_noise_v1.json # table 2
-python -m legal_agent.evaluation.calibrate evals/golden_noise_v1.json  # table 3
+python -m pytest -q                                                    # 177 tests
+python -m legal_agent.evaluation.mutation                              # full-corpus catch rate
+python -m legal_agent.evaluation.golden_set evals/golden_v2.json       # golden v2 (30 cases)
+python -m legal_agent.evaluation.calibrate evals/golden_v2.json        # threshold sweep
 python -m legal_agent.evaluation.ablation evals/golden_noise_v1.json --models llama3.1:latest qwen3:latest --out evals/ablation_raw.json
 ```
 
+(Tables 2–4 above are the 11-article-era baselines and still reproduce
+against `evals/golden_noise_v1.json`; §0 records what moved at corpus v2.)
+
 Raw per-run ablation data: [`ablation_raw.json`](ablation_raw.json).
+
+**Ollama note (measured 2026-07-21):** the golden/ablation runs drive a local
+Ollama for both embeddings (bge-m3) and generation (llama3.1). On an 8 GB GPU
+the default single-resident-model setting swaps the two models on every case —
+two runs aborted on the 180 s client timeout that way. Start the server with
+`OLLAMA_MAX_LOADED_MODELS=2` and load bge-m3 *before* llama3.1 (small model
+first fits both); a clean 30-case run then takes ~10 minutes.
