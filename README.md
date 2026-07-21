@@ -3,12 +3,12 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-177%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-180%20passing-brightgreen)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
 > machine-verified against a time-versioned corpus, and the guardrails are
-> themselves tested by injecting errors** (9,833/9,833 seeded defects caught
+> themselves tested by injecting errors** (10,435/10,435 seeded defects caught
 > across the full corpus, 0 false positives). The bet is not "zero errors" —
 > it's **errors you can see.**
 
@@ -45,17 +45,18 @@ before it's trusted.
 How do you know a verifier actually catches anything? Break answers on purpose.
 [`evaluation/mutation.py`](legal_agent/evaluation/mutation.py) injects seeded
 defects (fabricated statute, ghost article number, invented 之X sub-article,
-wrong amount, flipped 以下/以上 direction word, out-of-force citation) into
-otherwise-correct answers over every article in the corpus and measures the
-catch rate: **9,833/9,833 caught, 0/2,560 false positives on clean answers**.
-Two earlier mutation types each started at 0% — one exposed an amounts-only
-content match, the other a regex that laundered invented 之X sub-articles into
-their real parent article — and a 2026-07 re-verification run caught the
-harness itself assuming single-version articles (a capped historical slice
-legitimately covers "the day before the current version"; the mutation now
-dates its citation before the article's *earliest* slice). Finding your own
-blind spots is precisely the point. A guardrail without this number is
-decoration.
+wrong amount, flipped 以下/以上 direction word, swapped period/day-count,
+out-of-force citation) into otherwise-correct answers over every article in
+the corpus and measures the catch rate: **10,435/10,435 caught, 0/2,560 false
+positives on clean answers**. Three mutation types each started at 0% — one
+exposed an amounts-only content match, one a regex that laundered invented
+之X sub-articles into their real parent article, and the newest a
+period-blindness (七日 claimed as 十四日: 0/602, then 602/602 the same day) —
+and a 2026-07 re-verification run caught the harness itself assuming
+single-version articles (a capped historical slice legitimately covers "the
+day before the current version"; the mutation now dates its citation before
+the article's *earliest* slice). Finding your own blind spots is precisely
+the point. A guardrail without this number is decoration.
 
 **3. Time-sliced retrieval for versioned sources.**
 [`data/schema.sql`](legal_agent/data/schema.sql) keys statutes by
@@ -116,7 +117,7 @@ was measured on the original 11-article corpus; the corpus is now **2 560
 articles across 11 everyday-law statutes** plus a hand-verified police routing
 note and its first capped historical slice (official-XML import, hand-typed
 golden sample matched character-for-character). Current numbers: full-corpus
-mutation **9 833/9 833 caught, 0/2 560 false positives**; golden set
+mutation **10 435/10 435 caught, 0/2 560 false positives**; golden set
 re-baselined at 30 cases — **88% pass+partial statute coverage**, honesty
 tier 23/30, premise detection 30/30. The honest details, including which
 numbers moved and why, are in RESULTS.md §0. Headlines:
@@ -153,7 +154,7 @@ python -m legal_agent.cli seed
 python -m legal_agent.data.source_ingest corpus/moj_bulk_v1_proposal.json
 python -m legal_agent.data.source_ingest corpus/noise_routing_proposal.json
 
-python -m pytest -q          # 177 passing
+python -m pytest -q          # 180 passing
 
 # (optional) scale the corpus: parse the official 全國法規資料庫 bulk XML into a
 # proposal file, review it by hand, then ingest through the same validated path
@@ -200,7 +201,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (177 tests),
+five gates → dialogue → solution ladder — is implemented and green (180 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).

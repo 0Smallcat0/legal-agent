@@ -31,7 +31,13 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from legal_agent.anti_hallucination.verifier import _amounts, _parse_number, verify_answer
+from legal_agent.anti_hallucination.verifier import (
+    _amounts,
+    _parse_number,
+    _period_label,
+    _periods,
+    verify_answer,
+)
 
 _ARTICLE_NUM_RE = re.compile(r"第(\d+)條")
 _FAKE_ANSWER = "依台灣安寧保障法第3條,住戶應保持安寧。"
@@ -178,11 +184,19 @@ def run_mutation_test(
         ref = f"{sid}{ano}"
         num_match = _ARTICLE_NUM_RE.search(ano)
         source_amounts = _amounts(content)
+        source_periods = _periods(content)
+        period_unit = next((u for u, vs in source_periods.items() if vs), None)
 
-        # control — correct citation; include a REAL amount when the article has one.
+        # control — correct citation; include a REAL amount / period when the
+        # article states one, so the false-positive bar exercises both passes.
+        claims = []
         if source_amounts:
-            amt = max(source_amounts)
-            control = f"依{ref},法定金額為{amt}元。"
+            claims.append(f"法定金額為{max(source_amounts)}元")
+        if period_unit is not None:
+            real_period = max(source_periods[period_unit])
+            claims.append(f"相關期間為{real_period}{_period_label(period_unit)}")
+        if claims:
+            control = f"依{ref}," + ",".join(claims) + "。"
         else:
             control = f"依{ref},其規範內容如條文所示。"
         # with the semantic axis on, controls ALSO pass through it — the 0-FP
@@ -252,6 +266,21 @@ def run_mutation_test(
             outcomes.append(_judge(
                 "direction_flip", ref,
                 f"依{ref},違者可處新臺幣{unique}元{flipped}罰鍰。",
+                expect_flag=True, conn=conn,
+            ))
+
+        # period_swap — real citation, real unit, wrong count (「七日」 claimed
+        # as 「十四日」). An amounts-only content match is provably blind to
+        # this class — the demo copy almost advertised the catch before it
+        # existed (2026-07-19). Planted only when the article states a period,
+        # and the fake value is verified absent from that unit's values.
+        if period_unit is not None:
+            fake_period = max(source_periods[period_unit]) * 2
+            while fake_period in source_periods[period_unit]:
+                fake_period += 1
+            outcomes.append(_judge(
+                "period_swap", ref,
+                f"依{ref},相關期間為{fake_period}{_period_label(period_unit)}。",
                 expect_flag=True, conn=conn,
             ))
 
