@@ -64,6 +64,9 @@ class Stage3Result:
     practice_disclaimer_ok: bool = True     # False if 實務見解 present without the 非法律明文 label
     # Mechanism 5 — anti-sycophancy.
     premise_flag: bool = False
+    # Reference tier — judgments citing the SAME retrieved articles (never
+    # retrieval candidates, never citable law; rendered code-side).
+    related_judgments: tuple = ()
 
 
 def assemble_fact_query(collected_facts: dict) -> str:
@@ -217,6 +220,11 @@ def run_stage3(
     sections_ok = all(s is not None for s in (law_section, practice_section, analysis_section))
     practice_disclaimer_ok = practice_section is not None and PRACTICE_DISCLAIMER in practice_section
 
+    # Reference judgments: a deterministic JOIN on the already-retrieved
+    # articles (retrieval still fired exactly once). Empty table -> ().
+    from legal_agent.retrieval.judgments import related_judgments as _related
+    refs = tuple(_related(retrieved, conn=conn))
+
     return Stage3Result(
         answer=answer,
         retrieved=retrieved,
@@ -232,4 +240,5 @@ def run_stage3(
         sections_ok=sections_ok,
         practice_disclaimer_ok=practice_disclaimer_ok,
         premise_flag=premise_flag,
+        related_judgments=refs,
     )
