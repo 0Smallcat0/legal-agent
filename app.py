@@ -293,6 +293,20 @@ def _sections_html(result) -> str:
             '<div class="note">模型未依三段格式作答,以下為原文。</div>'
             f'<div class="seccard"><div class="b">{escape(result.answer)}</div></div>'
         )
+
+    # Reference judgments — deterministic join on the retrieved articles,
+    # rendered code-side (the model never writes a case number).
+    refs = getattr(getattr(result, "stage3", result), "related_judgments", ())
+    if refs:
+        rows = "".join(
+            f"<li>{escape(r.jid)}({escape(r.case_type or '案由不明')})"
+            f"— 同引 {escape('、'.join(r.matched))}</li>"
+            for r in refs
+        )
+        blocks.append(
+            '<div class="seccard"><div class="t">相關裁判參考(個案見解,非法律明文,僅供參考)</div>'
+            f'<div class="b"><ul>{rows}</ul></div></div>'
+        )
     return "".join(blocks)
 
 

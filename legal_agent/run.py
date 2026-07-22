@@ -112,6 +112,12 @@ def _format_result(result) -> str:
             out.append("\n(模型未依「法律明文 / 實務見解 / 分析研判」三段格式,以下為原始回答)")
             out.append(result.answer)
 
+        # Reference judgments — deterministic, code-rendered (never the model).
+        refs = getattr(getattr(result, "stage3", result), "related_judgments", ())
+        if refs:
+            from legal_agent.retrieval.judgments import render_block
+            out.append("\n" + render_block(list(refs)))
+
     # Mechanism 2 — verification flags WITH the attached corpus verbatim.
     flagged = [v for v in result.verifications if v.flagged]
     if flagged:
