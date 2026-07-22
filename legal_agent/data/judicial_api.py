@@ -149,13 +149,21 @@ def harvest(
     conn = connect(config.DB_PATH)
     try:
         known_ids = {r[0] for r in conn.execute("SELECT DISTINCT statute_id FROM statutes")}
+        # Skip jids already in the table BEFORE spending API calls on them.
+        # (Amended-judgment refresh is a known TODO — the importer skips dup
+        # PKs anyway, so behaviour is unchanged, just cheaper.)
+        have = {r[0] for r in conn.execute("SELECT jid FROM judgments")}
+        todo = [j for j in jids if j not in have]
+        if len(todo) < len(jids):
+            progress(f"已在庫 {len(jids) - len(todo)} 筆,不重抓;本次實際 {len(todo)} 筆")
+
         rows: list[dict] = []
-        fetched = 0
-        for i, jid in enumerate(jids, 1):
+        fetched = inserted = skipped = 0
+        for i, jid in enumerate(todo, 1):
             jdoc = fetch_judgment(token, jid)
             time.sleep(delay)
             if jdoc is None:
-                progress(f"  [{i}/{len(jids)}] {jid} — 查無資料(已移除/未公開),略過")
+                progress(f"  [{i}/{len(todo)}] {jid} — 查無資料(已移除/未公開),略過")
                 continue
             fetched += 1
             row, warnings = parse_judgment(jdoc_to_record(jdoc), known_ids)
@@ -163,9 +171,19 @@ def harvest(
                 progress(f"  警告:{w}")
             if row is not None:
                 rows.append(row)
+            # Batch-insert: a mid-run kill (network drop, window close, Ctrl-C)
+            # keeps every completed batch instead of losing the whole run.
+            if len(rows) >= 50:
+                ins, skp = load_judgments(rows, conn)
+                inserted += ins
+                skipped += skp
+                rows = []
             if i % 25 == 0:
-                progress(f"  [{i}/{len(jids)}] 已取得 {fetched} 筆…")
-        inserted, skipped = load_judgments(rows, conn)
+                progress(f"  [{i}/{len(todo)}] 已取得 {fetched} 筆…")
+        if rows:
+            ins, skp = load_judgments(rows, conn)
+            inserted += ins
+            skipped += skp
     finally:
         conn.close()
     progress(f"完成:取得 {fetched},入庫 {inserted},重複略過 {skipped}")
