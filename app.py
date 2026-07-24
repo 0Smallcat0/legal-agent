@@ -104,69 +104,117 @@ FONT_STACK = [
 ]
 
 CSS = """
-.gradio-container {font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
+/* ── design tokens ─────────────────────────────────────────────────────────
+   4-step type scale (was 6 sizes clustered in a 2px band) + semantic accents.
+   Accents default to the light-mode (darker) shade; .dark brightens the
+   BORDER/bar use so the strips stay visible on #171717. The ✓/✗ pills keep
+   the darker fills (hardcoded below) because white pill-text needs them. */
+:root {
+  --fs-h1:22px; --fs-title:15px; --fs-body:14px; --fs-meta:12.5px;
+  --acc-green:#2f7d4f; --acc-amber:#b07d24; --acc-red:#b3372f; --acc-blue:#3a5f8a;
+  --muted:var(--body-text-color-subdued);
+}
+.dark {--acc-green:#4f9d6c; --acc-amber:#c99a3f; --acc-red:#cf5b52; --acc-blue:#5b83bd;}
+
+.gradio-container {max-width:1100px; margin:0 auto;
+  font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif}
 .gradio-container p, .gradio-container li {line-height:1.75}
 
 .hero {padding:14px 0 2px}
-.hero h1 {margin:0; font-size:22px; font-weight:650; letter-spacing:.02em}
-.hero .sub {margin:6px 0 0; font-size:14.5px; opacity:.8}
-.hero .meta {margin:4px 0 0; font-size:12.5px; opacity:.5}
-.disclaimer {font-size:12px; opacity:.55; margin-top:14px}
+.hero h1 {margin:0; font-size:var(--fs-h1); font-weight:600; letter-spacing:.02em}
+.hero .sub {margin:6px 0 0; font-size:var(--fs-body); color:var(--muted)}
+.hero .meta {margin:4px 0 0; font-size:var(--fs-meta); color:var(--muted)}
+.disclaimer {font-size:var(--fs-meta); color:var(--muted); margin-top:14px}
 
 .verdict {border:1px solid var(--border-color-primary); border-left-width:3px;
-  border-radius:6px; padding:9px 14px; font-weight:600; font-size:14px; margin:2px 0 10px}
-.verdict.normal       {border-left-color:#2f7d4f}
-.verdict.marginal     {border-left-color:#b07d24}
-.verdict.insufficient {border-left-color:#b3372f}
+  border-radius:6px; padding:9px 14px; font-weight:600; font-size:var(--fs-title); margin:2px 0 10px}
+.verdict.normal       {border-left-color:var(--acc-green)}
+.verdict.marginal     {border-left-color:var(--acc-amber)}
+.verdict.insufficient {border-left-color:var(--acc-red)}
 
 .note {border:1px solid var(--border-color-primary); border-radius:6px;
-  padding:8px 14px; margin:10px 0; font-size:13.5px; opacity:.92}
+  padding:8px 14px; margin:10px 0; font-size:var(--fs-body); color:var(--muted)}
 
-.cite-card {border:1px solid var(--border-color-primary); border-left:3px solid #2f7d4f;
-  border-radius:6px; padding:10px 14px; margin:8px 0}
-.cite-card.bad {border-left-color:#b3372f}
-.cite-card .ref {font-weight:650; font-size:14.5px}
-.ax {font-size:12.5px; margin-left:12px; white-space:nowrap}
-.ax.ok  {color:#2f7d4f}
-.ax.bad {color:#b3372f}
-.cite-card .why {margin-top:5px; font-size:13px; opacity:.85}
-.cite-card details {margin-top:6px; font-size:12.5px}
-.cite-card summary {cursor:pointer; opacity:.6}
-.cite-card pre {white-space:pre-wrap; font-size:12.5px; border-radius:6px; padding:10px;
+.cite-card {border:1px solid var(--border-color-primary); border-left:3px solid var(--acc-green);
+  border-radius:6px; padding:10px 14px; margin:8px 0; transition:border-color .15s, background .15s}
+.cite-card:hover {border-color:var(--muted); background:var(--background-fill-secondary)}
+.cite-card.bad {border-left-color:var(--acc-red)}
+.cite-card .ref {font-weight:600; font-size:var(--fs-title)}
+/* axis marks are solid pills — white text on a dark-enough semantic fill,
+   which fixes the dark-mode contrast failure of the old coloured text. */
+.ax {font-size:var(--fs-meta); margin-left:8px; padding:1px 9px; border-radius:999px;
+  color:#fff; white-space:nowrap; display:inline-block}
+.ax.ok  {background:#2f7d4f}
+.ax.bad {background:#b3372f}
+.cite-card .why {margin-top:6px; font-size:var(--fs-body)}
+.cite-card details {margin-top:6px; font-size:var(--fs-meta)}
+.cite-card summary {cursor:pointer; color:var(--muted)}
+.cite-card summary:hover {color:var(--body-text-color)}
+.cite-card pre {white-space:pre-wrap; font-size:var(--fs-meta); border-radius:6px; padding:10px;
   margin-top:6px; background:var(--background-fill-secondary); line-height:1.7}
 
 .retr-card {border:1px solid var(--border-color-primary); border-radius:6px;
-  padding:9px 14px; margin:8px 0}
+  padding:9px 14px; margin:8px 0; transition:border-color .15s, background .15s}
+.retr-card:hover {border-color:var(--muted); background:var(--background-fill-secondary)}
 .retr-card .head {display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap}
-.retr-card .ref {font-weight:650; font-size:14px}
-.retr-card .meta {font-size:12px; opacity:.6}
-.retr-card .excerpt {font-size:12.5px; opacity:.75; margin-top:3px}
-.retr-card details {margin-top:5px; font-size:12.5px}
-.retr-card summary {cursor:pointer; opacity:.6}
-.retr-card pre {white-space:pre-wrap; font-size:12.5px; border-radius:6px; padding:10px;
+.retr-card .ref {font-weight:600; font-size:var(--fs-body)}
+.retr-card .meta {font-size:var(--fs-meta); color:var(--muted)}
+.retr-card .excerpt {font-size:var(--fs-meta); color:var(--muted); margin-top:3px}
+.retr-card details {margin-top:5px; font-size:var(--fs-meta)}
+.retr-card summary {cursor:pointer; color:var(--muted)}
+.retr-card summary:hover {color:var(--body-text-color)}
+.retr-card pre {white-space:pre-wrap; font-size:var(--fs-meta); border-radius:6px; padding:10px;
   margin-top:6px; background:var(--background-fill-secondary); line-height:1.7}
 .bar {height:4px; border-radius:2px; background:var(--background-fill-secondary);
   margin-top:8px; overflow:hidden}
-.bar > i {display:block; height:100%; background:#64748b}
+.bar > i {display:block; height:100%; background:var(--acc-blue)}
 
-.compare {display:grid; grid-template-columns:1fr 1fr; gap:14px}
+.compare {display:grid; grid-template-columns:1fr 1fr; gap:14px; align-items:start}
 @media (max-width:860px){.compare {grid-template-columns:1fr}}
-.compare .colhead {font-weight:650; font-size:13.5px; margin:2px 0 4px; opacity:.8}
+.compare .colhead {font-weight:600; font-size:var(--fs-body); margin:2px 0 4px; color:var(--muted)}
 
-.statgrid {display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+.statgrid {display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
   gap:12px; margin:8px 0 6px}
+@media (max-width:520px){.statgrid {grid-template-columns:1fr}}
 .stat {border:1px solid var(--border-color-primary); border-radius:6px;
-  padding:16px 10px; text-align:center}
+  padding:16px 10px; text-align:center; transition:border-color .15s}
+.stat:hover {border-color:var(--muted)}
 .stat .num {font-size:24px; font-weight:700; line-height:1.15}
-.stat .lbl {font-size:12.5px; opacity:.65; margin-top:6px; line-height:1.6}
+.stat .lbl {font-size:var(--fs-meta); color:var(--muted); margin-top:6px; line-height:1.6}
 
 .seccard {border:1px solid var(--border-color-primary); border-radius:6px;
   padding:10px 14px; margin:8px 0}
-.seccard .t {font-weight:650; font-size:13.5px; margin-bottom:4px}
-.seccard .b {white-space:pre-wrap; font-size:13.5px; line-height:1.8}
-.ladder {white-space:pre-wrap; font-size:12.5px; border-radius:6px; padding:12px;
+.seccard .t {font-weight:600; font-size:var(--fs-title); margin-bottom:4px}
+.seccard .b {white-space:pre-wrap; font-size:var(--fs-body); line-height:1.8}
+/* result hierarchy: the hard-law answer is emphasised, advisory/soft material recessed */
+.seccard.primary {border-left:3px solid var(--acc-blue)}
+.seccard.aux {background:var(--background-fill-secondary)}
+.seccard.aux .t {color:var(--muted)}
+
+.ladder {white-space:pre-wrap; font-size:var(--fs-meta); border-radius:6px; padding:12px;
   background:var(--background-fill-secondary); line-height:1.8}
-h4.blockhead {margin:16px 0 2px; font-size:14px; font-weight:650; opacity:.85}
+h4.blockhead {margin:16px 0 2px; font-size:var(--fs-title); font-weight:600; color:var(--body-text-color)}
+
+/* empty state shown in the result column before the first consultation */
+.empty-state {border:1px dashed var(--border-color-primary); border-radius:8px;
+  padding:22px 18px; color:var(--muted); font-size:var(--fs-body); line-height:1.9}
+.empty-state b {display:block; color:var(--body-text-color); font-weight:600;
+  font-size:var(--fs-title); margin-bottom:6px}
+.empty-state ol {margin:6px 0 0; padding-left:20px}
+
+/* bottom-align the retrieval control row so buttons line up with the input box */
+.btnrow {align-items:flex-end}
+/* chatbot fixed height relaxes on small screens */
+@media (max-width:600px){.consult-chat {height:auto !important; max-height:62vh}}
+
+/* in-content loading indicator during the one-shot retrieval + LLM */
+.loading {display:flex; align-items:center; gap:10px; padding:16px 4px;
+  color:var(--muted); font-size:var(--fs-body)}
+.spin {width:16px; height:16px; border-radius:50%; display:inline-block;
+  border:2px solid var(--border-color-primary); border-top-color:var(--acc-blue);
+  animation:spin .8s linear infinite}
+@keyframes spin {to {transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.spin {animation:none}}
 """
 
 HERO = """
@@ -182,6 +230,26 @@ FOOTER = """
 公開資料逐字匯入(11 部民生法規 2,560 條+警察分工實務指引);「住宅噪音」有專屬問診流程,
 其他問題走通用流程。資料庫未涵蓋的領域,系統會直接說不知道。</p>
 """
+
+# Placeholder for the result column before the first consultation completes —
+# tells the user what will appear here instead of leaving a blank void.
+EMPTY_STATE = """
+<div class="empty-state">
+  <b>諮詢結果會顯示在這裡</b>
+  完成左側問答、事實齊備後,系統會檢索一次並給出:
+  <ol>
+    <li>適用法源(逐字條文,依相關度排序)</li>
+    <li>說明(法律明文 / 實務見解 / 分析研判)</li>
+    <li>建議處理順序(低成本優先,訴訟最後)</li>
+  </ol>
+</div>
+"""
+
+# Shown in the result column while the one-shot retrieval + gates + LLM run, so
+# the wait (Ollama can take seconds) is not a frozen blank panel.
+LOADING_HTML = (
+    '<div class="loading"><span class="spin"></span>檢索法源、逐筆查核並產生說明中…</div>'
+)
 
 
 # ── data bootstrap ───────────────────────────────────────────────────────────
@@ -258,7 +326,7 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
             '<div class="retr-card"><div class="head">'
             f'<span class="ref">{escape(s.statute_id + s.article_no)}</span>'
             f'<span class="meta">{escape(s.hierarchy_level)} · 生效 {escape(s.effective_from)}'
-            f" · 相關度 {sc:.1f}</span></div>"
+            f" · 相關度 {width}%</span></div>"
             f'<div class="excerpt">{excerpt}…</div>{fulltext}'
             f'<div class="bar"><i style="width:{width}%"></i></div></div>'
         )
@@ -278,14 +346,14 @@ def _clean_section(title: str, body: str) -> str:
 
 def _sections_html(result) -> str:
     blocks = []
-    for title, body in (
-        ("法律明文", result.law_section),
-        ("實務見解(非法律明文)", result.practice_section),
-        ("分析研判(模型推論)", result.analysis_section),
+    for title, body, cls in (
+        ("法律明文", result.law_section, "primary"),
+        ("實務見解(非法律明文)", result.practice_section, "aux"),
+        ("分析研判(模型推論)", result.analysis_section, ""),
     ):
         if body:
             blocks.append(
-                f'<div class="seccard"><div class="t">{title}</div>'
+                f'<div class="seccard {cls}"><div class="t">{title}</div>'
                 f'<div class="b">{escape(_clean_section(title, body))}</div></div>'
             )
     if not blocks:   # model skipped the headings — show the raw answer, flagged
@@ -304,7 +372,7 @@ def _sections_html(result) -> str:
             for r in refs
         )
         blocks.append(
-            '<div class="seccard"><div class="t">相關裁判參考(個案見解,非法律明文,僅供參考)</div>'
+            '<div class="seccard aux"><div class="t">相關裁判參考(個案見解,非法律明文,僅供參考)</div>'
             f'<div class="b"><ul>{rows}</ul></div></div>'
         )
     return "".join(blocks)
@@ -375,9 +443,12 @@ def _ready_summary(state: SessionState) -> str:
 
 
 def consult_step(message: str, history: list[dict], state: SessionState):
+    """Streaming handler (generator): yields once per UI update so the result
+    column can show a loading indicator during the one-shot retrieval + LLM."""
     message = (message or "").strip()
     if not message:
-        return history, state, gr.update(), ""
+        yield history, state, gr.update(), ""
+        return
     if state.stage is Stage.READY_FOR_STAGE3:   # previous case closed — start anew
         history, state = _fresh_chat(), SessionState()
 
@@ -386,11 +457,13 @@ def consult_step(message: str, history: list[dict], state: SessionState):
 
     if state.stage is not Stage.READY_FOR_STAGE3:
         history.append({"role": "assistant", "content": reply})
-        return history, state, gr.update(), ""
+        yield history, state, gr.update(), ""
+        return
 
     # facts complete: replace the CLI-oriented ready-text with a plain summary,
-    # then run the one-shot retrieval + gates + ladder.
+    # show the loader, then run the one-shot retrieval + gates + ladder.
     history.append({"role": "assistant", "content": _ready_summary(state)})
+    yield history, state, LOADING_HTML, ""
     llm = ollama_llm() if ollama_available() else _stub_llm
     conn = connect(config.DB_PATH)
     try:
@@ -398,11 +471,11 @@ def consult_step(message: str, history: list[dict], state: SessionState):
     finally:
         conn.close()
     history.append({"role": "assistant", "content": "診斷完成,結果見右側。按「重新開始」可諮詢下一件。"})
-    return history, state, _consult_result_html(result), ""
+    yield history, state, _consult_result_html(result), ""
 
 
 def consult_reset():
-    return _fresh_chat(), SessionState(), "", ""
+    return _fresh_chat(), SessionState(), EMPTY_STATE, ""
 
 
 # ── 引用查核(獨立工具,無模型) ────────────────────────────────────────────────
@@ -480,7 +553,7 @@ with gr.Blocks(title="Legal Agent") as demo:
         gr.Markdown("描述問題,依提問補齊事實;資料齊備後,系統檢索一次並給出法源、說明與處理順序。")
         with gr.Row():
             with gr.Column(scale=5):
-                chat = gr.Chatbot(value=_fresh_chat(), label="諮詢對話", height=460)
+                chat = gr.Chatbot(value=_fresh_chat(), label="諮詢對話", height=460, elem_classes=["consult-chat"])
                 msg_in = gr.Textbox(label="輸入", lines=2, placeholder="多個問題可分行回答")
                 with gr.Row():
                     btn_send = gr.Button("送出", variant="primary")
@@ -498,7 +571,7 @@ with gr.Blocks(title="Legal Agent") as demo:
                     label="範例開場(最後一則資料庫未涵蓋,系統應誠實說不知道)",
                 )
             with gr.Column(scale=7):
-                consult_out = gr.HTML(label="諮詢結果")
+                consult_out = gr.HTML(value=EMPTY_STATE, label="諮詢結果")
         consult_state = gr.State(SessionState())
         btn_send.click(
             consult_step, [msg_in, chat, consult_state], [chat, consult_state, consult_out, msg_in]
@@ -543,7 +616,7 @@ with gr.Blocks(title="Legal Agent") as demo:
             "同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。"
         )
         q_in = gr.Textbox(value=DEFAULT_QUERY, label="事實描述")
-        with gr.Row():
+        with gr.Row(elem_classes=["btnrow"]):
             asof_2 = gr.Textbox(value="", label="基準日", placeholder="YYYY-MM-DD,留空為現行", scale=3)
             btn_retr = gr.Button("檢索", variant="primary", scale=1)
             btn_cmp = gr.Button("現行與 2024-06-01 對照", scale=2)
@@ -561,4 +634,13 @@ with gr.Blocks(title="Legal Agent") as demo:
     demo.load(compare_timeslice, [q_in], out_retr)
 
 if __name__ == "__main__":
-    demo.launch(theme=gr.themes.Monochrome(font=FONT_STACK), css=CSS)
+    demo.launch(
+        theme=gr.themes.Monochrome(font=FONT_STACK).set(
+            button_primary_background_fill="#3a5f8a",
+            button_primary_background_fill_hover="#4a72a3",
+            button_primary_text_color="#ffffff",
+            button_primary_background_fill_dark="#3a5f8a",
+            button_primary_background_fill_hover_dark="#4a72a3",
+        ),
+        css=CSS,
+    )
