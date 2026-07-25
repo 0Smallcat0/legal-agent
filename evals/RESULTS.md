@@ -683,12 +683,32 @@ state: stub pass/partial/miss **19/7/0**, tier 27/30, premise 30/30. The one
 remaining miss is 民法§423 on 房東擅自進房間, where 刑法§306 (無故侵入他人住宅)
 does surface — the stronger article of the two.
 
+### 7.4 The web demo had never been used either (2026-07-25)
+
+Twelve lived CLI sessions, zero web sessions — and the Gradio tab is the front
+door AND a different code path: it runs the RULE-BASED intake (model-free by
+design, so it works on HF Spaces free CPU), so none of §6.3's intake work
+applied to it. Three consultations through `app.consult_step`:
+
+| what the visitor saw | fix |
+|---|---|
+| Typed 「退租後房東說牆壁有釘孔要扣我兩個月押金」 and was asked 「這是租屋、勞資、消費、車禍、家事,還是鄰里的問題?」 — classify what you just described | triage now recognises 租屋/勞資/消費/車禍/家事 by keyword; only genuinely vague openings get the discriminating question |
+| Four turns in, the result column was still blank and there was no way to finish | 「請幫我分析」 (and a 6-turn cap) end the intake from `handle_turn`, so BOTH front ends have the exit; every question block now says the exit exists |
+| Answered 「公寓大廈有管委會」, was then asked 「有管委會的公寓大廈,還是透天?」 | answers are filed by WHAT THEY SAY when a line unambiguously matches one still-open field, positional otherwise |
+| 「噪音主要是什麼?」 asked four turns running to someone whose opening line was 「樓上小孩跑跳、拖椅子」 | the noise flow seeds that field from the opening complaint, exactly as the generic flow already seeded `problem` |
+| 民法§432 — the article that decides a 押金/釘孔 case — displayed last, labelled 「相關度 4%」 | a 0.0 BM25 score is the honest score of a dense/lexicon-channel candidate, not 4% relevance; those cards now say 「語彙/語意比對命中(與提問無字面重疊)」 |
+
+A bug in the routing fix itself, worth keeping: the leftover lines were indexed
+by the PENDING-question index rather than their own cursor, so a routed line
+silently ate a positional slot and `impact` went unfilled. Caught by the
+existing full-transcript test, which is what it is for.
+
 ---
 
 ## Reproduce
 
 ```bash
-python -m pytest -q                                                    # 232 tests
+python -m pytest -q                                                    # 236 tests
 python -m legal_agent.evaluation.mutation                              # full-corpus catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json       # golden v2 (30 cases)
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json        # threshold sweep

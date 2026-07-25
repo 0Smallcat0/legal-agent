@@ -25,6 +25,23 @@ class Stage(str, Enum):
     READY_FOR_STAGE3 = "READY_FOR_STAGE3"
 
 
+# The user must be able to end the questioning. Measured on the web demo, which
+# has no such escape: four turns in, the visitor had answered everything they
+# knew, the checklist still had gaps, and the result column was still blank.
+DONE_WORDS = {"沒有了", "沒了", "就這樣", "夠了", "可以了", "沒有其他", "沒別的了",
+              "不知道", "不清楚", "沒印象"}
+DONE_PHRASES = ("請幫我分析", "請分析", "開始分析", "幫我看", "可以分析", "直接分析")
+# Hard cap on intake turns — a checklist that cannot be completed must not trap
+# the user inside it forever.
+MAX_INTAKE_TURNS = 6
+
+
+def wants_analysis(message: str) -> bool:
+    """True when the user is asking to stop answering and get the diagnosis."""
+    text = (message or "").strip()
+    return text in DONE_WORDS or any(phrase in text for phrase in DONE_PHRASES)
+
+
 @dataclass
 class SessionState:
     stage: Stage = Stage.TRIAGE
@@ -33,6 +50,7 @@ class SessionState:
     pending_questions: list[str] = field(default_factory=list)  # field keys asked last turn
     user_text: str | None = None   # the opening complaint (fed to Mechanism 5)
     asked_discriminating: bool = False  # the one ambiguous-case question was used
+    intake_turns: int = 0          # answers taken so far (cap: MAX_INTAKE_TURNS)
 
 
 @dataclass
@@ -57,6 +75,9 @@ def _render_batch(batch: list[intake.IntakeField]) -> str:
     lines = ["請幫我確認幾個問題(可逐項分行回答):"]
     for i, f in enumerate(batch, 1):
         lines.append(f"{i}. {f.question}")
+    # Say the exit exists. A visitor who has run out of facts should not have to
+    # guess that 「請幫我分析」 works.
+    lines.append("(不知道或問夠了,直接說「請幫我分析」即可)")
     return "\n".join(lines)
 
 
@@ -79,6 +100,11 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
         if result.kind == "noise":
             state.problem_type = "noise"
             state.stage = Stage.INTAKE
+            # The opening complaint already describes the noise — the generic
+            # flow seeds `problem` with it, the noise flow did not, so a visitor
+            # who wrote 「樓上小孩跑跳、拖椅子」 was asked 「噪音主要是什麼?」 four
+            # turns running. Their own words are the best answer to that field.
+            state.collected_facts.setdefault("noise_type", user_message)
             batch = intake.next_questions(state)
             state.pending_questions = [f.key for f in batch]
             return "好的,聽起來是住宅噪音問題。\n" + _render_batch(batch), state
@@ -105,8 +131,14 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
 
     if state.stage is Stage.INTAKE:
         intake.record_answers(state, user_message)
+        state.intake_turns += 1
         batch = intake.next_questions(state)
-        if batch:
+        # The user decides when the questioning ends — either by saying so, or by
+        # hitting the turn cap. Whatever facts exist go to Stage 3; the honesty
+        # tier already grades a thin retrieval honestly, which is a better answer
+        # than an unfinishable questionnaire.
+        stop = wants_analysis(user_message) or state.intake_turns >= MAX_INTAKE_TURNS
+        if batch and not stop:
             state.pending_questions = [f.key for f in batch]
             return _render_batch(batch), state
         state.pending_questions = []
