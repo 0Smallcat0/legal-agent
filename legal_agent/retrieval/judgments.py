@@ -30,6 +30,7 @@ class JudgmentRef:
     court: str | None
     case_type: str | None                 # 案由
     matched: tuple[str, ...]              # 「民法第184條」-style refs shared with the answer
+    awards: tuple[int, ...] = ()          # amounts the 主文 orders paid (verbatim-derived)
 
 
 def related_judgments(
@@ -53,7 +54,7 @@ def related_judgments(
         rows = active.execute(
             "SELECT j.jid, j.court, j.case_type, "
             "json_extract(c.value, '$.statute_id'), "
-            "json_extract(c.value, '$.article_no') "
+            "json_extract(c.value, '$.article_no'), j.full_text "
             "FROM judgments j, json_each(j.cited_articles) c "
             f"WHERE json_extract(c.value, '$.statute_id') IN ({','.join('?' * len(sids))})",
             sids,
@@ -65,11 +66,13 @@ def related_judgments(
             own.close()
 
     by_jid: dict[str, dict] = {}
-    for jid, court, case_type, sid, ano in rows:
+    for jid, court, case_type, sid, ano, full_text in rows:
         if (sid, ano) not in wanted:
             continue
         entry = by_jid.setdefault(
-            jid, {"court": court, "case_type": case_type, "matched": []}
+            jid,
+            {"court": court, "case_type": case_type, "matched": [],
+             "full_text": full_text},
         )
         ref = f"{sid}{ano}"
         if ref not in entry["matched"]:
@@ -77,12 +80,17 @@ def related_judgments(
 
     items = sorted(by_jid.items(), key=lambda kv: kv[0], reverse=True)   # newer jid first
     items.sort(key=lambda kv: len(kv[1]["matched"]), reverse=True)       # overlap wins
+
+    # 主文 is parsed only for the few judgments actually shown — verbatim
+    # slice, no LLM, and an unreadable 主文 simply yields no figure.
+    from legal_agent.data.judgment_text import awards as _awards
     return [
         JudgmentRef(
             jid=jid,
             court=meta["court"],
             case_type=meta["case_type"],
             matched=tuple(meta["matched"]),
+            awards=_awards(meta.get("full_text")),
         )
         for jid, meta in items[:limit]
     ]
@@ -92,8 +100,12 @@ def render_block(refs: list[JudgmentRef]) -> str:
     """Terminal/text block for the reference judgments; '' when none."""
     if not refs:
         return ""
+    from legal_agent.data.judgment_text import format_awards
+
     lines = [DISCLAIMER]
     for r in refs:
         title = r.case_type or "(案由不明)"
-        lines.append(f"・{r.jid}({title})— 同引 {'、'.join(r.matched)}")
+        money = format_awards(r.awards)
+        money = f"{money}｜" if money else ""
+        lines.append(f"・{r.jid}({title})— {money}同引 {'、'.join(r.matched)}")
     return "\n".join(lines)

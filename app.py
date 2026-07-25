@@ -366,9 +366,12 @@ def _sections_html(result) -> str:
     # rendered code-side (the model never writes a case number).
     refs = getattr(getattr(result, "stage3", result), "related_judgments", ())
     if refs:
+        from legal_agent.data.judgment_text import format_awards
+
         rows = "".join(
-            f"<li>{escape(r.jid)}({escape(r.case_type or '案由不明')})"
-            f"— 同引 {escape('、'.join(r.matched))}</li>"
+            f"<li>{escape(r.jid)}({escape(r.case_type or '案由不明')})— "
+            + (f"<b>{escape(format_awards(r.awards))}</b>｜" if format_awards(r.awards) else "")
+            + f"同引 {escape('、'.join(r.matched))}</li>"
             for r in refs
         )
         blocks.append(
