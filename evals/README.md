@@ -9,8 +9,11 @@ SPEC §4). This directory holds **data and results**, not code.
   25 cases: 12 in-scope (statute mapping), 3 borderline (threshold-calibration
   probes), 5 out-of-scope (honesty tier must be `insufficient`), 3 wrong-premise
   (anti-sycophancy), 2 time-slice pairs (point-in-time retrieval).
-- `RESULTS.md` — measured numbers from the latest full run (verifier mutation
-  test, golden-set coverage, bare-vs-gated ablation per local model).
+- `RESULTS.md` — the current numbers, what each harness refuses to measure,
+  the honest limits, and the changes that were measured and NOT shipped.
+- `HISTORY.md` — how each number was arrived at, in the order it happened.
+- `real_sessions.json` — nine problems typed the way people type them;
+  scored by `evaluation/real_recall.py` (retrieval only, no model).
 
 ## Case schema
 

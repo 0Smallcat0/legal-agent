@@ -1,9 +1,9 @@
 """Retrieval recall on REAL user wording (SPEC §4.2, Tier-1 companion).
 
 The golden set scores the pipeline on cases written FOR the pipeline. This
-harness scores retrieval on six problems typed into the assistant as ordinary
+harness scores retrieval on nine problems typed into the assistant as ordinary
 people type them — the transcripts that exposed most of the 2026-07-25 defect
-list (evals/RESULTS.md §6).
+list (evals/HISTORY.md §6).
 
 Deliberately narrow:
   * input is the user's own turns, so the number does not depend on how well
