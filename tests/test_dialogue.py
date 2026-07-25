@@ -34,7 +34,8 @@ def test_triage_non_noise_routes_to_the_generic_flow():
     r = triage.classify("樓上漏水滲到我家天花板")
     assert r.kind == "other"
     assert r.problem_type == "other:leak"
-    assert r.message and "通用流程" in r.message
+    assert r.label == "漏水"          # a human one-liner, not a tour of the plumbing
+    assert r.message is None          # nothing actionable to say -> say nothing
 
 
 def test_everyday_domains_are_recognised_instead_of_asked_about():
@@ -157,12 +158,14 @@ def test_flow_full_transcript_reaches_ready_and_collects_facts():
     assert s.collected_facts["noise_type"] == "鄰居半夜很吵,受不了"
     assert s.pending_questions == ["timing"]
     _, s = handle_turn(s, facts["timing"])
-    assert s.pending_questions == ["building_type", "impact"]
+    assert s.pending_questions == ["building_type"]      # ONE question per turn
     _, s = handle_turn(s, f"{facts['building_type']}\n{facts['impact']}")
-    assert s.pending_questions == ["evidence", "actions_taken"]
+    assert s.pending_questions == ["impact"]
     _, s = handle_turn(s, f"{facts['evidence']}\n{facts['actions_taken']}")
+    # Three answers is the cap: the diagnosis is worth more than a complete form.
     assert s.stage == Stage.READY_FOR_STAGE3
-    assert s.collected_facts == facts
+    for key in ("noise_type", "timing", "building_type", "evidence", "actions_taken"):
+        assert s.collected_facts[key] == facts[key]
 
 
 def test_flow_vague_opening_then_clarify_to_noise():

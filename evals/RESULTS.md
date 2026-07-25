@@ -703,12 +703,46 @@ by the PENDING-question index rather than their own cursor, so a routed line
 silently ate a positional slot and `impact` went unfilled. Caught by the
 existing full-transcript test, which is what it is for.
 
+### 7.5 UX pass — 「不接 AI 的情況下真的很難用」 (2026-07-25, owner feedback)
+
+The owner typed 「退租後房東說牆壁有釘孔要扣我兩個月押金」 into the running demo
+and got 「這是租屋、勞資、消費、車禍、家事,還是鄰里的問題?」. That exact case had
+just been fixed (§7.4) — they were on a server started before the fix — but the
+verdict stood: the model-free flow reads as paperwork, not a consultation.
+What shipped after that feedback:
+
+- **The web demo now drives its INTAKE with the model** when one is available.
+  It had used Ollama for the Stage-3 narrative since the day it shipped while
+  still asking a scripted checklist, even with a model running on the same
+  machine. `flow.handle_turn_smart` has the same `(reply, state)` contract as
+  `handle_turn`, so the front ends pick per-request and the scripted path still
+  runs when there is no model — which is what keeps the demo alive on HF Spaces
+  free CPU.
+- **The opener stopped describing its own plumbing.** 「「住宅噪音」有專屬問診流程,
+  其他問題走通用流程(同一套檢索與五道關卡,語料涵蓋民法、租賃住宅條例…)」 was the
+  first thing a visitor read. Now: 「了解,租屋的問題。再問一件事就好——」. Triage
+  carries a `label` for the human line and a `message` only when it is
+  ACTIONABLE (the personal-safety route's 110 / 113 pointer).
+- **One question per turn, and at most three.** MAX_INTAKE_TURNS 6 → 3, because
+  this session's own measurement says retrieval on the user's opening words
+  already reaches 19/20 of the wanted articles: questions four through six buy
+  paperwork, not accuracy.
+- **Two more model-intake failure modes, both found in the same three web runs.**
+  The 8B model asked 「你覺得房東扣你的押金是公平的嗎?」 — a question mark, not a
+  repeat, and it hands the legal judgement back to the person who came to ask
+  it. And after the visitor answered 「公寓大廈有管委會」 it asked 「…公寓大廈有管
+  委會嗎?」. Both are now caught deterministically: a verdict-seeking phrase, or
+  a question whose keywords belong to an already-filled field, is replaced with
+  the next missing checklist question. The keyword router that the rule-based
+  intake uses also runs UNDER the model, so an extraction miss no longer loses
+  the answer.
+
 ---
 
 ## Reproduce
 
 ```bash
-python -m pytest -q                                                    # 236 tests
+python -m pytest -q                                                    # 238 tests
 python -m legal_agent.evaluation.mutation                              # full-corpus catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json       # golden v2 (30 cases)
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json        # threshold sweep

@@ -72,7 +72,9 @@ GENERIC_CHECKLIST: list[list[IntakeField]] = [
         ),
         IntakeField(
             "goal",
-            "你希望達成什麼結果(例:拿回款項、要求停止、請求賠償)?",
+            # 停止 leads: the generic flow also carries personal-safety cases, and
+            # offering 「拿回款項」 first to someone being stalked is tone-deaf.
+            "你希望達成什麼結果?(例:要求對方停止、拿回款項、請求賠償)",
             "決定救濟方向",
         ),
     ],

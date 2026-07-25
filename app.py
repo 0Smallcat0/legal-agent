@@ -29,7 +29,13 @@ from legal_agent.anti_hallucination.verifier import verify_answer
 from legal_agent.data.database import connect, init_db
 from legal_agent.data.seed import seed_source_hierarchy
 from legal_agent.data.source_ingest import load_proposals
-from legal_agent.dialogue.flow import SessionState, Stage, advance_to_stage3, handle_turn
+from legal_agent.dialogue.flow import (
+    SessionState,
+    Stage,
+    advance_to_stage3,
+    handle_turn,
+    handle_turn_smart,
+)
 from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
 from legal_agent.retrieval.retriever import retrieve_scored
 
@@ -223,7 +229,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">236 項測試通過 · 植入錯誤抓取率 10,435/10,435(零誤報) · 1,367 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">238 項測試通過 · 植入錯誤抓取率 10,435/10,435(零誤報) · 1,367 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -467,14 +473,27 @@ def consult_step(message: str, history: list[dict], state: SessionState):
     if not message:
         yield history, state, gr.update(), ""
         return
+    new_case = ""
     if state.stage is Stage.READY_FOR_STAGE3:   # previous case closed — start anew
         history, state = _fresh_chat(), SessionState()
+        # Say so. Silently restarting made the next message look like it was
+        # ignored: the visitor typed a follow-up and got a fresh intake question.
+        new_case = "(這是新的一件諮詢——上一件的結果仍在右側,按「重新開始」可清空)\n"
 
-    reply, state = handle_turn(state, message)
+    # With a local model present, the INTAKE is model-driven too — the same
+    # conversation the CLI has had since 07-19. Without one, the scripted
+    # checklist still runs, which is what keeps this demo working on HF Spaces
+    # free CPU with no keys.
     history = history + [{"role": "user", "content": message}]
+    if ollama_available():
+        reply, state = handle_turn_smart(
+            state, message, history, ollama_llm(fmt="json"),
+        )
+    else:
+        reply, state = handle_turn(state, message)
 
     if state.stage is not Stage.READY_FOR_STAGE3:
-        history.append({"role": "assistant", "content": reply})
+        history.append({"role": "assistant", "content": new_case + reply})
         yield history, state, gr.update(), ""
         return
 
