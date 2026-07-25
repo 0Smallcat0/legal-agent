@@ -39,15 +39,34 @@ class CalibrationResult:
     default_threshold: float
     default_accuracy: float
     insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD
+    # The insufficient floor is swept too: it was calibrated on the 11-article
+    # corpus (scores 4-42) and left fixed while corpus v2 pushed the same scores
+    # to 30-330, so out-of-scope questions sailed straight over a floor of 6.
+    best_insufficient: float | None = None
+    default_insufficient: float = INSUFFICIENT_SCORE_THRESHOLD
 
     def render(self) -> str:
+        best_floor = (self.best_insufficient if self.best_insufficient is not None
+                      else self.insufficient_threshold)
         lines = [
             "═══════ 誠實分級門檻校準(golden set 掃描) ═══════",
             f"樣本數:{len(self.points)}(含 expected_tier 的案例)",
-            f"insufficient 下限(固定):{self.insufficient_threshold:g}",
-            f"目前 marginal 門檻 {self.default_threshold:g} -> 分級正確率 {self.default_accuracy:.0%}",
-            f"最佳 marginal 門檻 {self.best_threshold:g} -> 分級正確率 {self.best_accuracy:.0%}",
+            f"目前門檻 insufficient<{self.default_insufficient:g} / marginal<"
+            f"{self.default_threshold:g} -> 分級正確率 {self.default_accuracy:.0%}",
+            f"最佳門檻 insufficient<{best_floor:g} / marginal<{self.best_threshold:g}"
+            f" -> 分級正確率 {self.best_accuracy:.0%}",
         ]
+        by_tier: dict[str, list[float]] = {}
+        for p in self.points:
+            if p.top_score is not None:
+                by_tier.setdefault(p.expected_tier, []).append(p.top_score)
+        for tier in ("insufficient", "marginal", "normal"):
+            scores = sorted(by_tier.get(tier, []))
+            if scores:
+                lines.append(
+                    f"  預期 {tier:<12} top BM25 {scores[0]:.1f}–{scores[-1]:.1f}(n={len(scores)})"
+                )
+        lines.append("  (兩層範圍若重疊,代表絕對 BM25 切不開——訊號問題,不是常數問題)")
         return "\n".join(lines)
 
 
@@ -76,27 +95,49 @@ def accuracy_at(
     return hits / len(points)
 
 
+def _candidates(points: list[CalibrationPoint]) -> list[float]:
+    """Every decision boundary the data can distinguish: midpoints between
+    adjacent observed scores, plus the extremes."""
+    scores = sorted({p.top_score for p in points if p.top_score is not None})
+    out = [0.0]
+    out += [(a + b) / 2 for a, b in zip(scores, scores[1:])]
+    if scores:
+        out += [scores[0] / 2, scores[-1] + 1.0]
+    return out
+
+
 def sweep_threshold(
     points: list[CalibrationPoint],
     default_threshold: float,
     insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD,
 ) -> CalibrationResult:
-    """Sweep the MARGINAL threshold (the insufficient floor stays fixed).
-    Candidate thresholds = midpoints between adjacent observed scores (plus
-    the extremes), i.e. every decision boundary the data can distinguish."""
-    scores = sorted({p.top_score for p in points if p.top_score is not None})
-    candidates = [0.0]
-    candidates += [(a + b) / 2 for a, b in zip(scores, scores[1:])]
-    if scores:
-        candidates += [scores[0] / 2, scores[-1] + 1.0]
-    best = max(candidates, key=lambda t: (accuracy_at(points, t, insufficient_threshold), -t))
+    """Sweep BOTH thresholds — the insufficient floor and the marginal band.
+
+    Sweeping only the marginal threshold hid a live defect: the floor was
+    calibrated at 6.0 on the 11-article corpus and never revisited, while
+    corpus v2 lifted every score by an order of magnitude. Out-of-scope
+    questions (商標搶註, 虛擬貨幣課稅) scored 30-40 — far over the floor — and
+    were answered as if the corpus covered them.
+    """
+    candidates = _candidates(points)
+    pairs = [
+        (floor, marginal)
+        for floor in candidates
+        for marginal in candidates
+        if marginal >= floor
+    ]
+    best_floor, best_marginal = max(
+        pairs, key=lambda fm: (accuracy_at(points, fm[1], fm[0]), -fm[0], -fm[1])
+    )
     return CalibrationResult(
         points=points,
-        best_threshold=best,
-        best_accuracy=accuracy_at(points, best, insufficient_threshold),
+        best_threshold=best_marginal,
+        best_accuracy=accuracy_at(points, best_marginal, best_floor),
         default_threshold=default_threshold,
         default_accuracy=accuracy_at(points, default_threshold, insufficient_threshold),
         insufficient_threshold=insufficient_threshold,
+        best_insufficient=best_floor,
+        default_insufficient=insufficient_threshold,
     )
 
 

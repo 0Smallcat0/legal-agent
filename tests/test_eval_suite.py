@@ -101,8 +101,10 @@ def test_sweep_finds_a_separating_threshold():
 def test_predict_tier_applies_insufficient_floor():
     # mirrors honesty.grade_honesty: below the floor -> insufficient even
     # though something was retrieved (the oos-01 leak shape)
-    assert predict_tier(3.89, 1.5) == "insufficient"
-    assert predict_tier(9.65, 1.5) == "normal"
+    assert predict_tier(3.89, 1.5, insufficient_threshold=6.0) == "insufficient"
+    assert predict_tier(9.65, 1.5, insufficient_threshold=6.0) == "normal"
+    # and with the shipped (recalibrated) floor, a v2-scale noise match fails it
+    assert predict_tier(37.5, 106.0) == "insufficient"
 
 
 # ── golden set v1 + auto-score extensions ────────────────────────────────────

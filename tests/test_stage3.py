@@ -115,7 +115,7 @@ def test_lexical_noise_score_short_circuits_as_insufficient(monkeypatch):
 
 
 def test_normal_tier_has_no_prefix(monkeypatch):
-    monkeypatch.setattr(retriever, "retrieve_scored", lambda *a, **k: [(_STUB, 99.0)])
+    monkeypatch.setattr(retriever, "retrieve_scored", lambda *a, **k: [(_STUB, 250.0)])
     res = run_stage3({"noise_type": "深夜"}, llm=lambda p: "這是模型的分析內容。", conn=None)
     assert res.honesty_tier == "normal"
     assert MARGINAL_PREFIX not in res.answer
