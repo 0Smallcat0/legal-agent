@@ -213,7 +213,8 @@ def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadde
         Rung(
             "evidence", "蒐證與書面紀錄",
             "保存契約/對話紀錄/單據/照片,整理時間軸", (),
-            "免費", "隨時", "低", "把事實與證據整理成一頁時間軸", False, True,
+            "免費", "隨時", "低", "把事實與證據整理成一頁時間軸",
+            False, bool(retrieved),
         ),
         Rung(
             "negotiate", "正式溝通與存證信函",
@@ -226,7 +227,11 @@ def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadde
             "免費", "數週", "中", "向所在地調解委員會聲請調解", False, False,
         ),
         _authority_rung(retrieved),
-        _LEGAL_AID_RUNG,
+        # When retrieval came back EMPTY the honesty gate has just told the user
+        # 「這個問題我的資料庫沒有涵蓋」 — and then the ladder used to point at
+        # 蒐證 as the next step. The useful next step for a question this tool
+        # cannot answer is a free consultation with someone who can.
+        replace(_LEGAL_AID_RUNG, recommended=not retrieved),
         Rung(
             "litigation", "民事訴訟(最後手段)",
             "小額/簡易/通常程序,依金額與案情選擇", (),
