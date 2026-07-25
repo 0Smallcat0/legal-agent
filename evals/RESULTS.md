@@ -688,7 +688,7 @@ does surface — the stronger article of the two.
 ## Reproduce
 
 ```bash
-python -m pytest -q                                                    # 231 tests
+python -m pytest -q                                                    # 232 tests
 python -m legal_agent.evaluation.mutation                              # full-corpus catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json       # golden v2 (30 cases)
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json        # threshold sweep

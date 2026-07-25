@@ -105,6 +105,20 @@ def test_authority_rung_falls_back_when_the_domain_is_unknown():
     assert "主管機關申訴/檢舉" in text
 
 
+def test_refusal_recommends_the_free_consultation_not_evidence_gathering():
+    # When retrieval came back empty the user has just been told 「這個問題我的
+    # 資料庫沒有涵蓋」 — pointing at 蒐證 as the next step answers nothing.
+    from legal_agent.dialogue.solution import build_generic_ladder
+
+    refused = build_generic_ladder({}, retrieved=[]).render()
+    recommended = [line for line in refused.splitlines() if "建議下一步" in line]
+    assert recommended and "法律扶助" in recommended[0]
+
+    answered = build_generic_ladder({}, retrieved=[_statute("勞動基準法")]).render()
+    recommended = [line for line in answered.splitlines() if "建議下一步" in line]
+    assert recommended and "蒐證" in recommended[0]
+
+
 def test_generic_ladder_offers_free_legal_help_before_litigation():
     from legal_agent.dialogue.solution import build_generic_ladder
 
