@@ -11,7 +11,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from legal_agent.anti_hallucination.answer_structure import split_sections  # noqa: E402
+from legal_agent.anti_hallucination.answer_structure import (  # noqa: E402
+    PRACTICE_HEADING,
+    is_empty_section,
+    split_sections,
+)
 from legal_agent.anti_hallucination.honesty import grade_honesty  # noqa: E402
 from legal_agent.anti_hallucination.sycophancy import check_premise  # noqa: E402
 from legal_agent.data.models import Statute  # noqa: E402
@@ -72,6 +76,38 @@ def test_check_premise_flags_asserted_legal_conclusion():
 
 def test_check_premise_ignores_neutral_factual_description():
     assert check_premise("鄰居每天晚上走路很大聲,已經持續好幾個月了") is False
+
+
+def test_check_premise_does_not_fire_on_the_question_itself():
+    # Measured on a lived session: 「這樣有沒有違法?」 tripped the flag, so a user
+    # asking the exact question the tool answers was told they had 「先下了
+    # 法律判斷」. Asking is not asserting.
+    assert check_premise("老闆說準備時間不算錢,這樣有沒有違法?") is False
+    assert check_premise("房東這樣做算不算違法?") is False
+    assert check_premise("公司說責任制所以沒有加班費,這樣合法嗎?") is False
+
+
+def test_check_premise_still_fires_on_agreement_seeking_tag():
+    # 「對吧?」 has a question mark but wants a yes — that is the sycophancy risk.
+    assert check_premise("小孩白天在家跑跳就是違法,對吧?") is True
+    assert check_premise("他這樣就是犯法。") is True
+
+
+# ── Section decoration / empty sections ──────────────────────────────────────
+def test_split_strips_markdown_decoration_around_headings():
+    # Local models write 「**法律明文**」; splitting on the bare heading used to
+    # leave a stray 「**」 on its own line between every section.
+    answer = "**法律明文**\n民法第793條:…\n\n**實務見解**\n(無)\n\n**分析研判**\n僅供參考。"
+    law, practice, analysis = split_sections(answer)
+    assert not law.rstrip().endswith("*")
+    assert law.splitlines()[0] == "法律明文"
+    assert "**" not in law and "**" not in practice and "**" not in analysis
+
+
+def test_empty_practice_section_is_recognised():
+    assert is_empty_section("實務見解\n(無)", PRACTICE_HEADING) is True
+    assert is_empty_section("實務見解\n無", PRACTICE_HEADING) is True
+    assert is_empty_section("實務見解\n依內政部函釋…", PRACTICE_HEADING) is False
 
 
 if __name__ == "__main__":
