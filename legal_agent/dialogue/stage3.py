@@ -8,8 +8,8 @@ Retrieval fires EXACTLY ONCE (retrieve_scored) on the complete fact set (§3.3).
 """
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 from legal_agent import config
 from legal_agent.anti_hallucination import verifier

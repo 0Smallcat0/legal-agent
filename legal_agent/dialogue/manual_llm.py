@@ -11,7 +11,7 @@ Select the backend in config.LLM_PROVIDER.
 """
 from __future__ import annotations
 
-from typing import Callable
+from collections.abc import Callable
 
 # A lone line equal to this ends the pasted answer. Distinct enough to never
 # appear as a line inside a real (Chinese) legal answer.

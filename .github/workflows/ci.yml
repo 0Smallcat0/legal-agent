@@ -20,5 +20,7 @@ jobs:
           cache: pip
       - name: Install dependencies
         run: pip install -r requirements.txt
+      - name: Lint
+        run: python -m ruff check legal_agent app.py tests
       - name: Run tests
         run: python -m pytest -q

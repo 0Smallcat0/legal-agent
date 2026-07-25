@@ -1,10 +1,10 @@
 """Stage 2 — Structured intake (spec §3.2). Pre-designed 住宅噪音 checklist.
 
-NO retrieval, NO LLM. Questions are asked 2-3 per turn (batching is UX-only and,
-because this stage is BEFORE retrieval, has ZERO accuracy impact — spec §3.2).
-Each field records a legally-relevant fact plus its rationale (why it matters).
-v1 records answers positionally, one per line; the LLM upgrade will extract facts
-from free-form replies.
+NO retrieval, NO LLM — this is the checklist the model-free path walks, and the
+field set the model-driven intake (dialogue/smart_intake.py) extracts into. Each
+field records a legally-relevant fact plus its rationale (why it matters).
+Answers are filed by WHAT THEY SAY when a line unambiguously matches one open
+field (route_answer), positionally otherwise.
 """
 from __future__ import annotations
 
@@ -118,7 +118,7 @@ def next_questions(session_state) -> list[IntakeField]:
 # asked 「有管委會的公寓大廈,還是透天/無管委會?」 — the thing they had just said.
 # Conservative by construction: a line is re-routed only when it matches exactly
 # ONE still-unanswered field, otherwise the positional rule stands.
-_FIELD_HINTS: dict[str, tuple[str, ...]] = {
+FIELD_HINTS: dict[str, tuple[str, ...]] = {
     "building_type": ("公寓", "大廈", "透天", "管委會", "套房", "華廈", "宿舍", "社區"),
     "evidence": ("錄音", "錄影", "照片", "截圖", "分貝", "檢測", "沒有證據", "沒錄"),
     "actions_taken": ("報警", "報過警", "里長", "申訴", "檢舉", "調解", "溝通過",
@@ -130,11 +130,11 @@ _FIELD_HINTS: dict[str, tuple[str, ...]] = {
 }
 
 
-def _route(line: str, unanswered: set[str]) -> str | None:
+def route_answer(line: str, unanswered: set[str]) -> str | None:
     """The one unanswered field this line unambiguously answers, else None."""
     hits = [
         key for key in unanswered
-        if any(word in line for word in _FIELD_HINTS.get(key, ()))
+        if any(word in line for word in FIELD_HINTS.get(key, ()))
     ]
     return hits[0] if len(hits) == 1 else None
 
@@ -153,7 +153,7 @@ def record_answers(session_state, message: str) -> None:
 
     positional: list[str] = []
     for line in lines:
-        target = _route(line, open_keys)
+        target = route_answer(line, open_keys)
         if target is not None:
             facts[target] = line
             open_keys.discard(target)

@@ -153,7 +153,7 @@ def harvest(
     jids = [j for _date, jlist in days for j in jlist]
     if only_substantive_civil:
         jids = [j for j in jids if is_substantive_civil(j)]
-    progress(f"異動清單:{sum(len(l) for _d, l in days)} 筆,篩選後 {len(jids)} 筆,"
+    progress(f"異動清單:{sum(len(jid_list) for _day, jid_list in days)} 筆,篩選後 {len(jids)} 筆,"
              f"本次上限 {limit} 筆")
     jids = jids[:limit]
 

@@ -7,16 +7,23 @@
 HARD INVARIANT (spec §3.3): retrieval is NOT imported or called in Stages 1-2.
 This module imports only triage + intake at module load; stage3/solution (which
 pull in the retrieval layer) are imported LAZILY inside advance_to_stage3.
-handle_turn (Stages 1-2) never touches them.
+Neither handle_turn nor handle_turn_smart touches them.
 
-Rule-based v1, no LLM in Stages 1-2.
+Two intake styles, same (reply, state) contract: `handle_turn` is rule-based and
+needs no model; `handle_turn_smart` lets the model conduct the interview. An LLM
+may run here — retrieval still may not.
 """
 from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import TYPE_CHECKING
 
 from legal_agent.dialogue import intake, triage
+
+if TYPE_CHECKING:   # annotations only — importing these at runtime would drag
+    from legal_agent.dialogue.solution import SolutionLadder  # the retrieval
+    from legal_agent.dialogue.stage3 import Stage3Result  # layer into Stages 1-2
 
 
 class Stage(str, Enum):
@@ -70,8 +77,8 @@ class PipelineResult:
     flagged_count: int
     premise_flag: bool             # Mechanism 5
     solution_text: str             # Stage 4: rendered escalation ladder
-    solution_ladder: "SolutionLadder"
-    stage3: "Stage3Result"         # full Stage 3 result, for deeper access
+    solution_ladder: SolutionLadder
+    stage3: Stage3Result         # full Stage 3 result, for deeper access
 
 
 def _render_batch(batch: list[intake.IntakeField]) -> str:
@@ -203,7 +210,9 @@ def handle_turn_smart(state: SessionState, user_message: str,
     if ready:
         state.pending_questions = []
         state.stage = Stage.READY_FOR_STAGE3
-        return preface + _render_ready(state), state
+    # The model's own last line is the natural bridge into the diagnosis
+    # (「我了解了,開始幫你查」); callers that want a fact summary instead read
+    # `state` and render their own, which is what the web demo does.
     return preface + turn.reply, state
 
 

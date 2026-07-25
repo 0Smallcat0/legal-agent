@@ -11,9 +11,6 @@ DB_PATH = PROJECT_ROOT / "db" / "legal_agent.db"   # local SQLite file (gitignor
 CORPUS_DIR = PROJECT_ROOT / "corpus"               # human-verified source material (§1.5)
 PROMPTS_DIR = PROJECT_ROOT / "prompts"             # system-prompt text files (§2)
 
-# Locked scenario #1 (spec §1.5 / §3.4): residential noise disputes.
-ACTIVE_SCENARIO = "住宅噪音糾紛"
-
 # ── Runtime reasoning model (spec §0.4) ──────────────────────────────────────
 # NOIR: set MODEL to a real model id before running the agent live. It ships as a
 # PLACEHOLDER on purpose, so `python -m legal_agent.run` fails fast with a clear

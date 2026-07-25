@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import json
 import re
-from typing import Callable
+from collections.abc import Callable
 
 # The claim sentence and the verbatim article both go in; the model answers a
 # single yes/no. The reply is parsed, never shown verbatim to the user.

@@ -13,6 +13,7 @@ exits with a clear message (no traceback).
 """
 from __future__ import annotations
 
+import contextlib
 import sys
 from datetime import date
 
@@ -193,30 +194,23 @@ def run_conversation(llm, conn, as_of_date=None, input_fn=input, output_fn=print
             return   # clinic-style: one diagnosis per session
 
 
-_DONE_PHRASES = ("請幫我分析", "請分析", "開始分析", "幫我看", "可以分析")
-_DONE_WORDS = {"沒有了", "沒了", "就這樣", "夠了", "可以了", "沒有其他", "沒別的了"}
-
-
 def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
-                           output_fn=print, max_turns=12, intake_llm=None) -> None:
+                           output_fn=print, intake_llm=None) -> None:
     """LLM-driven intake loop: the model DRIVES the conversation (natural replies,
     its own follow-ups, free-form fact extraction), then on ready runs the SAME
     Stage 3 -> 4 pipeline. No retrieval happens during intake (spec §3.3);
     retrieval fires exactly once inside advance_to_stage3. `intake_llm` (falls back
     to `llm`) can be a JSON-constrained backend so a small local model extracts
     facts reliably. Injectable IO for tests.
-    """
-    from legal_agent.dialogue.smart_intake import field_keys, run_smart_intake_turn
-    from legal_agent.dialogue.triage import classify
 
+    Triage, seeding, the done-signal and the turn cap all live in
+    `flow.handle_turn_smart` — this loop is IO. They used to be duplicated here,
+    which is how the CLI and the web demo drifted apart in the first place.
+    """
     intake_llm = intake_llm or llm
     output_fn(_WELCOME_SMART)
+    state = flow.SessionState()
     history: list[dict] = []
-    facts: dict = {}
-    user_text: str | None = None
-    problem_type = "generic"
-    pending_key: str | None = None   # checklist field the last turn asked directly
-    turns = 0
     while True:
         try:
             msg = input_fn("\n你 > ")
@@ -230,52 +224,23 @@ def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
             output_fn("(結束對話)")
             return
 
-        if user_text is None:
-            user_text = msg
-            # Same coarse triage as the rule-based flow: the built noise
-            # scenario keeps its deep checklist; everything else (incl.
-            # ambiguous openings — the LLM asks its own follow-ups) gets the
-            # generic four-field intake instead of a noise questionnaire.
-            triage_result = classify(msg)
-            problem_type = "noise" if triage_result.kind == "noise" else "generic"
-            # A personal-safety complaint carries the 110 / 113 pointer. Say it
-            # first — it matters more than anything the pipeline prints later.
-            # Domain notices are not printed here: the model is about to reply
-            # naturally, and 「聽起來像租屋問題」 on top of that is just noise.
-            if triage_result.urgent and triage_result.message:
-                output_fn(triage_result.message)
         history.append({"role": "user", "content": msg})
-        turns += 1
+        reply, state = flow.handle_turn_smart(state, msg, history, intake_llm)
+        history.append({"role": "assistant", "content": reply})
 
-        turn = run_smart_intake_turn(history, facts, intake_llm, problem_type,
-                                     pending_key=pending_key)
-        facts = turn.facts
-        pending_key = turn.asked
-        history.append({"role": "assistant", "content": turn.reply})
-        output_fn(turn.reply)
+        output_fn(reply)
+        if state.stage is not flow.Stage.READY_FOR_STAGE3:
+            continue
 
-        done_signal = msg.strip() in _DONE_WORDS or any(p in msg for p in _DONE_PHRASES)
-        ready = (turn.ready or done_signal
-                 or all(k in facts for k in field_keys(problem_type))
-                 or turns >= max_turns)
-        if ready:
-            output_fn("\n(資訊已足夠——開始檢索法條並診斷;這一步只檢索一次)")
-            state = flow.SessionState(
-                stage=flow.Stage.READY_FOR_STAGE3,
-                problem_type=problem_type,
-                collected_facts=facts,
-                user_text=user_text,
-            )
-            result = flow.advance_to_stage3(state, llm=llm, as_of_date=as_of_date, conn=conn)
-            output_fn(_format_result(result))
-            return   # clinic-style: one diagnosis per session
+        output_fn("\n(資訊已足夠——開始檢索法條並診斷;這一步只檢索一次)")
+        result = flow.advance_to_stage3(state, llm=llm, as_of_date=as_of_date, conn=conn)
+        output_fn(_format_result(result))
+        return   # clinic-style: one diagnosis per session
 
 
 def main(argv=None) -> int:
-    try:
+    with contextlib.suppress(AttributeError, ValueError):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
-    except (AttributeError, ValueError):
-        pass
 
     import argparse
 

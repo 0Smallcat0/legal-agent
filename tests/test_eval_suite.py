@@ -148,7 +148,7 @@ FAKE_ANSWER = (
 
 
 def test_ablation_counts_unverifiable_citations_and_strips_think(real_conn):
-    factory = lambda model: (lambda _p: FAKE_ANSWER)  # noqa: E731
+    factory = lambda model: (lambda _p: FAKE_ANSWER)
     report = run_ablation(FIXTURE, models=["fake-a"], llm_factory=factory, conn=real_conn)
 
     # 2 fixture cases x 2 conditions

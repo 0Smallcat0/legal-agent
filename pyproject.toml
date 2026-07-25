@@ -1,0 +1,21 @@
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+extend-exclude = ["db", "evals"]
+
+[tool.ruff.lint]
+# Chosen, not defaulted. The ignores below are not laziness — they are what a
+# CJK codebase looks like:
+#   E501        long lines are almost always a Chinese comment or a verbatim
+#               statute string; wrapping them costs more than it buys.
+#   RUF001-003  「ambiguous unicode」 is the point: this project stores
+#               Traditional Chinese legal text verbatim, full-width punctuation
+#               included.
+#   ARG001/005  injected callables and test fakes must match an interface even
+#               when they ignore the argument (`lambda prompt: CANNED_ANSWER`).
+select = ["F", "E", "W", "I", "UP", "B", "SIM", "C4", "RUF"]
+ignore = ["E501", "RUF001", "RUF002", "RUF003", "ARG001", "ARG005"]
+
+[tool.ruff.lint.per-file-ignores]
+# A canned lambda reads better than a three-line def in a test fixture.
+"tests/*" = ["E731"]
