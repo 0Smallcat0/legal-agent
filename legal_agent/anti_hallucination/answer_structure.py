@@ -34,6 +34,34 @@ def _find(heading: str, text: str) -> int:
     return text.find(heading)
 
 
+# Models emit the headings as markdown (「**法律明文**」). Splitting on the bare
+# heading therefore leaves the opening 「**」 dangling at the END of the previous
+# section and the closing 「**」 stuck to the heading — the user reads a stray
+# 「**」 on its own line between every section. Strip the decoration; keep the
+# text itself byte-for-byte.
+_DECOR = " \t*#_\r\n:："
+
+
+def _tidy(block: str, heading: str) -> str:
+    body = block[len(heading):] if block.startswith(heading) else block
+    body = body.strip(_DECOR)
+    return f"{heading}\n{body}" if body else heading
+
+
+# A section whose body is just 「(無)」 says something true: there was nothing to
+# report. Callers use this to avoid warning about a missing disclaimer on a
+# section that has no content to disclaim.
+_EMPTY_BODIES = {"", "無", "(無)", "（無）", "N/A", "n/a"}
+
+
+def is_empty_section(section: str | None, heading: str) -> bool:
+    """True when `section` carries the heading but no substantive body."""
+    if section is None:
+        return True
+    body = section[len(heading):] if section.startswith(heading) else section
+    return body.strip(_DECOR + "。,，、") in _EMPTY_BODIES
+
+
 def split_sections(answer: str) -> tuple[str | None, str | None, str | None]:
     """Split `answer` into (法律明文, 實務見解, 分析研判) text.
 
@@ -49,7 +77,7 @@ def split_sections(answer: str) -> tuple[str | None, str | None, str | None]:
     section: dict[str, str] = {}
     for i, (heading, start) in enumerate(present):
         end = present[i + 1][1] if i + 1 < len(present) else len(text)
-        section[heading] = text[start:end].strip()
+        section[heading] = _tidy(text[start:end].strip(), heading)
 
     return (
         section.get(LAW_HEADING),
