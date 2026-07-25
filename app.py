@@ -369,7 +369,9 @@ def _sections_html(result) -> str:
         from legal_agent.data.judgment_text import format_awards
 
         rows = "".join(
-            f"<li>{escape(r.jid)}({escape(r.case_type or '案由不明')})— "
+            # 案號 read verbatim from the judgment's own header — a jid is a
+            # database key nobody can look up.
+            f"<li>{escape(r.cite or r.jid)}({escape(r.case_type or '案由不明')})— "
             + (f"<b>{escape(format_awards(r.awards))}</b>｜" if format_awards(r.awards) else "")
             + f"同引 {escape('、'.join(r.matched))}</li>"
             for r in refs

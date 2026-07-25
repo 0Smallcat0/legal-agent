@@ -13,7 +13,12 @@ from typing import Callable
 
 from legal_agent import config
 from legal_agent.anti_hallucination import verifier
-from legal_agent.anti_hallucination.answer_structure import PRACTICE_DISCLAIMER, split_sections
+from legal_agent.anti_hallucination.answer_structure import (
+    PRACTICE_DISCLAIMER,
+    PRACTICE_HEADING,
+    is_empty_section,
+    split_sections,
+)
 from legal_agent.anti_hallucination.honesty import (
     INSUFFICIENT_TEXT,
     MARGINAL_PREFIX,
@@ -39,6 +44,8 @@ SYSTEM_PROMPT = (
     "切勿把實務見解寫進「法律明文」。"
     "\n「分析研判」:你的推論與研判;此段為模型推論、僅供參考,並非法律本身。"
     "\n(若某段沒有對應的檢索結果,仍要保留該段標題並寫「(無)」。)"
+    "\n\n【涵蓋(重要)】檢索到的法源中,凡與使用者事實相關者都要在「法律明文」列出"
+    "並說明;不要只挑一條講完就結束。與本案無關的可以不提,但不得虛構。"
     "\n\n【立場(重要)】當使用者的陳述包含錯誤的法律判斷(例如把不構成的行為說成"
     "犯罪、或斷定「一定告得成」「他一定要賠」),糾正其錯誤優先於附和。請說明法律"
     "實際上如何規定,而不是使用者想聽的話。"
@@ -116,7 +123,13 @@ def build_model_input(retrieved: list[Statute], collected_facts: dict) -> str:
         + _render_articles(retrieved)
         + "\n\n===== 使用者陳述的事實 =====\n"
         + _render_facts(collected_facts)
-        + "\n\n請根據上述法源回答;若不足以回答,請說「現有資料不足」。"
+        # The trailing reminder used to end 「若不足以回答,請說『現有資料不足』」,
+        # and a local 8B model appended that line to answers that had just
+        # analysed five articles — the reader gets a full answer stamped
+        # 「資料不足」. Insufficiency is graded by the honesty tier in code; the
+        # model only needs to say it INSIDE its analysis, when it is true.
+        + "\n\n請根據上述法源回答。若法源確實不足以回答,請在「分析研判」段直接寫"
+          "「現有資料不足」並建議諮詢律師——不要在已經做出分析的答案後面再補這句。"
     )
 
 
@@ -218,12 +231,27 @@ def run_stage3(
 
     law_section, practice_section, analysis_section = split_sections(answer)
     sections_ok = all(s is not None for s in (law_section, practice_section, analysis_section))
-    practice_disclaimer_ok = practice_section is not None and PRACTICE_DISCLAIMER in practice_section
+    # An 實務見解 section that says 「(無)」 has nothing to disclaim — warning about
+    # a missing disclaimer there trains the user to ignore the warnings that matter.
+    practice_disclaimer_ok = practice_section is not None and (
+        PRACTICE_DISCLAIMER in practice_section
+        or is_empty_section(practice_section, PRACTICE_HEADING)
+    )
 
     # Reference judgments: a deterministic JOIN on the already-retrieved
     # articles (retrieval still fired exactly once). Empty table -> ().
     from legal_agent.retrieval.judgments import related_judgments as _related
-    refs = tuple(_related(retrieved, conn=conn))
+
+    # Judgments accompany the law the ANSWER stands on, not every article the
+    # retriever considered — a citation that passed verification, written by
+    # name (an inherited back-reference inside a quoted article is not the
+    # answer's own claim). Empty set = fall back to the whole window.
+    cited_ok = {
+        (v.citation.statute_id, v.citation.article_no)
+        for v in verifications
+        if v.exists and not v.flagged and v.citation.article_no and not v.citation.inferred_id
+    }
+    refs = tuple(_related(retrieved, conn=conn, focus=cited_ok))
 
     return Stage3Result(
         answer=answer,
