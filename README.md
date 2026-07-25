@@ -3,7 +3,8 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-180%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-200%20passing-brightgreen)
+![Judgments](https://img.shields.io/badge/judgments-1%2C367%20harvested-blue)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
 > like the real thing. This repo is a working countermeasure: **every citation is
@@ -154,12 +155,19 @@ python -m legal_agent.cli seed
 python -m legal_agent.data.source_ingest corpus/moj_bulk_v1_proposal.json
 python -m legal_agent.data.source_ingest corpus/noise_routing_proposal.json
 
-python -m pytest -q          # 180 passing
+python -m pytest -q          # 200 passing
 
 # (optional) scale the corpus: parse the official 全國法規資料庫 bulk XML into a
 # proposal file, review it by hand, then ingest through the same validated path
 python -m legal_agent.data.moj_xml FalVMingLing.xml -o proposals.json --include 噪音管制法
 python -m legal_agent.data.source_ingest proposals.json
+
+# (optional) reference judgments. Needs a free account at
+# opendata.judicial.gov.tw in a gitignored .env (JUDICIAL_USER/JUDICIAL_PASSWORD).
+# Two constraints come from the API itself, not from us: it serves ONLY 00:00-06:00,
+# and each call returns the change list of the day SEVEN DAYS AGO — so the
+# judgment corpus accumulates night by night rather than downloading in bulk.
+python -m legal_agent.data.judicial_api --limit 200
 
 # measure it (no key, no cost — see evals/RESULTS.md for current numbers)
 python -m legal_agent.evaluation.mutation                               # verifier catch rate
@@ -201,7 +209,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (180 tests),
+five gates → dialogue → solution ladder — is implemented and green (200 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).
@@ -218,11 +226,18 @@ historical slice (rent, labor, traffic, consumer, family-violence,
 noise — imported from the official bulk XML, with the original hand-verified
 11 articles as the character-for-character golden sample), one fully built
 consultation scenario (noise) with a generic clinic flow — intake checklist,
-retrieval, low-cost-first action ladder — covering everything else; judgments
-have an importer
-([`data/judicial_json.py`](legal_agent/data/judicial_json.py): 裁判書開放API
-JSON → rows, citations extracted by the verifier's own grammar) but are
-reference material only — not yet retrieval candidates. Roadmap — each item
+retrieval, low-cost-first action ladder — covering everything else; and
+**1 367 real court judgments** harvested from the 裁判書開放API
+([`data/judicial_api.py`](legal_agent/data/judicial_api.py) → the same
+importer, citations extracted by the verifier's own grammar). Judgments stay
+REFERENCE tier — never retrieval candidates, never citable law — and surface
+only through a deterministic JOIN on the articles the pipeline already
+retrieved ([`retrieval/judgments.py`](legal_agent/retrieval/judgments.py)),
+carrying the award figure read verbatim from the judgment's own 主文
+([`data/judgment_text.py`](legal_agent/data/judgment_text.py); 爭點/裁判要旨
+stay NULL — summarising reasoning is an NLP task this project will not fake).
+The block is rendered code-side, so the model can never invent a case number.
+Coverage and its gaps are published, not assumed: RESULTS §5. Roadmap — each item
 motivated by a measured gap: **hybrid retrieval + 口語→法條語彙 expansion
 shipped** (golden-v2 coverage 65% → 88% → 96% pass+partial — the last jump
 came from joining the user's ORIGINAL ask into the retrieval query: distilled
