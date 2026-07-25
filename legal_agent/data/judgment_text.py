@@ -57,6 +57,28 @@ _AMOUNT_RE = re.compile(
 _AWARD_MARKERS = ("給付", "賠償")
 _NOT_AWARD_MARKERS = ("訴訟費用", "程序費用", "擔保", "假執行", "免為")
 
+# Every harvested judgment opens the same way, and both lines are verbatim:
+#   line 1  臺灣宜蘭地方法院民事簡易判決      <- court + what kind of ruling it is
+#   line 2  114年度宜簡字第406號              <- the 案號 a person can actually look up
+# The API's jid (「LTEV,114,羅簡,192,20260630,2」) is a database key; showing it
+# to a user beside an answer told them nothing and hid the 判決/裁定 distinction.
+_COURT_LINE_RE = re.compile(r"^\s*(\S*法院\S*)\s*$", re.MULTILINE)
+_CASE_NO_RE = re.compile(r"^\s*(\S*年度\S*第\s*\d+\s*號)\s*$", re.MULTILINE)
+
+
+def citation(full_text: str | None) -> str | None:
+    """The judgment's own header — 「法院＋裁判種類 案號」 — read verbatim from its
+    first lines, or None when the text does not carry them."""
+    if not full_text:
+        return None
+    head = full_text[:400]
+    court = _COURT_LINE_RE.search(head)
+    case_no = _CASE_NO_RE.search(head)
+    if not court and not case_no:
+        return None
+    parts = [m.group(1).strip() for m in (court, case_no) if m]
+    return " ".join(parts)
+
 
 def main_text(full_text: str | None) -> str | None:
     """The 主文 block, verbatim, or None when the judgment has no such heading

@@ -31,12 +31,14 @@ class JudgmentRef:
     case_type: str | None                 # 案由
     matched: tuple[str, ...]              # 「民法第184條」-style refs shared with the answer
     awards: tuple[int, ...] = ()          # amounts the 主文 orders paid (verbatim-derived)
+    cite: str | None = None               # 「法院＋裁判種類 案號」, verbatim from the header
 
 
 def related_judgments(
     retrieved: list[Statute],
     conn: sqlite3.Connection | None = None,
     limit: int = 3,
+    focus: set[tuple[str, str]] | None = None,
 ) -> list[JudgmentRef]:
     """Judgments whose extracted citations overlap the retrieved statutes,
     ranked by overlap count, then by jid (its 5th segment is the 裁判日期, so
@@ -46,6 +48,16 @@ def related_judgments(
     if not retrieved:
         return []
     wanted = {(s.statute_id, s.article_no) for s in retrieved}
+    # `focus` = the articles the ANSWER actually relies on. Joining on the whole
+    # retrieved window surfaced a 本票 case under a noise question, because 民法
+    # §144 (時效) happened to sit in the window and one judgment cited it. A
+    # reference judgment should accompany the law being cited, not everything the
+    # retriever considered. Falls back to the full window when the answer cites
+    # nothing verifiable, so the layer never goes silent by accident.
+    if focus:
+        narrowed = wanted & set(focus)
+        if narrowed:
+            wanted = narrowed
     sids = sorted({sid for sid, _ano in wanted})
 
     own = connect(DB_PATH) if conn is None else None
@@ -81,9 +93,10 @@ def related_judgments(
     items = sorted(by_jid.items(), key=lambda kv: kv[0], reverse=True)   # newer jid first
     items.sort(key=lambda kv: len(kv[1]["matched"]), reverse=True)       # overlap wins
 
-    # 主文 is parsed only for the few judgments actually shown — verbatim
-    # slice, no LLM, and an unreadable 主文 simply yields no figure.
+    # 主文 and the header are parsed only for the few judgments actually shown —
+    # verbatim slices, no LLM; an unreadable one simply yields nothing.
     from legal_agent.data.judgment_text import awards as _awards
+    from legal_agent.data.judgment_text import citation as _citation
     return [
         JudgmentRef(
             jid=jid,
@@ -91,6 +104,7 @@ def related_judgments(
             case_type=meta["case_type"],
             matched=tuple(meta["matched"]),
             awards=_awards(meta.get("full_text")),
+            cite=_citation(meta.get("full_text")),
         )
         for jid, meta in items[:limit]
     ]
@@ -107,5 +121,9 @@ def render_block(refs: list[JudgmentRef]) -> str:
         title = r.case_type or "(案由不明)"
         money = format_awards(r.awards)
         money = f"{money}｜" if money else ""
-        lines.append(f"・{r.jid}({title})— {money}同引 {'、'.join(r.matched)}")
+        # The 案號 is what a person can look up on 司法院裁判書系統; the jid is a
+        # database key. Fall back to it only when the header is unparseable
+        # (調解筆錄 and 宣示判決筆錄 do not carry one).
+        label = r.cite or r.jid
+        lines.append(f"・{label}({title})— {money}同引 {'、'.join(r.matched)}")
     return "\n".join(lines)

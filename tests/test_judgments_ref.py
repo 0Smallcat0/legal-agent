@@ -54,7 +54,8 @@ def conn(tmp_path):
         c.execute(
             "INSERT INTO judgments (jid, court, year, case_type, issues, "
             "cited_articles, holding, full_text) VALUES (?, ?, ?, ?, NULL, ?, NULL, ?)",
-            (jid, court, 114, case_type, json.dumps(cited, ensure_ascii=False), "全文"),
+            (jid, court, 114, case_type, json.dumps(cited, ensure_ascii=False),
+             f"臺灣測試地方法院民事判決\r\n114年度訴字第{jid.split(',')[3]}號\r\n全文"),
         )
     c.commit()
     yield c
@@ -79,7 +80,28 @@ def test_render_block_labels_reference_tier(conn):
     refs = related_judgments([_statute()], conn=conn)
     text = render_block(refs)
     assert "非法律明文" in text and "僅供參考" in text
-    assert "AAA,114,訴,1,20260101,1" in text and "損害賠償" in text
+    assert "損害賠償" in text
+    # The 案號 read from the judgment's own header, not the API's jid.
+    assert "臺灣測試地方法院民事判決 114年度訴字第1號" in text
+    assert "AAA,114,訴,1,20260101,1" not in text
+
+
+def test_focus_restricts_the_join_to_the_articles_the_answer_cites(conn):
+    # A noise question surfaced a 本票 judgment because 民法§144 happened to sit
+    # in the retrieved window. Reference judgments accompany the law the answer
+    # actually stands on.
+    retrieved = [_statute(), _statute("民法", "第195條", "非財產上之損害…")]
+    focused = related_judgments(retrieved, conn=conn, focus={("民法", "第195條")})
+    assert [r.jid for r in focused] == ["AAA,114,訴,1,20260101,1"]
+    assert focused[0].matched == ("民法第195條",)
+
+
+def test_focus_that_matches_nothing_falls_back_to_the_whole_window(conn):
+    retrieved = [_statute()]
+    refs = related_judgments(retrieved, conn=conn, focus={("票據法", "第5條")})
+    assert [r.jid for r in refs] == [
+        "BBB,115,簡,2,20260201,1", "AAA,114,訴,1,20260101,1",
+    ]
 
 
 def test_stage3_carries_related_judgments(conn, monkeypatch):

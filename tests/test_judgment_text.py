@@ -99,6 +99,21 @@ def test_missing_heading_returns_none():
     assert awards(None) == ()
 
 
+def test_citation_reads_the_header_verbatim():
+    # The API's jid is a database key; the 案號 in the judgment's own first two
+    # lines is what a person can look up — and it says 判決 vs 裁定 for free.
+    from legal_agent.data.judgment_text import citation
+
+    text = ("臺灣宜蘭地方法院民事簡易判決\r\n114年度宜簡字第406號\r\n"
+            "原      告  林某某\r\n")
+    assert citation(text) == "臺灣宜蘭地方法院民事簡易判決 114年度宜簡字第406號"
+    ruling = "臺灣宜蘭地方法院民事裁定\r\n114年度羅簡字第192號\r\n上  訴  人\r\n"
+    assert citation(ruling) == "臺灣宜蘭地方法院民事裁定 114年度羅簡字第192號"
+    # 調解筆錄 carries no such header — say nothing rather than guess.
+    assert citation("調  解  筆  錄\r\n聲  請  人  周某\r\n") is None
+    assert citation(None) is None and citation("") is None
+
+
 def test_format_awards_reports_range_when_several():
     # A real case orders six defendants different sums — a single headline
     # number would misstate it.
