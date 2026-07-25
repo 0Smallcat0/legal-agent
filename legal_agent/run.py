@@ -107,8 +107,14 @@ def _format_result(result) -> str:
     if result.honesty_tier == "insufficient":
         out.append(f"【資料涵蓋】不足:{result.answer}")
     else:
-        if result.honesty_tier == "marginal" and result.honesty_label:
-            out.append(f"【提醒】{result.honesty_label}")
+        # honesty_label lives on Stage3Result, not on PipelineResult — reading it
+        # off `result` raised AttributeError, and nobody noticed because the
+        # marginal band was empty under the stale threshold pair (floor 6 /
+        # marginal 1.5). Recalibrating the band made the branch reachable and the
+        # crash immediate: an unreachable code path is an untested one.
+        label = getattr(getattr(result, "stage3", result), "honesty_label", None)
+        if result.honesty_tier == "marginal" and label:
+            out.append(f"【提醒】{label}")
         # Mechanism 4 — three sections by 位階: 法律明文 / 實務見解 / 分析研判.
         if result.sections_ok:
             out.append("\n" + (result.law_section or ""))

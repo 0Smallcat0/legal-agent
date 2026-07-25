@@ -589,6 +589,82 @@ judgement call, and the number is here so it can be revisited.
 
 ---
 
+## 7. Round two — the honesty floor had been dead for a week (2026-07-25)
+
+Six MORE lived sessions, chosen to be things the assistant had never seen:
+資遣費, 房東擅自進房間, 車禍對方受傷求償, 前男友騷擾, plus two deliberate
+out-of-corpus probes (商標搶註, 虛擬貨幣課稅).
+
+### 7.1 The worst failure this project has shipped
+
+Asked 「虛擬貨幣獲利怎麼課稅」, the assistant answered with **中華民國刑法§195/
+§196/§198 — 偽造、變造通用貨幣**. Top BM25 37.5, honesty tier `normal`,
+citations all verified (they exist, they were retrieved, the quotes match). Every
+gate did its job and the answer was still nonsense, because the gate that was
+supposed to say 「資料庫沒涵蓋」 never fired.
+
+Cause: `INSUFFICIENT_SCORE_THRESHOLD` was calibrated at **6.0** against the
+11-article corpus, where top scores ran 4–42. Corpus v2 lifted the same scores
+to 30–330 and the floor was never revisited — so *every* out-of-scope question
+cleared it by 5×. The number that would have caught this (tier accuracy 77%) was
+published on the README the whole time; it was read as 「out-of-scope detection
+is hard」 rather than 「the constant is stale」.
+
+`evaluation/calibrate.py` swept only the marginal threshold, with the floor
+pinned — so the harness could not see it either. It now sweeps **both**:
+
+| thresholds | tier accuracy |
+|---|---|
+| floor 6 / marginal 1.5 (as shipped since v1) | 77% (23/30) |
+| **floor 70 / marginal 106** | **90% (27/30)** |
+
+Observed top-BM25 by expected tier: insufficient **31.6–40.5** (n=3) · marginal
+85.4–268.1 (n=4) · normal 126.4–330.6 (n=23). The floor is set at 70 rather than
+the golden gap's midpoint (62.96) because 商標搶註 scored 62.92 in a real session
+— the midpoint would have refused it by 0.04. Golden accuracy is identical
+anywhere in 60–80. The three remaining tier misses are all marginal-vs-normal,
+which absolute BM25 provably cannot separate (the ranges overlap); that stays
+recorded as a signal problem, not a constant to tune.
+
+Verified end-to-end after the change: both probes now short-circuit to
+`insufficient` with **0 articles retrieved and no LLM call**, while 資遣費 still
+answers (marginal, 8 articles, 勞基§16/§17 among them).
+
+**Negative result — dense cosine as the insufficiency signal, measured and NOT
+adopted.** Cosine is scale-comparable across queries, so it looked like the
+better floor. Top-1 bge-m3 cosine on golden v2: out-of-scope **0.619 / 0.640 /
+0.649** — the three lowest of all 30 — but the weakest in-scope case sits at
+**0.634**, interleaved. Length-normalised BM25 (per-token and /√n) and the
+top/median ratio were measured too; only /√n matched raw BM25's separation, and
+neither beat it. Raw BM25 with an honest floor wins; the extra machinery does not
+pay for itself.
+
+**A latent crash fell out of the fix.** The marginal band had been effectively
+empty (threshold 1.5), so `_format_result`'s marginal branch had never run in
+production — and it read `result.honesty_label` off `PipelineResult`, which has
+no such field. Making the band real crashed the CLI immediately. An unreachable
+code path is an untested one; the fix also reworded the marginal label, which
+claimed 「未找到直接對應的法條」 while sitting on top of 勞基§17.
+
+### 7.2 Three more vocabulary gaps, one of them safety-critical
+
+| session | what it retrieved before | what was missing |
+|---|---|---|
+| 前男友騷擾 | 家暴法§2/§13, plus 違反社維法處理辦法§25 (police **interrogation procedure**) as 實務見解 | **家暴法§63-1** — the article that lets 「曾有親密關係之未同居伴侶」 use 保護令 at all — and **§14**, what a 保護令 can actually order |
+| 房東擅自進房間 | 民法§441, 租賃住宅條例§7/§23/§24 | **刑法§306** 無故侵入他人住宅 |
+| 被資遣沒給資遣費 | 勞基§17/§18/§20/§28 (already good) | — |
+
+The harassment one matters most: without §63-1 the 8B model asserted 「這是家庭
+暴力」 about someone who was never a 家庭成員, which is both legally wrong and,
+for a person deciding whether to seek a protective order, actively unhelpful.
+Three lexicon rows later (all statutory sides verbatim), the same query surfaces
+§63-1 and §14.
+
+Recall harness grown to nine cases: **17/20 (85%)** hit@8. Golden v2 unchanged
+(stub pass/partial/miss 17/8/1, tier 27/30, premise 30/30).
+
+---
+
 ## Reproduce
 
 ```bash
