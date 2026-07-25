@@ -19,9 +19,12 @@ version of the problem (CJK legal text, versioned statutes, high stakes) and
 builds the discipline the numbers demand: the model may only cite what was
 retrieved, and nothing reaches the user unchecked.
 
-The reference corpus is **Taiwan (R.O.C.) law**, scoped to one scenario
-(住宅噪音糾紛 / residential noise disputes) so every article is hand-verified.
-The engine is **jurisdiction-agnostic** — swap the data, keep the gates.
+The reference corpus is **Taiwan (R.O.C.) law** — 2 560 articles across 11
+everyday-law statutes (rent, labour, consumer, traffic, family violence,
+noise…), imported from the official bulk XML and validated against a
+hand-typed golden sample, plus **1 367 real court judgments** as reference
+material. The engine is **jurisdiction-agnostic** — swap the data, keep the
+gates.
 
 ---
 
@@ -81,10 +84,15 @@ design rationale in [`SPEC.md`](SPEC.md).
   <img src="docs/demo.svg" alt="Live demo: the verifier flags statutes the model hallucinated" width="840">
 </p>
 
-A live run against a **free local `llama3.1` (8B)** model. The user describes
-the problem in plain language; the model drives the intake, then answers under
-all five gates. Being a small model, it over-reached (it even typo'd 公寓→公寀)
-— and the verifier caught every citation. **Every one was flagged.** That is
+A real run against a **free local `llama3.1` (8B)** model, transcribed from
+its actual terminal output. The user describes the problem in plain language,
+the intake collects the facts, and retrieval fires once. The 8B model then
+reached past what was retrieved and cited three more articles from memory —
+and all three were flagged, each with the reason spelled out: *the article
+does exist in the database, but it was not retrieved this time, so this
+citation is not accepted.* That distinction matters. A verifier that says
+「查無此法源」 about an article that plainly exists is lying in the other
+direction; this one separates **fabricated** from **un-retrieved**. That is
 the entire thesis: *the model errs; the user knows.* A stronger model errs
 less — the gates work identically regardless of backend.
 
@@ -98,39 +106,47 @@ python app.py   # Gradio demo: paste any "AI legal answer", watch the verifier f
   <img src="docs/demo_web.png" alt="Web demo: paste an AI answer, the verifier flags the wrong amount, the out-of-corpus statute, and the typo'd statute name" width="840">
 </p>
 
+<sub>Screenshot from the 11-article era — the current UI adds the reference-judgment
+block and a dark theme. Re-shooting it is on the list.</sub>
+
 The first tab is the product: a clinic-style consultation — describe the
 problem, answer the intake checklist, and on fact-completion the system
 retrieves ONCE and returns the applicable statutes (verbatim,
-relevance-ranked), the graded explanation, and the low-cost-first action
-ladder, with citation verification as a quiet status line under the answer.
-Everything deterministic runs with no model at all; a local Ollama adds the
-分析研判 narrative. Remaining tabs: the citation-check tool (pre-filled with a
-3-defect answer), the retrieval/time-slice explorer, and the measured numbers.
-Free hosting recipe: [`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
+relevance-ranked), the graded explanation, the low-cost-first action ladder,
+and **the judgments that cite those same articles, with what the court
+actually ordered paid** — read verbatim from each judgment's 主文, rendered
+code-side so the model can never invent a case number. Citation verification
+runs as a quiet status line under the answer. Everything deterministic runs
+with no model at all; a local Ollama adds the 分析研判 narrative. Remaining
+tabs: the citation-check tool (pre-filled with an answer whose defects the
+verifier flags — and one correct citation it must let through), the
+retrieval/time-slice explorer, and the measured numbers. Free hosting recipe:
+[`docs/DEPLOY_SPACES.md`](docs/DEPLOY_SPACES.md).
 
 ---
 
 ## Measured results (local models, $0)
 
 Full tables and method notes in [`evals/RESULTS.md`](evals/RESULTS.md); raw
-per-run data in `evals/ablation_raw.json`. **Corpus note:** the table below
-was measured on the original 11-article corpus; the corpus is now **2 560
-articles across 11 everyday-law statutes** plus a hand-verified police routing
-note and its first capped historical slice (official-XML import, hand-typed
-golden sample matched character-for-character). Current numbers: full-corpus
-mutation **10 435/10 435 caught, 0/2 560 false positives**; golden set
-re-baselined at 30 cases — **96% pass+partial statute coverage** (69%
-strict), honesty tier 23/30, premise detection 30/30. The honest details,
-including which numbers moved and why, are in RESULTS.md §0. Headlines:
+per-run data in `evals/ablation_raw.json`. Every number below is reproducible
+with the commands in Quickstart — no key, no cost. RESULTS.md records which
+numbers moved when the corpus grew from 11 articles to 2 560, and why some of
+them moved *down*.
 
 | what | number |
 |---|---|
-| Verifier catch rate on 33 seeded errors (fake statute / ghost article / wrong amount / flipped direction / out-of-force) | **33/33 (100%), 0/10 false positives** |
-| Golden-set statute coverage (25 cases, llama3.1 8B, gated) | **84% pass+partial** (58% strict) |
-| Honesty-tier accuracy / anti-sycophancy premise detection | **84% / 100%** |
-| Out-of-scope questions refused instead of answered | **5/5** (the last leak fixed by a calibrated floor) |
-| Bare model (no pipeline): memory-cited statutes traceable to a vetted source | **0–5%** (llama3.1 / qwen3) |
-| Gated: every citation checked; small-model over-reach flagged inline with the verbatim article | **30–40% flagged** — *the model errs; the user knows* |
+| Verifier catch rate, seeded errors over **every article** (fake statute / ghost article / ghost 之X / wrong amount / flipped direction / swapped period / out-of-force) | **10 435/10 435 (100%), 0/2 560 false positives** |
+| Golden-set statute coverage (30 cases, llama3.1 8B, gated, hybrid retrieval) | **96% pass+partial** (69% strict) |
+| Honesty-tier accuracy / anti-sycophancy premise detection | **77% (23/30) / 100% (30/30)** |
+| Reference judgments surfaced beside the answer (counted, never scored) | **21/30 cases**, 20 carrying a 主文 award figure |
+| Bare model (no pipeline): memory-cited statutes traceable to a vetted source | **0–5%** (llama3.1 / qwen3) ¹ |
+| Gated: every citation checked; small-model over-reach flagged inline with the verbatim article | **30–40% flagged** — *the model errs; the user knows* ¹ |
+
+¹ The two ablation rows were measured on the original 11-article corpus and
+have not been re-run at v2 scale; every other row is current. Honesty-tier
+accuracy *fell* from the 11-article era's 84% — out-of-scope detection is
+genuinely harder in 2 560 articles, and RESULTS.md §0 shows why absolute BM25
+cannot separate the remaining cases.
 
 The golden set keeps earning its keep: it caught a real retriever defect while
 being built (single-character function-word tokens matched everything → fixed),
@@ -191,8 +207,8 @@ Each layer maps to one package under `legal_agent/`:
 
 | Layer | Package | What it does |
 |---|---|---|
-| Data | `data/` | time-sliced SQLite corpus + hand-entry / official-XML ingest tooling |
-| Retrieval | `retrieval/` | hybrid: BM25 (jieba + CJK bigrams) + optional local bge-m3 dense via RRF; 口語→法條語彙 query expansion; point-in-time filter before ranking |
+| Data | `data/` | time-sliced SQLite corpus + hand-entry / official-XML ingest (single-open-slice guard) + 裁判書API harvester and verbatim 主文 reader |
+| Retrieval | `retrieval/` | hybrid: BM25 (jieba + CJK bigrams) + optional local bge-m3 dense via RRF with measured reserved seats; 口語→法條語彙 query expansion; point-in-time filter before ranking; reference-judgment join |
 | Anti-hallucination | `anti_hallucination/` | the five gates (verifier / honesty / structure / sycophancy) |
 | Dialogue | `dialogue/` | four-stage clinic flow; LLM-driven + rule-based intake; solution ladder |
 | Evaluation | `evaluation/` | golden-set runner + batch hallucination check + seeded-error mutation test + bare-vs-gated ablation + threshold calibration |
