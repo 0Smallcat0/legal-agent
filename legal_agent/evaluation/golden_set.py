@@ -50,6 +50,12 @@ class CaseResult:
     expected_premise_flag: bool | None = None
     premise_flag: bool = False              # Mechanism-5 detector output
     premise_ok: bool | None = None          # premise_flag == expected_premise_flag
+    # Reference tier — judgments citing the retrieved articles. NOT scored:
+    # there is no ground truth for "the right judgment", and inventing one
+    # would be the same sin as auto-scoring legal correctness. Counted, so the
+    # layer's real coverage (and its domain gaps) is visible instead of assumed.
+    judgment_count: int = 0
+    judgment_award_count: int = 0           # of those, how many carry a 主文 figure
 
 
 @dataclass
@@ -105,6 +111,14 @@ class Scorecard:
     def premise_accuracy(self) -> float:
         return (self.premise_correct / self.premise_checked) if self.premise_checked else 0.0
 
+    @property
+    def cases_with_judgments(self) -> int:
+        return sum(1 for c in self.cases if c.judgment_count)
+
+    @property
+    def cases_with_award(self) -> int:
+        return sum(1 for c in self.cases if c.judgment_award_count)
+
     def render(self) -> str:
         lines = [
             "═══════ Tier 1 Golden-Set 計分表 ═══════",
@@ -114,6 +128,8 @@ class Scorecard:
             f"誠實分級正確率:{self.tier_correct}/{self.tier_checked}"
             f"({self.tier_accuracy:.0%})｜前提偵測正確率:"
             f"{self.premise_correct}/{self.premise_checked}({self.premise_accuracy:.0%})",
+            f"參考裁判涵蓋:{self.cases_with_judgments}/{self.total} 案有裁判可掛"
+            f"(其中 {self.cases_with_award} 案讀得到判賠金額)——僅計數,不計分",
             "",
             "⚠ 本表只『自動計分法條涵蓋』(expected_statutes 是否被引用或檢索到)。",
             "  法律判斷是否正確,必須由『人工』比對下方 [代理人回答] 與 [預期行動];",
@@ -135,6 +151,7 @@ class Scorecard:
             lines.append(
                 f"   誠實分級:{c.honesty_tier}{tier_note}｜被標記引用數:"
                 f"{c.flagged_citation_count}{premise_note}{score_note}"
+                f"｜參考裁判:{c.judgment_count}(含判賠金額 {c.judgment_award_count})"
             )
             lines.append(f"   [代理人回答] {c.agent_answer}")
             lines.append(f"   [預期行動]   {c.expected_action}   ← 需人工比對法律判斷")
@@ -195,6 +212,8 @@ def _run_case(case: dict, llm, conn) -> CaseResult:
     expected_tier = case.get("expected_tier")
     expected_premise = case.get("expected_premise_flag")
 
+    refs = getattr(result.stage3, "related_judgments", ()) or ()
+
     return CaseResult(
         id=case.get("id", ""),
         question=case.get("question", ""),
@@ -212,6 +231,8 @@ def _run_case(case: dict, llm, conn) -> CaseResult:
         expected_premise_flag=expected_premise,
         premise_flag=result.premise_flag,
         premise_ok=None if expected_premise is None else result.premise_flag == expected_premise,
+        judgment_count=len(refs),
+        judgment_award_count=sum(1 for r in refs if getattr(r, "awards", ())),
     )
 
 
