@@ -103,11 +103,14 @@ python app.py   # Gradio demo: paste any "AI legal answer", watch the verifier f
 ```
 
 <p align="center">
-  <img src="docs/demo_web.png" alt="Web demo: paste an AI answer, the verifier flags the wrong amount, the out-of-corpus statute, and the typo'd statute name" width="840">
+  <img src="docs/demo_web.png" alt="Web demo: the model's analysis, then the reference judgments citing the same articles with what each court ordered paid, then the low-cost-first action ladder" width="840">
 </p>
 
-<sub>Screenshot from the 11-article era — the current UI adds the reference-judgment
-block and a dark theme. Re-shooting it is on the list.</sub>
+<sub>A real consultation, screenshotted live. Read the two panels together: the 8B
+model's prose (marked 模型推論) waves 民法§18/§195 away as <em>「似乎與噪音問題無
+直接關係」</em> — and directly beneath it the deterministic layer lists three actual
+judgments decided under those very articles, one awarding 2 150 000–5 134 300 元.
+The weakest component is the model; the parts that must be right are not left to it.</sub>
 
 The first tab is the product: a clinic-style consultation — describe the
 problem, answer the intake checklist, and on fact-completion the system
