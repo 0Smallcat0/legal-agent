@@ -421,6 +421,26 @@ real case orders six defendants 165 000–1 672 000 元 separately — so printi
 the largest as 「判賠 X 元」 would misstate the case. One amount is reported
 exactly; several are reported as a range marked 多筆.
 
+**Negative result — 同法 anaphora resolution, measured and NOT shipped.**
+Judgment prose writes 「並依同法第392條」, and the citation extractor stores
+同法 as the statute name, so those citations never match anything. Resolving
+the anaphora (同法 = the last statute named before it) looked like free
+recall. Two measurements, and the first one was wrong:
+
+- A loose antecedent regex reported **0 of 425** anaphora citations resolving
+  into the corpus — it was capturing particles (依同法, 本件係就民事訴訟法)
+  as if they were statute names. A bad ruler produces a confident zero.
+- Anchoring on KNOWN statute names instead: **61 of 425 (14%)** resolve to a
+  corpus statute (民法 55, 家暴法 3, 勞基法 2, 消保法 1).
+- The number that decides it: **0 judgments become newly usable.** Every
+  judgment that would gain a resolved citation already cites a corpus article
+  directly, so the reference layer's 386 usable judgments do not move. The
+  only effect would be small shifts in overlap ranking — bought with a real
+  risk of mis-attributing an article to the wrong statute.
+
+Not shipped. Same rule as the lexicon table: a change that moves no number
+does not enter the codebase.
+
 Live output on real data (慰撫金 consultation): three 損害賠償 judgments
 citing 民法§184/§185/§195 with 判賠 2 150 000–5 134 300 元(多筆) etc. The
 押金 consultation correctly shows NO judgments — the corpus has 2, and neither
