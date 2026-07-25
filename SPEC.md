@@ -231,3 +231,58 @@ Tiers 1 + 2 are sufficient for personal use; do Tier 3 ad hoc. Tier 1 gives glob
 ---
 
 *End of specification. This document reflects design decisions only; all legal-content specifics (exact articles, intake questions, prompt wording) are to be finalized during implementation against the live corpus.*
+
+---
+
+## As built — architecture, scope, and the commands the README no longer carries
+
+Each layer maps to one package under `legal_agent/`:
+
+| Layer | Package | What it does |
+|---|---|---|
+| Data | `data/` | time-sliced SQLite corpus, hand-entry + official-XML ingest (single-open-slice guard), 裁判書API harvester, verbatim 主文 reader, one-call `bootstrap.ensure_corpus` |
+| Retrieval | `retrieval/` | BM25 (jieba + CJK bigrams) + local bge-m3 dense via RRF with measured reserved seats; 口語→法條語彙 table used both to rank AND as an exact-phrase channel; point-in-time filter before ranking; reference-judgment join |
+| Anti-hallucination | `anti_hallucination/` | the five gates — verifier, honesty tier, three-section structure, anti-sycophancy |
+| Dialogue | `dialogue/` | four-stage clinic flow; model-driven intake with deterministic guards, scripted checklist as the no-model fallback; solution ladder |
+| Evaluation | `evaluation/` | golden set, seeded-error mutation test, bare-vs-gated ablation, threshold calibration, real-session recall |
+
+Two design choices worth naming. **The LLM sits behind a `str -> str` seam**
+with three swappable backends — `manual` (free, paste into any chat), `ollama`
+(free, local), `anthropic` (paid) — so the whole pipeline tests against a fake
+model: no network, no key. **Retrieval fires exactly once per consultation**, on
+the complete fact set after intake (multi-turn re-retrieval is the documented
+cause of RAG degradation) — enforced by a test, not a convention.
+
+**Scope today.** One jurisdiction (Taiwan). 2,560 articles across 11 everyday
+statutes plus a police routing note and the corpus's first capped historical
+slice, imported from the official 全國法規資料庫 bulk XML with the original
+hand-verified 11 articles kept as a character-for-character golden sample. One
+fully built scenario (住宅噪音) with its own checklist and action ladder; a
+generic clinic flow covers everything else. 1,367 judgments stay REFERENCE tier
+— never retrieval candidates, never citable law — surfacing only through a
+deterministic join on articles the pipeline already retrieved, with the award
+figure read verbatim from each judgment's 主文 (爭點/裁判要旨 stay NULL:
+summarising reasoning is an NLP task this project will not fake).
+
+**Roadmap**, each item motivated by a measured gap: more historical statute
+versions (the corpus carries one, guarded by an ingest rule that refuses two
+open versions of the same article), judgment-aware answers, then more scenarios
+and jurisdictions on the same engine.
+
+Advanced commands, for the two jobs a first run does not need:
+
+```bash
+# scale the corpus: official bulk XML -> reviewable proposal -> validated ingest
+python -m legal_agent.data.moj_xml FalVMingLing.xml -o proposals.json --include 噪音管制法
+python -m legal_agent.data.source_ingest proposals.json
+
+# reference judgments (free account at opendata.judicial.gov.tw in a gitignored
+# .env). Two constraints come from the API itself: it serves ONLY 00:00-06:00,
+# and each call returns the change list of the day SEVEN DAYS AGO — so the
+# judgment corpus accumulates night by night instead of downloading in bulk.
+python -m legal_agent.data.judicial_api --limit 200
+```
+
+Zero-setup alternative to a local model: set `LLM_PROVIDER = "manual"` in
+[`legal_agent/config.py`](legal_agent/config.py) and the agent prints the
+assembled prompt for you to paste into any chat — no model, no key.
