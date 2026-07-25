@@ -378,6 +378,56 @@ Reading the table:
 
 ---
 
+## 5. 判決參考層 — what the harvested judgments actually buy (2026-07-23)
+
+Two nights of harvesting (裁判書開放API, 0-6h window, incremental 7-day-lag
+feed) put **1 367 judgments** in the reference table. The honest audit:
+
+| what | number |
+|---|---|
+| judgments harvested | 1 367 |
+| **usable** — cite ≥1 article that exists in our statutes corpus | **386 (28%)** |
+| corpus articles with ≥1 judgment behind them | 239 / 2 561 (9%) |
+| judgments with an extractable 主文 block | 1 078 (79%) |
+| judgments with a readable award figure | 370 (27%) |
+| award cases ordering SEVERAL payments | 107 / 370 (29%) |
+
+**The 28% matters more than the 1 367.** A day's civil feed is dominated by
+交通損賠 / 給付票款 / 返還借款, so most of it cites 民事訴訟法 and never
+touches the everyday-law corpus. Worse, the thinnest coverage is exactly the
+domains users ask about: 民法 841 matches, but 租賃住宅條例 **2**, 消保法
+**4**, 道交條例 **2**. Volume is not the constraint — alignment is. Harvest
+cadence should therefore be targeted by 案由, not nightly-everything (measured
+argument against a standing schedule).
+
+**主文 extraction (`data/judgment_text.py`) is verbatim-or-nothing**, the same
+rule as the statutes corpus; 爭點/裁判要旨 stay NULL because summarising
+reasoning is an NLP task this project will not fake. Three properties of real
+judgment text shaped it, each found by reading the harvested data:
+
+1. The heading is 「主　　　文」 with IDEOGRAPHIC SPACES — a plain `"主文"`
+   search finds *zero* of them. It also appears inside body text quoting
+   民訴§436-18 (「判決書得僅記載主文」), so the anchor must be a standalone line.
+2. Text wraps at fixed width with indented continuations, so a line is not a
+   sentence — and an amount can be split across two lines. Lines are rejoined
+   before sentences are split.
+3. 主文 carries THREE kinds of money: the award, 訴訟費用, and 假執行擔保.
+   Only 給付 sentences carrying neither of the other two markers are read.
+   Small-claims judgments write 大寫 numerals (貳萬伍仟玖佰肆拾伍元), which
+   are normalised and parsed by the verifier's own numeral parser.
+
+**No single headline number.** 29% of award cases order several payments — one
+real case orders six defendants 165 000–1 672 000 元 separately — so printing
+the largest as 「判賠 X 元」 would misstate the case. One amount is reported
+exactly; several are reported as a range marked 多筆.
+
+Live output on real data (慰撫金 consultation): three 損害賠償 judgments
+citing 民法§184/§185/§195 with 判賠 2 150 000–5 134 300 元(多筆) etc. The
+押金 consultation correctly shows NO judgments — the corpus has 2, and neither
+was retrieved. That silence is the measurement working.
+
+---
+
 ## Reproduce
 
 ```bash
