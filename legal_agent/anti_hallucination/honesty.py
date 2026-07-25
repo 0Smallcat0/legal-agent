@@ -50,13 +50,24 @@ def grade_honesty(
     scores: list[float],
     threshold: float = MARGINAL_SCORE_THRESHOLD,
     insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD,
+    lexicon_hit: bool = False,
 ) -> str:
-    """Return the honesty tier: "insufficient" | "marginal" | "normal"."""
+    """Return the honesty tier: "insufficient" | "marginal" | "normal".
+
+    `lexicon_hit` — a hand-curated 口語→法條 phrase matched a retrieved article
+    VERBATIM. BM25 magnitude scales with query length, so a one-line complaint
+    scores low even when retrieval nailed it: 「樓上小孩每天晚上跑跳到十一二點,
+    還會拖椅子」 tops out at 28.8 (its words share nothing with 社維§72) yet the
+    phrase channel put exactly that article in the window. A curated phrase
+    landing on a real article is evidence of coverage, so it floors the tier at
+    「marginal」 (僅供參考) instead of refusing. It never raises anything to
+    「normal」 — a short query is still a weak signal.
+    """
     if not retrieved:
         return "insufficient"
     top = max(scores) if scores else 0.0
     if top < insufficient_threshold:
-        return "insufficient"
+        return "marginal" if lexicon_hit else "insufficient"
     if top < threshold:
         return "marginal"
     return "normal"
