@@ -448,10 +448,151 @@ was retrieved. That silence is the measurement working.
 
 ---
 
+## 6. Six lived sessions — what USING it exposed (2026-07-25)
+
+Everything above measures the system against sets the system was built for.
+This section is what happened when six ordinary problems were typed into
+`python -m legal_agent.run` and the whole transcript was read as a user reads
+it: 押金不退, 房東不修漏水, 打工加班費, 機車車禍, 網購瑕疵, 樓上小孩跑跳.
+
+Six sessions produced **eleven distinct defects**, of which the two most
+serious were in the guardrail itself.
+
+### 6.1 The verifier was wrong in both directions
+
+| class | what the user saw | status |
+|---|---|---|
+| **false NEGATIVE — bracketed citations invisible** | 「根據《民法》第9999條」 extracted **nothing**: the citation regex required a CJK character immediately before 第, and 》 is not one. A pure fabrication in the model's most natural writing style was never checked. | fixed |
+| quoted cross-references | 勞基§32-1's own text says 「雇主依第三十二條第一項…」; each was read as a citation of a statute named 「雇主依」 → three 「corpus 查無此法源」 warnings on a **correct** answer | fixed |
+| common abbreviations | 「依刑法第271條」 flagged as unknown source — the corpus id is 中華民國刑法 | fixed |
+| shared claim scope | 「依社維法§72處一萬元以下罰鍰,依民法§195得請求…」 — §195 graded against §72's 一萬元 | fixed |
+
+The false negative is the one that matters: **4 of 8 realistic writing forms
+were skipped entirely** (《名》第X條, 「名」第X條, 名 第X條, and the bracketed
+parenthetical). A gate that silently ignores a writing style is worse than a
+noisy one, and the earlier "31/31 seeded errors caught" number never saw it —
+every seeded citation was written 依{名}第X條, the one form that worked.
+
+Fixes: optional closing bracket / whitespace between name and 第X條; a verified
+alias table (刑法 → 中華民國刑法 …) that may only resolve to ids that EXIST;
+unnamed references inherit the previously named statute and are checked for
+EXISTENCE but not content (the sentence around them belongs to the quoted
+article, not to them); claim scope clipped at the neighbouring citation, and at
+the clause comma when two citations share a sentence.
+
+**Full mutation suite re-run after all four changes: 10 435/10 435 caught
+(100%), 0/2 560 false positives** — unchanged. A statute-shaped unknown name
+(「台灣安寧保障法」) still flags; only prose runs are treated as anaphora, which
+is what keeps `fake_statute` caught.
+
+### 6.2 Retrieval — the vocabulary gap was worse than the lexicon could fix
+
+Recall on the users' OWN wording (the six sessions' turns joined, expected
+articles verified in the corpus first, hit@8):
+
+| build | hit@8 |
+|---|---|
+| before this session | **7/14 (50%)** |
+| + domain lexicon rows (租賃修繕, 押金/毀損, 買賣瑕疵, 時薪/打工, 跑跳/拖椅子) | 9/14 (64%) |
+| + lexicon phrases as a retrieval channel (N=3) | **12/14 (86%)** |
+
+Why the lexicon alone could not do it: inclusion (match / no-match) is decided
+by the USER'S OWN WORDS on purpose, and expansion only reorders. 「樓上小孩跑跳、
+拖椅子」 shares **not one token** with 社維§72, so no amount of ranking help can
+reach it; the dense channel ranked the missing targets 8–25, too deep for the 3
+reserved seats. The lexicon's statutory side is verbatim article text, so a
+phrase hit is an exact pointer (「製造噪音或深夜喧嘩」 occurs in exactly one
+article) — it now promotes up to N such articles into the window at an honest
+BM25 score of 0.0, leaving the honesty floor (the TOP score) untouched.
+
+N swept on both harnesses (stub-LLM golden v2 pass/partial/miss of 26 scorable
+· six sessions hit@8):
+
+| N | golden | real |
+|---|---|---|
+| 0 | 18/7/1 | 9/14 (64%) |
+| 1 | 19/6/1 | 9/14 (64%) |
+| 2 | 18/7/1 | 10/14 (71%) |
+| **3** | **17/8/1** | **12/14 (86%)** |
+| 4 | 13/11/2 | 12/14 (86%) |
+
+N=3 costs one golden case a strict pass (pass+partial stays 25/26 = 96%) and
+buys 22 points of real-wording recall. Two known losses remain, recorded rather
+than hidden: 勞基§22 (工資全額給付) and — displaced BY the promotions — 公寓大廈
+§16 on the noise question.
+
+**Negative result — per-statute cap on the top-k window, measured and NOT
+shipped.** One statute floods the window (公寓大廈條例 took 7 of 8 seats on the
+noise question), so capping seats per statute looked obvious. It loses on both
+harnesses, because real answers legitimately cluster inside one code
+(瑕疵擔保 = 民法§354+§359, 加班費 = 勞基§22+§24+§30):
+
+| cap | golden | real |
+|---|---|---|
+| off | 18/7/1 | 9/14 (64%) |
+| 2 | 15/10/1 | 5/14 (36%) |
+| 3 | 16/9/1 | 5/14 (36%) |
+| 4 | 17/8/1 | 7/14 (50%) |
+
+The six cases now ship as a harness, because a published number has to be
+reproducible: [`evals/real_sessions.json`](real_sessions.json) +
+`python -m legal_agent.evaluation.real_recall`. It scores retrieval only (no
+LLM, no network) on the users' own words, and a test asserts every expected
+article actually exists in the corpus — an expectation the corpus cannot
+contain would make the number meaningless.
+
+### 6.2b What the full pipeline did after all of it (real llama3.1 8B, 30 cases)
+
+| | before | after |
+|---|---|---|
+| golden statute coverage | 96% pass+partial (69% strict) | **100% pass+partial (73% strict)** — pass 19 / partial 7 / **miss 0** |
+| honesty tier | 77% (23/30) | 77% (23/30) — unchanged |
+| premise detection | 100% (30/30) | 100% (30/30) — unchanged |
+| cases with a reference judgment | 21/30 (20 with an award figure) | **11/30 (10 with an award figure)** |
+
+The judgment row went DOWN by design and is reported as a loss, not spun: the
+join now runs on the articles the answer actually cites instead of the whole
+retrieved window, which is what stopped a 本票 case appearing under a noise
+question. Precision up, coverage halved. Whether that trade is right is a
+judgement call, and the number is here so it can be revisited.
+
+### 6.3 The rest of what the transcripts showed
+
+- **The flagship scenario never fired.** 「樓上小孩每天晚上跑跳到十一二點,還會
+  拖椅子」 — the textbook complaint for the ONE scenario with a hand-built
+  ladder — contains neither 噪音 nor 吵, so triage classified it ambiguous and
+  the user got the generic ladder: no 報警, no 管委會, no 存證信函範本. Behaviour
+  words added to the triage keywords.
+- **Anti-sycophancy fired on the question itself.** 「這樣有沒有違法?」 tripped
+  Mechanism 5, and the user was told they had 「先下了法律判斷」 for asking the
+  question the tool exists to answer. Conclusion words now flag only outside a
+  genuine question frame — 「就是違法,對吧?」 (agreement-seeking) still flags,
+  and the golden set's three wrong-premise cases still score 30/30.
+- **The intake did not ask anything.** The local 8B model restated the user's
+  facts and asked 「你覺得這樣合法嗎?」 — for four turns straight, filling no
+  fields. Code now guarantees progress: a reply that asks nothing, or repeats
+  an earlier one, is replaced by the next missing checklist question, and the
+  answer to a code-asked question is filed verbatim if the extractor drops it.
+- **Cosmetics that cost trust.** Sections rendered as 「法律明文**」 with a stray
+  「**」 line between each (models write markdown headings); a 「實務見解段未標明
+  非法律明文」 warning fired on a section whose body was 「(無)」; the reference
+  judgments printed the API's jid (「PCDV,115,訴,493,20260713,1」) instead of the
+  案號 a person can look up. The 案號 is now read verbatim from the judgment's own
+  first two lines — **1 362/1 367 (99.6%)** parse; the five that do not are
+  調解筆錄 / 宣示判決筆錄, which genuinely have no such header.
+- **The banner still said 住宅噪音法律助理** while the corpus covered eleven
+  statutes — the first line every user reads, wrong for a week.
+- **The model uses only part of what it is given.** One session was handed
+  勞基§22/§24/§30 and wrote about §30 alone. The retrieved window is now listed
+  code-side beside the answer, so the reader sees the law that was FOUND, not
+  only the law the model chose to discuss.
+
+---
+
 ## Reproduce
 
 ```bash
-python -m pytest -q                                                    # 180 tests
+python -m pytest -q                                                    # 228 tests
 python -m legal_agent.evaluation.mutation                              # full-corpus catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json       # golden v2 (30 cases)
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json        # threshold sweep
