@@ -240,7 +240,9 @@ def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
             problem_type = "noise" if triage_result.kind == "noise" else "generic"
             # A personal-safety complaint carries the 110 / 113 pointer. Say it
             # first — it matters more than anything the pipeline prints later.
-            if triage_result.message:
+            # Domain notices are not printed here: the model is about to reply
+            # naturally, and 「聽起來像租屋問題」 on top of that is just noise.
+            if triage_result.urgent and triage_result.message:
                 output_fn(triage_result.message)
         history.append({"role": "user", "content": msg})
         turns += 1

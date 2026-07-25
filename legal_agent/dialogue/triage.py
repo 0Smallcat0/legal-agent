@@ -67,7 +67,12 @@ class TriageResult:
     kind: str                     # "noise" | "other" | "ambiguous"
     problem_type: str | None      # "noise" | f"other:{cat}" | None
     question: str | None = None   # discriminating question (ambiguous case)
-    message: str | None = None    # generic-not-built notice (other case)
+    message: str | None = None    # routing notice shown to the user
+    # True when the message must be said IMMEDIATELY, before any intake — the
+    # personal-safety route carries the 110 / 113 pointer. A domain notice
+    # (「聽起來像租屋問題」) is useful in a UI that shows it, and noise in a CLI
+    # where the assistant is about to reply naturally anyway.
+    urgent: bool = False
 
 
 def _hits(low: str, keywords: list[str]) -> bool:
@@ -85,6 +90,7 @@ def classify(message: str) -> TriageResult:
                 "不套用噪音問診;如果現在有危險,請直接撥 110,"
                 "親密關係暴力可撥 113 或洽家庭暴力防治中心。"
             ),
+            urgent=True,
         )
     if _hits(low, _NOISE):
         return TriageResult("noise", "noise")
