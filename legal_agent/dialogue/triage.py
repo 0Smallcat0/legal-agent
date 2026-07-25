@@ -22,6 +22,12 @@ _NOISE = [
     "噪音", "吵", "大聲", "喧嘩", "喧囂", "吠", "狗叫", "音響", "卡拉ok", "ktv",
     "深夜", "半夜", "三更", "施工", "裝修", "分貝", "低頻", "震動", "擾人", "安寧",
     "聲音", "腳步", "拖家具", "喇叭", "重低音", "打鼓", "樂器",
+    # People report the BEHAVIOUR, not the word 「噪音」. Measured on a lived
+    # session: 「樓上小孩每天晚上跑跳到十一二點,還會拖椅子」 — the textbook
+    # complaint for the one scenario with a hand-built ladder — classified as
+    # ambiguous, so it got the generic flow and never saw 報警/管委會/存證信函.
+    "跑跳", "跑來跑去", "拖椅子", "拖桌", "蹦蹦", "砰砰", "哭鬧", "尖叫",
+    "打球", "跳繩", "甩門", "摔門", "彈鋼琴", "唱歌",
 ]
 _OTHER = [
     ("leak", "漏水", ["漏水", "滲水", "壁癌", "水管", "天花板"]),
@@ -54,8 +60,9 @@ def classify(message: str) -> TriageResult:
             return TriageResult(
                 "other", f"other:{cat}",
                 message=(
-                    f"你描述的比較像「{label}」問題。目前僅建置「住宅噪音」情境,"
-                    "其他鄰里糾紛的通用流程尚未建立(後續步驟)。"
+                    f"你描述的比較像「{label}」問題。「住宅噪音」有專屬問診流程,"
+                    "其他問題走通用流程(同一套檢索與五道關卡,語料涵蓋民法、租賃住宅"
+                    "條例、消保法、勞基法、道交條例等)。"
                 ),
             )
     return TriageResult("ambiguous", None, question=DISCRIMINATING_QUESTION)

@@ -1,4 +1,5 @@
-"""Interactive entry point — talk to the 住宅噪音 legal assistant.
+"""Interactive entry point — talk to the 民生法律 assistant (住宅噪音 keeps its
+own deep intake; everything else runs the generic flow).
 
     python -m legal_agent.run [--as-of YYYY-MM-DD]
 
@@ -18,15 +19,22 @@ from datetime import date
 from legal_agent import config
 from legal_agent.dialogue import flow
 
+_COVERAGE = (
+    "可談:租屋、勞資、消費/網購、車禍、鄰里噪音、公寓大廈、家事等民生法律問題\n"
+    "(語料為 11 部民生法規逐字匯入;超出範圍我會直接說「資料不足」,不會硬掰)。"
+)
+
 _WELCOME = (
-    "住宅噪音法律助理(個人用;非正式法律意見,重大爭議請諮詢律師)。\n"
-    "請描述你的鄰居噪音困擾;我會先問幾個問題,再『一次』檢索法條並給出建議。\n"
+    "台灣民生法律助理(個人用;非正式法律意見,重大爭議請諮詢律師)。\n"
+    + _COVERAGE + "\n"
+    "請描述你遇到的狀況;我會先問幾個問題,再『一次』檢索法條並給出建議。\n"
     "(每行回答一題;輸入 quit 離開)"
 )
 
 _WELCOME_SMART = (
-    "住宅噪音法律助理(個人用;非正式法律意見,重大爭議請諮詢律師)。\n"
-    "用你自己的話描述鄰居噪音困擾就好——我會像諮詢一樣跟你聊、問幾個問題,\n"
+    "台灣民生法律助理(個人用;非正式法律意見,重大爭議請諮詢律師)。\n"
+    + _COVERAGE + "\n"
+    "用你自己的話講發生什麼事就好——我會像諮詢一樣跟你聊、問幾個問題,\n"
     "問清楚後再『一次』檢索法條並給出建議。(輸入 quit 離開)"
 )
 
@@ -112,6 +120,16 @@ def _format_result(result) -> str:
             out.append("\n(模型未依「法律明文 / 實務見解 / 分析研判」三段格式,以下為原始回答)")
             out.append(result.answer)
 
+        # What retrieval actually found, code-rendered. The model writes the
+        # 法律明文 section and routinely uses only part of what it was given —
+        # one lived session was handed 勞基§22/§24/§30 and wrote about §30 only.
+        # Listing the window costs three lines and lets the reader see the law
+        # that was found, not just the law the model chose to discuss.
+        retrieved = getattr(getattr(result, "stage3", result), "retrieved", ())
+        if retrieved:
+            refs_line = "、".join(f"{s.statute_id}{s.article_no}" for s in retrieved)
+            out.append(f"\n【本次檢索到的條文】(依相關度,逐字內容已提供給模型)\n{refs_line}")
+
         # Reference judgments — deterministic, code-rendered (never the model).
         refs = getattr(getattr(result, "stage3", result), "related_judgments", ())
         if refs:
@@ -191,6 +209,7 @@ def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
     facts: dict = {}
     user_text: str | None = None
     problem_type = "generic"
+    pending_key: str | None = None   # checklist field the last turn asked directly
     turns = 0
     while True:
         try:
@@ -215,8 +234,10 @@ def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
         history.append({"role": "user", "content": msg})
         turns += 1
 
-        turn = run_smart_intake_turn(history, facts, intake_llm, problem_type)
+        turn = run_smart_intake_turn(history, facts, intake_llm, problem_type,
+                                     pending_key=pending_key)
         facts = turn.facts
+        pending_key = turn.asked
         history.append({"role": "assistant", "content": turn.reply})
         output_fn(turn.reply)
 
@@ -246,7 +267,7 @@ def main(argv=None) -> int:
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="legal_agent.run", description="住宅噪音法律助理(個人用)"
+        prog="legal_agent.run", description="台灣民生法律助理(個人用)"
     )
     parser.add_argument(
         "--as-of", dest="as_of", default=None,

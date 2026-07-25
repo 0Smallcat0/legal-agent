@@ -53,6 +53,10 @@ _PROMPT_RULES = (
     "就照實記錄並在需要時追問有沒有管理單位;「很煩」是情緒不是事實,要追問實際影響)。"
     "使用者已經回答過的內容,務必記進 facts,絕對不要重複問同一個問題;"
     "「目前已知的事實」JSON 裡已有的欄位,不要再問,只問還缺的。\n"
+    "【絕對不要做的兩件事】(1)不要把使用者剛講的話原封不動複述一遍;"
+    "(2)不要反問使用者法律問題(例如「你覺得這樣合法嗎」「你認為誰有錯」)——"
+    "那正是這個系統稍後要回答的事,問回去等於沒問。每一輪都要問到「還沒問到的欄位」"
+    "裡的新資訊。\n"
     "【何時結束】當{n_fields}個欄位都大致問到、或使用者表示沒有更多資訊時,把 ready 設為 true。\n"
     "【輸出格式(務必嚴格遵守)】只輸出一個 JSON,放在 ```json 與 ``` 之間,前後不要有"
     "其他文字:\n"
@@ -98,6 +102,7 @@ class IntakeTurn:
     reply: str
     facts: dict       # cumulative known facts (english keys only)
     ready: bool
+    asked: str | None = None   # checklist key this turn asked about, when code did the asking
 
 
 def _format_history(history: list[dict]) -> str:
@@ -110,9 +115,17 @@ def _format_history(history: list[dict]) -> str:
 
 def build_intake_prompt(history: list[dict], facts: dict, problem_type: str = "noise") -> str:
     known = json.dumps(facts, ensure_ascii=False) if facts else "{}"
+    # Computed code-side: a small local model tracks 「what is still missing」 far
+    # better when it is handed the list than when it has to diff two JSONs.
+    missing = _missing_fields(facts, problem_type)
+    missing_block = (
+        "\n".join(f"- {f.key}: {f.question}" for f in missing)
+        if missing else "(全部欄位都問到了 — 請把 ready 設為 true)"
+    )
     return (
         build_system_prompt(problem_type)
         + "\n\n===== 目前已知的事實(JSON) =====\n" + known
+        + "\n\n===== 還沒問到的欄位(這一輪只問這裡面的) =====\n" + missing_block
         + "\n\n===== 對話紀錄 =====\n" + _format_history(history)
         + "\n\n請根據以上,輸出下一步的 JSON(記得只輸出 ```json 區塊)。"
     )
@@ -164,10 +177,74 @@ def parse_intake_response(text: str, prev_facts: dict,
     return IntakeTurn(reply=reply.strip(), facts=facts, ready=bool(obj.get("ready", False)))
 
 
+def _missing_fields(facts: dict, problem_type: str):
+    """Checklist fields not yet filled, in checklist order."""
+    checklist = _CHECKLISTS.get(problem_type, GENERIC_CHECKLIST)
+    return [f for batch in checklist for f in batch if f.key not in (facts or {})]
+
+
+def _asks_something(reply: str) -> bool:
+    return any(mark in (reply or "") for mark in ("?", "？"))
+
+
+def _char_overlap(a: str, b: str) -> float:
+    sa, sb = set(a or ""), set(b or "")
+    if not sa or not sb:
+        return 0.0
+    return len(sa & sb) / len(sa | sb)
+
+
+def _stalled(reply: str, history: list[dict]) -> bool:
+    """True when this reply makes no progress: it asks nothing, or it is a
+    near-copy of something the assistant already said.
+
+    Measured on six lived sessions with the local 8B model: it restated the
+    user's own facts back and asked 「你覺得這樣合法嗎?」 — the question the tool
+    exists to answer — then repeated that same sentence for four turns straight.
+    The model drives the intake, but code guarantees it moves.
+    """
+    if not _asks_something(reply):
+        return True
+    for message in history:
+        if message.get("role") != "assistant":
+            continue
+        previous = message.get("content", "")
+        if reply.strip() == previous.strip() or _char_overlap(reply, previous) > 0.85:
+            return True
+    return False
+
+
+def _last_user_message(history: list[dict]) -> str:
+    for message in reversed(history):
+        if message.get("role") == "user":
+            return (message.get("content") or "").strip()
+    return ""
+
+
 def run_smart_intake_turn(history: list[dict], facts: dict, llm,
-                          problem_type: str = "noise") -> IntakeTurn:
+                          problem_type: str = "noise",
+                          pending_key: str | None = None) -> IntakeTurn:
     """One intake turn: ask the model for its natural reply + fact extraction.
-    NO retrieval here (spec §3.3) — this only calls the injected `llm`."""
-    return parse_intake_response(
+    NO retrieval here (spec §3.3) — this only calls the injected `llm`.
+
+    Two code-side guarantees around a small local model:
+      * `pending_key` — the field the PREVIOUS turn asked about directly. If the
+        model failed to extract it, the user's own words are filed there
+        verbatim, exactly as the rule-based intake does. Answers do not vanish
+        because the extractor had a bad turn.
+      * a reply that makes no progress is replaced by the next missing question.
+    """
+    turn = parse_intake_response(
         llm(build_intake_prompt(history, facts, problem_type)), facts, problem_type,
     )
+    if pending_key and pending_key not in turn.facts:
+        answer = _last_user_message(history)
+        if answer:
+            turn.facts[pending_key] = answer
+    if turn.ready:
+        return turn
+    missing = _missing_fields(turn.facts, problem_type)
+    if missing and _stalled(turn.reply, history):
+        return IntakeTurn(reply=missing[0].question, facts=turn.facts,
+                          ready=False, asked=missing[0].key)
+    return turn

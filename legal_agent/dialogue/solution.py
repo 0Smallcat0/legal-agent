@@ -157,10 +157,58 @@ GENERIC_NOTE = (
 )
 
 
-def build_generic_ladder(collected_facts: dict) -> SolutionLadder:
+# Which authority actually handles a complaint, keyed by the statute the case
+# turned out to be about. Procedural pointers only — no legal claims, nothing
+# that needs to be verifiable against the corpus. Measured need: six lived
+# sessions all got the same 「勞工局/消保官/住宅主管機關等」 catch-all, which tells
+# a 打工族 nothing about where to actually file.
+_AUTHORITY_BY_STATUTE: tuple[tuple[str, str, str], ...] = (
+    ("勞動基準法", "勞工局 / 勞動檢查機構申訴",
+     "向工作地的勞工局(勞動檢查處)申訴,或申請勞資爭議調解;申訴可具名或匿名"),
+    ("消費者保護法", "消費者服務中心(1950)/ 消保官申訴",
+     "撥 1950 或向地方政府消費者服務中心申訴;不成立可再申請消費爭議調解"),
+    ("租賃住宅市場發展及管理條例", "地方政府住宅主管機關 / 租屋糾紛調處",
+     "向房屋所在地縣市政府的住宅(地政)主管機關申請調處"),
+    ("道路交通管理處罰條例", "行車事故鑑定 + 調解委員會",
+     "向公路主管機關申請車輛行車事故鑑定,並同時向鄉鎮市區調解委員會聲請調解"),
+    ("公寓大廈管理條例", "管委會 → 建管 / 公寓大廈主管機關",
+     "先以書面向管委會反映;未改善再向縣市政府建管(公寓大廈)主管機關報請處理"),
+    ("噪音管制法", "環保局 / 警察機關(依噪音來源分工)",
+     "營業、營建、擴音等特定場所找環保局;近鄰生活噪音當下報警處理"),
+    ("家庭暴力防治法", "113 保護專線 / 家庭暴力防治中心",
+     "撥打 113 或聯繫縣市家庭暴力防治中心;必要時向法院聲請保護令"),
+)
+
+# A free-lawyer route the ladder never mentioned. Procedural, means-tested, and
+# for a student with no money it is the most useful rung on the page.
+_LEGAL_AID_RUNG = Rung(
+    "legal_aid", "法律扶助 / 免費法律諮詢",
+    "法扶基金會與各地方政府、律師公會提供免費法律諮詢;經資力審查通過者可獲扶助律師",
+    (), "免費", "數日~數週", "低",
+    "先撥法扶基金會或縣市政府法律諮詢專線預約諮詢;要打官司再評估申請扶助(須經資力審查)",
+)
+
+
+def _authority_rung(retrieved) -> Rung:
+    """The 主管機關 rung, named for the statute the case actually turned on."""
+    for statute in retrieved or []:
+        for statute_id, title, next_step in _AUTHORITY_BY_STATUTE:
+            if statute.statute_id == statute_id:
+                return Rung("authority", title,
+                            "向該領域主管機關申訴/檢舉,由公權力介入", (),
+                            "免費", "數週", "中", next_step, False, False)
+    return Rung(
+        "authority", "主管機關申訴/檢舉",
+        "向該領域主管機關申訴(勞工局/消保官/住宅主管機關等)", (),
+        "免費", "數週", "中", "備妥證據向主管機關提出申訴", False, False,
+    )
+
+
+def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadder:
     """Generic escalation ladder for non-noise problems (spec §3.4 fallback):
     same cheapest-first shape, no scenario-specific statutes baked in — the
-    legal basis for a generic case is whatever Stage 3 retrieved."""
+    legal basis for a generic case is whatever Stage 3 retrieved, and the
+    authority rung is named from those same retrieved statutes."""
     rungs = [
         Rung(
             "evidence", "蒐證與書面紀錄",
@@ -177,11 +225,8 @@ def build_generic_ladder(collected_facts: dict) -> SolutionLadder:
             "鄉鎮市(區)調解委員會或主管機關調解,免費且具執行力", (),
             "免費", "數週", "中", "向所在地調解委員會聲請調解", False, False,
         ),
-        Rung(
-            "authority", "主管機關申訴/檢舉",
-            "向該領域主管機關申訴(勞工局/消保官/住宅主管機關等)", (),
-            "免費", "數週", "中", "備妥證據向主管機關提出申訴", False, False,
-        ),
+        _authority_rung(retrieved),
+        _LEGAL_AID_RUNG,
         Rung(
             "litigation", "民事訴訟(最後手段)",
             "小額/簡易/通常程序,依金額與案情選擇", (),
