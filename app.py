@@ -1,17 +1,17 @@
 """Gradio demo — clinic-style legal consultation, with the gates as the trust layer.
 
-The first tab IS the product: describe the problem, the system runs the
-pre-designed intake (rule-based, no retrieval), and only when the facts are
-complete does it retrieve ONCE and produce the answer — applicable statutes
-(verbatim, ranked), the graded explanation, and the low-cost-first action
-ladder. Citation verification appears as a quiet status line under the
-answer, not as the headline: the user came for the answer; the gates are why
-the answer can be trusted.
+The first tab IS the product: describe the problem, the assistant interviews
+you (model-driven when a local model is there, a short scripted checklist when
+it is not), and only when the facts are in does it retrieve ONCE and produce
+the answer — applicable statutes (verbatim, ranked), the graded explanation,
+and the low-cost-first action ladder. Citation verification appears as a quiet
+status line under the answer, not as the headline: the user came for the
+answer; the gates are why the answer can be trusted.
 
-Stages 1–2 and everything deterministic (retrieval, honesty tier, ladder,
-verbatim statutes) work with NO model at all, so the full consultation flow
-runs on HF Spaces free CPU with zero keys. A local Ollama, when present,
-additionally writes the 分析研判 narrative.
+Everything deterministic (retrieval, honesty tier, ladder, verbatim statutes)
+works with NO model at all, so the full consultation flow runs on HF Spaces
+free CPU with zero keys. A local Ollama, when present, both conducts the
+interview and writes the 分析研判 narrative.
 
 Local:      python app.py
 HF Spaces:  push this repo with app.py at the root (sdk: gradio) — see
