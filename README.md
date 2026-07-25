@@ -140,8 +140,8 @@ them moved *down*.
 |---|---|
 | Verifier catch rate, seeded errors over **every article** (fake statute / ghost article / ghost 之X / wrong amount / flipped direction / swapped period / out-of-force) | **10 435/10 435 (100%), 0/2 560 false positives** |
 | Golden-set statute coverage (30 cases, llama3.1 8B, gated, hybrid retrieval) | **100% pass+partial** (73% strict, 0 misses) |
-| Retrieval recall on six problems typed as people actually type them (hit@8) | **12/14 (86%)** — was 7/14 before the 07-25 pass |
-| Honesty-tier accuracy / anti-sycophancy premise detection | **77% (23/30) / 100% (30/30)** |
+| Retrieval recall on nine problems typed as people actually type them (hit@8) | **17/20 (85%)** — the first six went 7/14 → 12/14 in this pass |
+| Honesty-tier accuracy / anti-sycophancy premise detection | **90% (27/30) / 100% (30/30)** ³ |
 | Reference judgments surfaced beside the answer (counted, never scored) | **11/30 cases**, 10 carrying a 主文 award figure ² |
 | Bare model (no pipeline): memory-cited statutes traceable to a vetted source | **0–5%** (llama3.1 / qwen3) ¹ |
 | Gated: every citation checked; small-model over-reach flagged inline with the verbatim article | **30–40% flagged** — *the model errs; the user knows* ¹ |
@@ -154,16 +154,26 @@ articles the answer actually cites, not on the whole retrieved window — which 
 what stopped a 本票 case appearing under a noise question. Precision up, coverage
 halved; both halves of the trade are on the table.
 
-Honesty-tier
-accuracy *fell* from the 11-article era's 84% — out-of-scope detection is
-genuinely harder in 2 560 articles, and RESULTS.md §0 shows why absolute BM25
-cannot separate the remaining cases.
+³ This row read **77%** until 2026-07-25, and the explanation printed here was
+wrong. It said out-of-scope detection was intrinsically harder at v2 scale. The
+real cause: the `insufficient` floor was calibrated at 6.0 on the 11-article
+corpus (top scores 4–42) and never revisited while corpus v2 pushed the same
+scores to 30–330, so every out-of-scope question cleared it by 5×. Live
+consequence, found by using the thing: 「虛擬貨幣獲利怎麼課稅」 was answered with
+中華民國刑法§196 (行使偽造貨幣). Recalibrating both thresholds (floor 70 / marginal
+106, swept — the sweep used to hold the floor fixed, which is why the harness
+was blind too) gives 90%. The three remaining misses are marginal-vs-normal,
+where the score ranges genuinely overlap; that one *is* a signal problem.
+See [RESULTS.md §7](evals/RESULTS.md).
 
 The golden set keeps earning its keep: it caught a real retriever defect while
 being built (single-character function-word tokens matched everything → fixed),
-and its score distribution calibrated the `insufficient` floor that closed the
-last out-of-scope leak. The remaining tier misses are provably not separable by
-any BM25 cutoff — quantified motivation for the hybrid-retrieval roadmap item.
+and its score distribution calibrated the `insufficient` floor — twice, the
+second time because using the product exposed the first calibration as stale.
+The remaining tier misses are provably not separable by any BM25 cutoff (the
+marginal and normal score ranges overlap), and hybrid retrieval — which shipped —
+did not close that gap either: bge-m3 cosine was measured as a candidate
+insufficiency signal and interleaves the same way.
 
 ---
 
