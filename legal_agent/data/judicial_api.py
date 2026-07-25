@@ -123,14 +123,26 @@ def harvest(
     limit: int = 200,
     delay: float = 0.3,
     only_substantive_civil: bool = True,
+    skip_known: bool = False,
     progress=print,
 ) -> tuple[int, int, int]:
     """Auth -> JList -> JDoc loop -> judgments table. Returns
-    (fetched, inserted, skipped). Gentle by design: serial, `delay` between
-    calls, hard `limit` — the nightly window is shared infrastructure."""
+    (fetched, inserted, removed). Gentle by design: serial, `delay` between
+    calls, hard `limit` — the nightly window is shared infrastructure.
+
+    A jid that appears in a change list and is ALREADY stored is the spec's
+    AMENDMENT signal, so by default it is re-fetched and overwritten. That is
+    the whole point of an incremental feed; `skip_known=True` exists only for
+    cheap retries of a list already processed, and deliberately gives up
+    amendment detection for that run.
+    """
     from legal_agent import config
     from legal_agent.data.database import connect, init_db
-    from legal_agent.data.judicial_json import load_judgments, parse_judgment
+    from legal_agent.data.judicial_json import (
+        delete_judgment,
+        load_judgments,
+        parse_judgment,
+    )
 
     hour = datetime.now().hour
     if hour >= 6:
@@ -149,21 +161,27 @@ def harvest(
     conn = connect(config.DB_PATH)
     try:
         known_ids = {r[0] for r in conn.execute("SELECT DISTINCT statute_id FROM statutes")}
-        # Skip jids already in the table BEFORE spending API calls on them.
-        # (Amended-judgment refresh is a known TODO — the importer skips dup
-        # PKs anyway, so behaviour is unchanged, just cheaper.)
         have = {r[0] for r in conn.execute("SELECT jid FROM judgments")}
-        todo = [j for j in jids if j not in have]
-        if len(todo) < len(jids):
-            progress(f"已在庫 {len(jids) - len(todo)} 筆,不重抓;本次實際 {len(todo)} 筆")
+        todo = jids
+        if skip_known:
+            todo = [j for j in jids if j not in have]
+            if len(todo) < len(jids):
+                progress(f"--skip-known:略過已在庫 {len(jids) - len(todo)} 筆"
+                         f"(本次不偵測裁判異動);本次實際 {len(todo)} 筆")
 
         rows: list[dict] = []
-        fetched = inserted = skipped = 0
+        fetched = inserted = removed = 0
         for i, jid in enumerate(todo, 1):
             jdoc = fetch_judgment(token, jid)
             time.sleep(delay)
             if jdoc is None:
-                progress(f"  [{i}/{len(todo)}] {jid} — 查無資料(已移除/未公開),略過")
+                # Spec obligation: an unpublished/removed judgment must not
+                # survive locally — the court withdrew it to protect the parties.
+                if delete_judgment(jid, conn):
+                    removed += 1
+                    progress(f"  [{i}/{len(todo)}] {jid} — 已從來源移除,本地留存一併刪除")
+                else:
+                    progress(f"  [{i}/{len(todo)}] {jid} — 查無資料(未公開/已移除),略過")
                 continue
             fetched += 1
             row, warnings = parse_judgment(jdoc_to_record(jdoc), known_ids)
@@ -173,21 +191,20 @@ def harvest(
                 rows.append(row)
             # Batch-insert: a mid-run kill (network drop, window close, Ctrl-C)
             # keeps every completed batch instead of losing the whole run.
+            # replace=True: a re-listed jid is an AMENDMENT (spec §肆一).
             if len(rows) >= 50:
-                ins, skp = load_judgments(rows, conn)
+                ins, _ = load_judgments(rows, conn, replace=True)
                 inserted += ins
-                skipped += skp
                 rows = []
             if i % 25 == 0:
                 progress(f"  [{i}/{len(todo)}] 已取得 {fetched} 筆…")
         if rows:
-            ins, skp = load_judgments(rows, conn)
+            ins, _ = load_judgments(rows, conn, replace=True)
             inserted += ins
-            skipped += skp
     finally:
         conn.close()
-    progress(f"完成:取得 {fetched},入庫 {inserted},重複略過 {skipped}")
-    return fetched, inserted, skipped
+    progress(f"完成:取得 {fetched},入庫/更新 {inserted},依規定刪除 {removed}")
+    return fetched, inserted, removed
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -200,6 +217,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--all-types", action="store_true",
                         help="不篩選——預設只收民事(V)非程序性字別")
     parser.add_argument("--delay", type=float, default=0.3, help="每筆間隔秒數(預設 0.3)")
+    parser.add_argument("--skip-known", action="store_true",
+                        help="略過已在庫的 jid(僅供重跑同一份清單;會失去裁判異動偵測)")
     args = parser.parse_args(argv)
 
     env = _load_env()
@@ -211,7 +230,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     harvest(user, password, limit=args.limit, delay=args.delay,
-            only_substantive_civil=not args.all_types)
+            only_substantive_civil=not args.all_types, skip_known=args.skip_known)
     return 0
 
 
