@@ -40,7 +40,20 @@ _SAFETY = [
     "跟監", "堵我", "等我下班",
 ]
 
+# The everyday domains the corpus actually covers. Without these rows the
+# rule-based triage knew only 噪音 plus five neighbour disputes, so a plainly
+# stated 「退租後房東說牆壁有釘孔要扣我兩個月押金」 fell through to 「ambiguous」 and
+# the web demo replied 「這是租屋、勞資、消費、車禍、家事,還是鄰里的問題?」 —
+# asking the user to classify what they had just described.
 _OTHER = [
+    ("rent", "租屋", ["押金", "退租", "房東", "房客", "承租", "租約", "租金",
+                     "二房東", "續租", "違約金"]),
+    ("labor", "勞資", ["加班", "資遣", "解僱", "薪水", "薪資", "工資", "老闆",
+                      "雇主", "勞保", "責任制", "打工", "時薪", "離職"]),
+    ("consumer", "消費", ["網購", "退貨", "退款", "賣家", "瑕疵", "蝦皮",
+                         "消費", "訂金", "取消訂單"]),
+    ("traffic", "車禍", ["車禍", "擦撞", "追撞", "肇事", "強制險", "初判表"]),
+    ("family", "家事", ["離婚", "扶養", "監護", "遺產", "繼承", "贍養"]),
     ("leak", "漏水", ["漏水", "滲水", "壁癌", "水管", "天花板"]),
     ("threat", "言語衝突/恐嚇", ["恐嚇", "威脅", "辱罵", "謾罵", "挑釁", "衝突", "罵", "嗆"]),
     ("pets", "寵物", ["寵物", "養狗", "養貓", "放養", "糞便", "便溺", "貓砂"]),

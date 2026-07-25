@@ -37,6 +37,58 @@ def test_triage_non_noise_routes_to_the_generic_flow():
     assert r.message and "通用流程" in r.message
 
 
+def test_everyday_domains_are_recognised_instead_of_asked_about():
+    # The web demo asked 「這是租屋、勞資、消費、車禍、家事,還是鄰里的問題?」 after a
+    # visitor had plainly written 退租/押金/房東 — classify what was described.
+    for complaint, expected in [
+        ("我去年租的房子上個月退租,房東說牆壁有釘孔要扣我兩個月押金", "other:rent"),
+        ("公司說我們是責任制,加班都沒有加班費", "other:labor"),
+        ("網購買到瑕疵品,賣家不讓我退貨退款", "other:consumer"),
+        ("我騎機車跟汽車擦撞,對方要我賠五萬", "other:traffic"),
+        ("父親過世,兄弟姊妹要分遺產", "other:family"),
+    ]:
+        assert triage.classify(complaint).problem_type == expected, complaint
+    # a genuinely vague opening still gets the one discriminating question
+    assert triage.classify("我有惡鄰居").kind == "ambiguous"
+
+
+def test_an_answer_is_filed_by_what_it_says_not_only_by_position():
+    # Web-demo transcript: the visitor wrote 「公寓大廈有管委會」 and was then asked
+    # 「有管委會的公寓大廈,還是透天/無管委會?」 — the thing they had just answered.
+    state = SessionState()
+    handle_turn(state, "樓上小孩每天晚上跑跳,受不了")      # -> noise intake
+    _reply, state = handle_turn(state, "公寓大廈有管委會")
+    assert state.collected_facts.get("building_type") == "公寓大廈有管委會"
+    assert "building_type" not in state.pending_questions
+
+
+def test_routing_leaves_ambiguous_lines_to_the_positional_rule():
+    state = SessionState()
+    handle_turn(state, "鄰居半夜很吵,受不了")
+    state.collected_facts.pop("noise_type")        # as if the seed were absent
+    state.pending_questions = ["noise_type", "timing"]
+    _reply, state = handle_turn(state, "腳步聲、拖家具\n深夜,幾乎每天")
+    assert state.collected_facts["noise_type"] == "腳步聲、拖家具"   # positional
+    assert state.collected_facts["timing"] == "深夜,幾乎每天"        # routed
+
+
+def test_user_can_end_the_questioning():
+    from legal_agent.dialogue.flow import MAX_INTAKE_TURNS
+
+    state = SessionState()
+    _reply, state = handle_turn(state, "網購買到瑕疵品,賣家不讓我退貨")
+    assert state.stage is Stage.INTAKE
+    _reply, state = handle_turn(state, "請幫我分析")
+    assert state.stage is Stage.READY_FOR_STAGE3   # the exit the web demo lacked
+
+    # ...and an unanswerable checklist cannot trap the visitor forever
+    state = SessionState()
+    handle_turn(state, "網購買到瑕疵品,賣家不讓我退貨")
+    for _ in range(MAX_INTAKE_TURNS):
+        _reply, state = handle_turn(state, "不太確定")
+    assert state.stage is Stage.READY_FOR_STAGE3
+
+
 def test_personal_safety_beats_the_noise_keywords():
     # Measured on a lived session: 「前男友…半夜按我家電鈴…我很害怕」 hit the noise
     # keyword 半夜, so someone describing being stalked got the noise
@@ -91,7 +143,7 @@ def test_record_answers_maps_lines_positionally():
 # ── flow: full transcript ────────────────────────────────────────────────────
 def test_flow_full_transcript_reaches_ready_and_collects_facts():
     facts = {
-        "noise_type": "腳步聲、拖家具",
+        "noise_type": "鄰居半夜很吵,受不了",   # seeded from the opening complaint
         "timing": "深夜,幾乎每天",
         "building_type": "有管委會的公寓大廈",
         "impact": "睡眠受影響,很嚴重",
@@ -101,8 +153,10 @@ def test_flow_full_transcript_reaches_ready_and_collects_facts():
     s = SessionState()
     _, s = handle_turn(s, "鄰居半夜很吵,受不了")
     assert s.stage == Stage.INTAKE and s.problem_type == "noise"
-    assert s.pending_questions == ["noise_type", "timing"]
-    _, s = handle_turn(s, f"{facts['noise_type']}\n{facts['timing']}")
+    # the opening complaint already answers 「噪音主要是什麼」 — seeded, not asked
+    assert s.collected_facts["noise_type"] == "鄰居半夜很吵,受不了"
+    assert s.pending_questions == ["timing"]
+    _, s = handle_turn(s, facts["timing"])
     assert s.pending_questions == ["building_type", "impact"]
     _, s = handle_turn(s, f"{facts['building_type']}\n{facts['impact']}")
     assert s.pending_questions == ["evidence", "actions_taken"]

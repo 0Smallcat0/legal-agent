@@ -110,11 +110,61 @@ def next_questions(session_state) -> list[IntakeField]:
     return []
 
 
+# Words that identify WHICH field an answer is about. Positional filing alone
+# mis-files constantly in the model-free web demo: a visitor who answered
+# 「公寓大廈有管委會」 had it stored as the previous question's answer and was then
+# asked 「有管委會的公寓大廈,還是透天/無管委會?」 — the thing they had just said.
+# Conservative by construction: a line is re-routed only when it matches exactly
+# ONE still-unanswered field, otherwise the positional rule stands.
+_FIELD_HINTS: dict[str, tuple[str, ...]] = {
+    "building_type": ("公寓", "大廈", "透天", "管委會", "套房", "華廈", "宿舍", "社區"),
+    "evidence": ("錄音", "錄影", "照片", "截圖", "分貝", "檢測", "沒有證據", "沒錄"),
+    "actions_taken": ("報警", "報過警", "里長", "申訴", "檢舉", "調解", "溝通過",
+                      "按門鈴", "反映"),
+    "impact": ("睡不好", "失眠", "精神", "健康", "上班", "壓力", "受不了", "耳鳴"),
+    "timing": ("半夜", "深夜", "凌晨", "白天", "晚上", "每天", "偶爾", "持續"),
+    "goal": ("我想", "希望", "拿回", "要求", "請求", "賠償", "停止", "解約"),
+    "timeline": ("多久", "個月", "半年", "一年", "已經"),
+}
+
+
+def _route(line: str, unanswered: set[str]) -> str | None:
+    """The one unanswered field this line unambiguously answers, else None."""
+    hits = [
+        key for key in unanswered
+        if any(word in line for word in _FIELD_HINTS.get(key, ()))
+    ]
+    return hits[0] if len(hits) == 1 else None
+
+
 def record_answers(session_state, message: str) -> None:
     """Store the user's reply against the fields asked last turn
-    (session_state.pending_questions), one answer per non-empty line, positionally.
-    A missing line leaves its field unanswered (it is simply re-asked next turn)."""
+    (session_state.pending_questions), one answer per non-empty line, positionally
+    — except where a line unambiguously answers a DIFFERENT still-open field, in
+    which case it is filed there instead. A missing line leaves its field
+    unanswered (it is simply re-asked next turn)."""
     lines = [ln.strip() for ln in (message or "").splitlines() if ln.strip()]
-    for i, key in enumerate(session_state.pending_questions):
-        if i < len(lines):
-            session_state.collected_facts[key] = lines[i]
+    facts = session_state.collected_facts
+    open_keys = {
+        f.key for batch in _checklist(session_state) for f in batch if f.key not in facts
+    }
+
+    positional: list[str] = []
+    for line in lines:
+        target = _route(line, open_keys)
+        if target is not None:
+            facts[target] = line
+            open_keys.discard(target)
+        else:
+            positional.append(line)
+
+    # The leftover lines pair with the still-open asked fields IN ORDER — each
+    # list needs its own cursor, or a routed line silently eats a positional slot.
+    cursor = 0
+    for key in session_state.pending_questions:
+        if key in facts:            # already filled by routing this turn
+            continue
+        if cursor >= len(positional):
+            break
+        facts[key] = positional[cursor]
+        cursor += 1

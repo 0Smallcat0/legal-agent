@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-232%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-236%20passing-brightgreen)
 ![Judgments](https://img.shields.io/badge/judgments-1%2C367%20harvested-blue)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
@@ -247,7 +247,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (232 tests),
+five gates → dialogue → solution ladder — is implemented and green (236 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).

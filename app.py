@@ -94,7 +94,9 @@ _FIELD_ZH = {
 
 _TIER_TEXT = {
     "normal": "充分——檢索到高相關法源",
-    "marginal": "邊緣——未找到直接對應法條,僅供參考",
+    # Matches honesty.MARGINAL_PREFIX: the band means LOW RELEVANCE SCORE, not
+    # 「no matching article」 — it fires on cases that did retrieve the right one.
+    "marginal": "邊緣——檢索相關度偏低,請對照條文原文",
     "insufficient": "不足——資料庫未涵蓋,不作答",
 }
 
@@ -221,7 +223,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">232 項測試通過 · 植入錯誤抓取率 10,435/10,435(零誤報) · 1,367 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">236 項測試通過 · 植入錯誤抓取率 10,435/10,435(零誤報) · 1,367 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -316,7 +318,18 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
     top = max(sc for _, sc in scored) or 1.0
     cards = []
     for s, sc in scored:
-        width = max(4, int(round(sc / top * 100)))
+        # A 0.0 score is not 「4% relevant」 — it is the honest lexical score of a
+        # candidate the DENSE or LEXICON channel put here precisely because the
+        # user's words share nothing with the article. Measured on the web demo:
+        # 民法§432 (the article that decides a 押金/釘孔 case) was displayed last,
+        # labelled 「相關度 4%」. Say which channel found it instead of inventing a
+        # percentage for it.
+        if sc <= 0.0:
+            width = 100
+            relevance = "語彙/語意比對命中(與提問無字面重疊)"
+        else:
+            width = max(4, int(round(sc / top * 100)))
+            relevance = f"相關度 {width}%"
         excerpt = escape(s.content[:56].replace("\n", " "))
         fulltext = (
             f'<details><summary>條文全文</summary><pre>{escape(s.content)}</pre></details>'
@@ -326,7 +339,7 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
             '<div class="retr-card"><div class="head">'
             f'<span class="ref">{escape(s.statute_id + s.article_no)}</span>'
             f'<span class="meta">{escape(s.hierarchy_level)} · 生效 {escape(s.effective_from)}'
-            f" · 相關度 {width}%</span></div>"
+            f" · {escape(relevance)}</span></div>"
             f'<div class="excerpt">{excerpt}…</div>{fulltext}'
             f'<div class="bar"><i style="width:{width}%"></i></div></div>'
         )
