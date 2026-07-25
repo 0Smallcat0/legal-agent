@@ -95,10 +95,29 @@ def parse_file(path: str | Path, known_ids: set[str]) -> tuple[list[dict], list[
     return rows, warnings
 
 
-def load_judgments(rows: list[dict], conn: sqlite3.Connection) -> tuple[int, int]:
-    """Insert rows; duplicate jid (PK) is skipped. Returns (inserted, skipped)."""
+def load_judgments(
+    rows: list[dict], conn: sqlite3.Connection, replace: bool = False
+) -> tuple[int, int]:
+    """Insert rows. Returns (inserted, skipped).
+
+    `replace=True` OVERWRITES an existing jid instead of skipping it — the
+    official spec's amendment rule: 「若使用者曾於先前取得該裁判書資料,之後
+    再次以同一 jid 取得者,表示該筆裁判內容可能有所異動,應將後取得之內容
+    覆蓋先前取得之內容」. Overwritten rows count as inserted (they are the
+    current content); only genuinely unchanged duplicates count as skipped.
+    """
     inserted = skipped = 0
     for row in rows:
+        if replace:
+            conn.execute(
+                "INSERT OR REPLACE INTO judgments (jid, court, year, case_type, "
+                "issues, cited_articles, holding, full_text) VALUES "
+                "(:jid, :court, :year, :case_type, :issues, :cited_articles, "
+                ":holding, :full_text)",
+                row,
+            )
+            inserted += 1
+            continue
         try:
             conn.execute(
                 "INSERT INTO judgments (jid, court, year, case_type, issues, "
@@ -112,6 +131,19 @@ def load_judgments(rows: list[dict], conn: sqlite3.Connection) -> tuple[int, int
             skipped += 1
     conn.commit()
     return inserted, skipped
+
+
+def delete_judgment(jid: str, conn: sqlite3.Connection) -> bool:
+    """Remove a locally-stored judgment. True when a row was actually deleted.
+
+    The spec's removal rule is an OBLIGATION, not an option: when the API
+    answers 「查無資料,本裁判可能未公開或已從系統移除,若您曾經下載過本裁判,
+    亦請您將其移除!」 the copy must go — the court unpublished it to protect
+    the parties, and keeping it would defeat that.
+    """
+    cur = conn.execute("DELETE FROM judgments WHERE jid = ?", (jid,))
+    conn.commit()
+    return cur.rowcount > 0
 
 
 def main(argv: list[str] | None = None) -> int:

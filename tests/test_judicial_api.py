@@ -59,6 +59,56 @@ def test_substantive_civil_filter():
     assert not is_substantive_civil("badjid")                         # malformed
 
 
+@pytest.fixture
+def conn(tmp_path):
+    from legal_agent.data.database import connect, init_db
+
+    db = tmp_path / "h.db"
+    init_db(db)
+    c = connect(db)
+    yield c
+    c.close()
+
+
+def _row(jid="AAA,114,訴,1,20260101,1", case_type="損害賠償", full_text="舊版全文"):
+    return {
+        "jid": jid, "court": "AAA", "year": 114, "case_type": case_type,
+        "issues": None, "cited_articles": "[]", "holding": None,
+        "full_text": full_text,
+    }
+
+
+def test_relisted_jid_overwrites_previous_content(conn):
+    """Spec 肆一: a re-listed jid means the judgment was AMENDED — the newer
+    content must replace the older, not be discarded as a duplicate."""
+    from legal_agent.data.judicial_json import load_judgments
+
+    load_judgments([_row()], conn)
+    assert load_judgments([_row(case_type="損害賠償(更正)", full_text="更正後全文")],
+                          conn, replace=True) == (1, 0)
+    row = conn.execute(
+        "SELECT case_type, full_text FROM judgments WHERE jid = ?",
+        ("AAA,114,訴,1,20260101,1",),
+    ).fetchone()
+    assert row["case_type"] == "損害賠償(更正)"
+    assert row["full_text"] == "更正後全文"
+    assert conn.execute("SELECT COUNT(*) FROM judgments").fetchone()[0] == 1
+
+    # without replace, the old row stands (cheap-retry semantics)
+    assert load_judgments([_row(case_type="又一版")], conn) == (0, 1)
+
+
+def test_removed_judgment_is_deleted_locally(conn):
+    """Spec 肆二: 查無資料 means the court unpublished it — the local copy
+    must go, or the removal protects nobody."""
+    from legal_agent.data.judicial_json import delete_judgment, load_judgments
+
+    load_judgments([_row()], conn)
+    assert delete_judgment("AAA,114,訴,1,20260101,1", conn) is True
+    assert conn.execute("SELECT COUNT(*) FROM judgments").fetchone()[0] == 0
+    assert delete_judgment("NOPE,1,訴,1,20260101,1", conn) is False
+
+
 def test_load_env_reads_key_values(tmp_path):
     env = tmp_path / ".env"
     env.write_text("# comment\nJUDICIAL_USER=abc\nJUDICIAL_PASSWORD = p w \n", encoding="utf-8")
