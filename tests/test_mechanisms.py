@@ -44,6 +44,17 @@ def test_grade_insufficient_when_top_score_is_lexical_noise():
     assert grade_honesty([_STUB], [3.89]) == "insufficient"
 
 
+def test_curated_phrase_hit_floors_the_tier_at_marginal():
+    # BM25 scales with query length: 「樓上小孩每天晚上跑跳到十一二點,還會拖椅子」
+    # tops out at 28.8 (its words share nothing with 社維§72) while the phrase
+    # channel put exactly that article in the window. Refusing there would refuse
+    # the flagship scenario for anyone who types one line.
+    assert grade_honesty([_STUB], [28.8]) == "insufficient"
+    assert grade_honesty([_STUB], [28.8], lexicon_hit=True) == "marginal"
+    # never promotes to normal — a short query stays a weak signal
+    assert grade_honesty([_STUB], [28.8], lexicon_hit=True) != "normal"
+
+
 def test_grade_floor_is_inclusive_lower_bound():
     # exactly at the floor -> NOT insufficient (half-open band, mirrors slices).
     # Sits at the calibrated floor, above the marginal band, so: normal.

@@ -198,7 +198,17 @@ def run_stage3(
     scores = [sc for _, sc in scored]
 
     premise_flag = check_premise(user_text) if user_text else False
-    tier = grade_honesty(retrieved, scores)
+    # Did a curated 口語→法條 phrase land on something we actually retrieved?
+    # That is coverage evidence a length-sensitive BM25 score cannot express.
+    from legal_agent.retrieval.lexicon import expansions as _expansions
+
+    phrases = _expansions(fact_query)
+    lexicon_hit = any(
+        phrase in (statute.content or "")
+        for statute in retrieved
+        for phrase in phrases
+    )
+    tier = grade_honesty(retrieved, scores, lexicon_hit=lexicon_hit)
 
     if tier == "insufficient":   # short-circuit BEFORE the LLM (never fabricate)
         return Stage3Result(

@@ -110,7 +110,7 @@ def test_stage3_carries_related_judgments(conn, monkeypatch):
     # this test exercises.
     from legal_agent.dialogue import stage3 as s3mod
 
-    monkeypatch.setattr(s3mod, "grade_honesty", lambda retrieved, scores: "normal")
+    monkeypatch.setattr(s3mod, "grade_honesty", lambda *a, **kw: "normal")
     result = s3mod.run_stage3(
         {"problem": "被侵害請求損害賠償"}, llm=lambda p: STUB_ANSWER, conn=conn,
     )
