@@ -121,5 +121,60 @@ def test_retrieve_scored_returns_statute_score_pairs(fake_conn):
     assert [s for s, _ in pairs] == retrieve("貓咪", as_of_date="2015-06-01", conn=fake_conn)
 
 
+# ── Lexicon phrases as a retrieval channel ───────────────────────────────────
+@pytest.fixture
+def gap_conn(tmp_path):
+    """A corpus where the RIGHT article shares no word with how people talk.
+
+    測試法 第1條 quotes the statutory phrase 社維§72 uses; 測試法 第2條 is the
+    decoy that actually matches the user's words.
+    """
+    db = tmp_path / "gap.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    conn.executemany(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("測試法", "第1條", "製造噪音或深夜喧嘩，妨害公眾安寧，不聽禁止者，處罰鍰。",
+             "2010-01-01", None, "法律", "http://x/1"),
+            ("測試法", "第2條", "樓上住戶應維持樓地板之使用狀態。",
+             "2010-01-01", None, "法律", "http://x/2"),
+        ],
+    )
+    conn.commit()
+    yield conn
+    conn.close()
+
+
+def test_lexicon_phrase_pulls_in_an_article_the_users_words_never_reach(gap_conn):
+    # 「樓上小孩跑跳、拖椅子」 shares no token with 第1條 — inclusion is decided by
+    # the user's own words on purpose — so ranking alone can never surface it.
+    # The lexicon's statutory side is verbatim article text, so a phrase hit is
+    # an exact pointer.
+    refs = [
+        (s.statute_id, s.article_no)
+        for s in retrieve("樓上小孩每天跑跳、拖椅子,受不了", conn=gap_conn)
+    ]
+    assert ("測試法", "第1條") in refs
+    assert ("測試法", "第2條") in refs      # the decoy is not evicted
+
+
+def test_promotion_does_not_move_the_honesty_floor(gap_conn, monkeypatch):
+    from legal_agent.retrieval import retriever
+
+    query = "樓上小孩每天跑跳、拖椅子,受不了"
+    pairs = retriever.retrieve_scored(query, conn=gap_conn)
+    promoted = [sc for s, sc in pairs if s.article_no == "第1條"]
+    assert promoted == [0.0]              # honest: no lexical match of its own
+
+    # The honesty tier reads the TOP score: it must be identical to what it was
+    # before any promotion, or 「資料不足」 would quietly change meaning.
+    monkeypatch.setattr(retriever, "LEXICON_RESERVED_SEATS", 0)
+    before = retriever.retrieve_scored(query, conn=gap_conn)
+    assert max(sc for _s, sc in pairs) == max(sc for _s, sc in before)
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
