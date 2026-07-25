@@ -215,13 +215,13 @@ def _re_asks_a_filled_field(reply: str, facts: dict, problem_type: str) -> bool:
     earlier assistant line (so that guard passes too) — but it is a question the
     user has answered, which is the same insult by another route.
     """
-    from legal_agent.dialogue.intake import _FIELD_HINTS
+    from legal_agent.dialogue.intake import FIELD_HINTS
 
     open_keys = [k for k in field_keys(problem_type) if k not in facts]
     filled_keys = [k for k in field_keys(problem_type) if k in facts]
 
     def mentions(key: str) -> bool:
-        return any(word in reply for word in _FIELD_HINTS.get(key, ()))
+        return any(word in reply for word in FIELD_HINTS.get(key, ()))
 
     return any(mentions(k) for k in filled_keys) and not any(mentions(k) for k in open_keys)
 
@@ -277,10 +277,10 @@ def run_smart_intake_turn(history: list[dict], facts: dict, llm,
     # it. Measured on the web demo — the visitor wrote 「公寓大廈有管委會」 and the
     # next model question was 「有管委會的公寓大廈,還是透天/無管委會?」.
     if answer:
-        from legal_agent.dialogue.intake import _route
+        from legal_agent.dialogue.intake import route_answer
 
         open_keys = {k for k in field_keys(problem_type) if k not in turn.facts}
-        routed = _route(answer, open_keys)
+        routed = route_answer(answer, open_keys)
         if routed is not None:
             turn.facts[routed] = answer
     if turn.ready:

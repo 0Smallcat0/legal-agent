@@ -15,6 +15,7 @@ Run:  python -m legal_agent.cli {seed|add|list}
 from __future__ import annotations
 
 import argparse
+import contextlib
 import re
 import sqlite3
 import sys
@@ -312,10 +313,8 @@ def cmd_list(conn: sqlite3.Connection) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     # Make CJK / box-drawing output safe even when stdout is redirected (Windows).
-    try:
+    with contextlib.suppress(AttributeError, ValueError):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
-    except (AttributeError, ValueError):
-        pass
 
     parser = argparse.ArgumentParser(
         prog="legal_agent.cli", description="住宅噪音 statute 資料輸入 / 讀回工具"

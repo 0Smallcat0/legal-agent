@@ -324,7 +324,7 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
             width = 100
             relevance = "語彙/語意比對命中(與提問無字面重疊)"
         else:
-            width = max(4, int(round(sc / top * 100)))
+            width = max(4, round(sc / top * 100))
             relevance = f"相關度 {width}%"
         excerpt = escape(s.content[:56].replace("\n", " "))
         fulltext = (
@@ -437,7 +437,10 @@ def _consult_result_html(result) -> str:
         parts.append(
             '<div class="note">前提提醒:你的描述含法律結論斷言;以下以法規實際規定為準,而非附和。</div>'
         )
-    scored = list(zip(result.stage3.retrieved, result.stage3.retrieval_scores or []))
+    # strict=False on purpose: an insufficient tier returns statutes with no
+    # scores, and the panel should render what it has rather than raise.
+    scored = list(zip(result.stage3.retrieved,
+                      result.stage3.retrieval_scores or [], strict=False))
     parts.append('<h4 class="blockhead">適用法源(本次檢索,逐字)</h4>')
     parts.append(_retr_cards(scored, with_fulltext=True))
     parts.append('<h4 class="blockhead">說明</h4>')
@@ -474,7 +477,7 @@ def consult_step(message: str, history: list[dict], state: SessionState):
     # conversation the CLI has had since 07-19. Without one, the scripted
     # checklist still runs, which is what keeps this demo working on HF Spaces
     # free CPU with no keys.
-    history = history + [{"role": "user", "content": message}]
+    history = [*history, {"role": "user", "content": message}]
     if ollama_available():
         reply, state = handle_turn_smart(
             state, message, history, ollama_llm(fmt="json"),

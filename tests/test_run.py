@@ -53,7 +53,7 @@ def test_scripted_conversation_reaches_stage3_and_4(real_conn, monkeypatch):
         try:
             return next(lines)
         except StopIteration:      # loop should end before this
-            raise EOFError
+            raise EOFError from None
 
     outputs = []
     fake_llm = lambda p: (

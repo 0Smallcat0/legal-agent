@@ -16,6 +16,7 @@ Run:  python -m legal_agent.evaluation.calibrate evals/golden_noise_v1.json
 from __future__ import annotations
 
 from dataclasses import dataclass
+from itertools import pairwise
 
 from legal_agent.anti_hallucination.honesty import INSUFFICIENT_SCORE_THRESHOLD
 
@@ -100,7 +101,7 @@ def _candidates(points: list[CalibrationPoint]) -> list[float]:
     adjacent observed scores, plus the extremes."""
     scores = sorted({p.top_score for p in points if p.top_score is not None})
     out = [0.0]
-    out += [(a + b) / 2 for a, b in zip(scores, scores[1:])]
+    out += [(a + b) / 2 for a, b in pairwise(scores)]
     if scores:
         out += [scores[0] / 2, scores[-1] + 1.0]
     return out

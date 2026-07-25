@@ -27,7 +27,7 @@ def _scripted(lines):
         try:
             return next(it)
         except StopIteration:
-            raise EOFError
+            raise EOFError from None
 
     return fake_input
 

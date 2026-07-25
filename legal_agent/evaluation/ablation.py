@@ -27,9 +27,9 @@ from __future__ import annotations
 import json
 import re
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Callable
 
 from legal_agent.anti_hallucination.verifier import VerificationResult, verify_answer
 from legal_agent.evaluation.golden_set import load_golden_set
@@ -56,7 +56,7 @@ class CitationStats:
     flagged: int = 0          # any failure -> surfaced to the user
 
     @staticmethod
-    def from_verifications(vs: list[VerificationResult]) -> "CitationStats":
+    def from_verifications(vs: list[VerificationResult]) -> CitationStats:
         return CitationStats(
             total=len(vs),
             missing=sum(1 for v in vs if not v.exists),
@@ -65,7 +65,7 @@ class CitationStats:
             flagged=sum(1 for v in vs if v.flagged),
         )
 
-    def __add__(self, other: "CitationStats") -> "CitationStats":
+    def __add__(self, other: CitationStats) -> CitationStats:
         return CitationStats(
             self.total + other.total,
             self.missing + other.missing,
@@ -228,7 +228,7 @@ def run_ablation(
                         try:
                             run = runner(case, llm, conn)
                             break
-                        except Exception as exc:  # noqa: BLE001 — record & continue; see docstring
+                        except Exception as exc:
                             if attempt == 1:
                                 time.sleep(10)   # let Ollama recover (model swap / restart)
                                 continue

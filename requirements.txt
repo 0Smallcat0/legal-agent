@@ -24,6 +24,7 @@ gradio>=4.0.0            # Zero-key demo UI (verifier playground / retrieval exp
 
 # ── Evaluation & tests (spec §4) ──
 pytest>=8.0.0            # Golden-set + hallucination-check harness (Tiers 1 & 2), and the schema smoke test.
+ruff>=0.15.0             # Lint; rules are chosen in pyproject.toml and enforced in CI.
 
 # ── Data import / parsing (spec §1.2) ──
 # (no dependency) The 全國法規資料庫 bulk-XML importer (legal_agent/data/moj_xml.py)
