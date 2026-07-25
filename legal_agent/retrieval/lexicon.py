@@ -134,14 +134,33 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
 
 
 def expansions(text: str) -> list[str]:
-    """Statutory terms triggered by `text`, de-duplicated, in table order.
-    Exposed separately so a caller (or a reviewer) can see exactly what a
-    query was widened with."""
-    out: list[str] = []
-    for triggers, statutory in LEXICON:
-        if any(t in text for t in triggers):
-            out.extend(term for term in statutory if term not in out)
-    return out
+    """Statutory terms triggered by `text`, de-duplicated, MOST SPECIFICALLY
+    triggered first.
+
+    Order matters to one caller: the retriever gives the first few phrases
+    reserved seats in the top-k window, and table order made that allocation
+    arbitrary. Measured on a lived stalking session — 「前男友」 (3 chars) lost
+    its seats to entries triggered by 「聲」 (1 char) simply because the noise
+    rows sit higher in the table, so 家暴法§63-1 and §14 never surfaced. A long
+    trigger matching is far less likely to be incidental than a short one.
+    """
+    scored: list[tuple[int, int, int, str]] = []
+    seen: set[str] = set()
+    for row, (triggers, statutory) in enumerate(LEXICON):
+        matched = [t for t in triggers if t in text]
+        if not matched:
+            continue
+        specificity = max(len(t) for t in matched)
+        for position, term in enumerate(statutory):
+            if term in seen:
+                continue
+            seen.add(term)
+            # position keeps a row's own order — tie-breaking on the term text
+            # sorted 「持續性監視…」 (§2) above 「現有或曾有親密關係之未同居伴侶」
+            # (§63-1) and cost the stalking case its most important article.
+            scored.append((-specificity, row, position, term))
+    scored.sort()
+    return [term for _spec, _row, _pos, term in scored]
 
 
 def expand(text: str) -> str:

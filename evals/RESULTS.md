@@ -660,8 +660,28 @@ for a person deciding whether to seek a protective order, actively unhelpful.
 Three lexicon rows later (all statutory sides verbatim), the same query surfaces
 §63-1 and §14.
 
-Recall harness grown to nine cases: **17/20 (85%)** hit@8. Golden v2 unchanged
-(stub pass/partial/miss 17/8/1, tier 27/30, premise 30/30).
+### 7.3 Two bugs inside the promotion mechanism itself
+
+Re-running the stalking session with the new rows exposed the seat allocator:
+
+1. **Seats went to whichever row sat higher in the table.** 「前男友」 (a 3-char
+   trigger) lost its seats to rows triggered by 「聲」 (1 char), because the noise
+   rows come first. Phrases are now ordered by how specifically they were
+   triggered — a long trigger matching is far less likely to be incidental — with
+   ties broken by table position, NOT by the phrase text (the first version
+   sorted 「持續性監視…」 above 「現有或曾有親密關係之未同居伴侶」 alphabetically and
+   cost the case its most important article).
+2. **The promotion evicted the articles it exists to protect.** 家暴法§14 sat at
+   rank 6 of the 8-slot window, so it counted as 「already in the window」 and was
+   not promoted — and then three promotions trimmed the window to five and
+   dropped it. The trim now takes the unprotected tail first: an article matching
+   the same triggered phrases is cut only when nothing else is left.
+
+Recall harness, nine cases: **19/20 (95%)** hit@8 — the noise case reached 3/3
+for the first time and the stalking case 2/2. Golden v2 at its best measured
+state: stub pass/partial/miss **19/7/0**, tier 27/30, premise 30/30. The one
+remaining miss is 民法§423 on 房東擅自進房間, where 刑法§306 (無故侵入他人住宅)
+does surface — the stronger article of the two.
 
 ---
 

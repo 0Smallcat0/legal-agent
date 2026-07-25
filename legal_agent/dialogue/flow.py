@@ -95,7 +95,11 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
                 state.collected_facts["problem"] = " / ".join(dict.fromkeys(parts))
             batch = intake.next_questions(state)
             state.pending_questions = [f.key for f in batch]
-            return "好的,先幫我補齊幾個關鍵事實。\n" + _render_batch(batch), state
+            # Triage's own note is shown when it has one — for a personal-safety
+            # complaint it carries the 110 / 113 pointer, which matters more than
+            # anything the pipeline will say two turns later.
+            preface = f"{result.message}\n" if result.message else ""
+            return preface + "好的,先幫我補齊幾個關鍵事實。\n" + _render_batch(batch), state
         state.asked_discriminating = True
         return result.question, state
 

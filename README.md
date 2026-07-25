@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-228%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-230%20passing-brightgreen)
 ![Judgments](https://img.shields.io/badge/judgments-1%2C367%20harvested-blue)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
@@ -140,7 +140,7 @@ them moved *down*.
 |---|---|
 | Verifier catch rate, seeded errors over **every article** (fake statute / ghost article / ghost 之X / wrong amount / flipped direction / swapped period / out-of-force) | **10 435/10 435 (100%), 0/2 560 false positives** |
 | Golden-set statute coverage (30 cases, llama3.1 8B, gated, hybrid retrieval) | **100% pass+partial** (73% strict, 0 misses) |
-| Retrieval recall on nine problems typed as people actually type them (hit@8) | **17/20 (85%)** — the first six went 7/14 → 12/14 in this pass |
+| Retrieval recall on nine problems typed as people actually type them (hit@8) | **19/20 (95%)** — the first six went 7/14 → 12/14 in the same pass |
 | Honesty-tier accuracy / anti-sycophancy premise detection | **90% (27/30) / 100% (30/30)** ³ |
 | Reference judgments surfaced beside the answer (counted, never scored) | **11/30 cases**, 10 carrying a 主文 award figure ² |
 | Bare model (no pipeline): memory-cited statutes traceable to a vetted source | **0–5%** (llama3.1 / qwen3) ¹ |
@@ -247,7 +247,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (228 tests),
+five gates → dialogue → solution ladder — is implemented and green (230 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).
