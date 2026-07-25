@@ -30,11 +30,19 @@ def test_triage_vague_returns_discriminating_question():
     assert r.question and "?" in r.question   # it asks, it does not answer
 
 
-def test_triage_non_noise_flags_generic_not_built():
+def test_triage_non_noise_routes_to_the_generic_flow():
     r = triage.classify("樓上漏水滲到我家天花板")
     assert r.kind == "other"
     assert r.problem_type == "other:leak"
-    assert r.message and "尚未建立" in r.message
+    assert r.message and "通用流程" in r.message
+
+
+def test_triage_recognises_noise_described_as_behaviour():
+    # How the complaint is actually typed — no 「噪音」, no 「吵」 anywhere.
+    for complaint in ("樓上小孩每天晚上跑跳到十一二點,還會拖椅子",
+                      "隔壁小孩半夜哭鬧尖叫",
+                      "樓上一直甩門"):
+        assert triage.classify(complaint).kind == "noise", complaint
 
 
 # ── Stage 2: intake ──────────────────────────────────────────────────────────

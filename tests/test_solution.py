@@ -78,6 +78,41 @@ def test_render_contains_note_and_orders_rungs():
     assert text.index("反映管理委員會") < text.index("民事訴訟")   # cheap before litigation
 
 
+# ── Generic ladder: name the window, and say free help exists ────────────────
+def _statute(sid):
+    from legal_agent.data.models import Statute
+
+    return Statute(sid, "第1條", "內容", "2020-01-01", None, "法律", "http://x")
+
+
+def test_authority_rung_is_named_from_the_retrieved_statute():
+    from legal_agent.dialogue.solution import build_generic_ladder
+
+    labour = build_generic_ladder({}, retrieved=[_statute("勞動基準法")]).render()
+    assert "勞工局" in labour and "勞資爭議調解" in labour
+
+    consumer = build_generic_ladder({}, retrieved=[_statute("消費者保護法")]).render()
+    assert "1950" in consumer
+
+    rental = build_generic_ladder({}, retrieved=[_statute("租賃住宅市場發展及管理條例")]).render()
+    assert "住宅" in rental and "調處" in rental
+
+
+def test_authority_rung_falls_back_when_the_domain_is_unknown():
+    from legal_agent.dialogue.solution import build_generic_ladder
+
+    text = build_generic_ladder({}, retrieved=[_statute("民法")]).render()
+    assert "主管機關申訴/檢舉" in text
+
+
+def test_generic_ladder_offers_free_legal_help_before_litigation():
+    from legal_agent.dialogue.solution import build_generic_ladder
+
+    text = build_generic_ladder({}).render()
+    assert "法律扶助" in text
+    assert text.index("法律扶助") < text.index("民事訴訟")
+
+
 if __name__ == "__main__":
     import pytest
 

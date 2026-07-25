@@ -131,7 +131,7 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
     if state.problem_type == "noise":
         ladder = solution.build_solution_ladder(state.collected_facts, retrieved=s3.retrieved)
     else:
-        ladder = solution.build_generic_ladder(state.collected_facts)
+        ladder = solution.build_generic_ladder(state.collected_facts, retrieved=s3.retrieved)
     return PipelineResult(
         answer=s3.answer,
         honesty_tier=s3.honesty_tier,

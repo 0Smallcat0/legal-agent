@@ -159,5 +159,74 @@ def test_smart_conversation_reaches_stage3_and_4(real_conn):
     assert "報警" in text                                    # Stage 4 ladder rendered
 
 
+# ── No-progress guard (found by USING the assistant) ─────────────────────────
+# The local 8B model restated the user's own facts and asked 「你覺得這樣合法嗎?」
+# for four turns straight, filling no fields. The model drives; code guarantees
+# the conversation moves.
+def test_stalled_reply_is_replaced_by_the_next_missing_question():
+    history = [
+        {"role": "user", "content": "房東不退押金"},
+        {"role": "assistant", "content": "你覺得這樣合法嗎?"},
+        {"role": "user", "content": "他說牆壁有釘孔"},
+    ]
+
+    def llm(prompt):
+        return '{"reply":"你覺得這樣合法嗎?","facts":{},"ready":false}'
+
+    turn = si.run_smart_intake_turn(history, {}, llm, "generic")
+    assert turn.reply != "你覺得這樣合法嗎?"
+    assert "?" in turn.reply and turn.ready is False
+
+
+def test_reply_without_a_question_is_replaced_too():
+    def llm(prompt):
+        return '{"reply":"我了解你的狀況。","facts":{"problem":"房東不退押金"},"ready":false}'
+
+    turn = si.run_smart_intake_turn([], {}, llm, "generic")
+    assert "?" in turn.reply
+    assert turn.facts["problem"] == "房東不退押金"      # extracted facts are kept
+
+
+def test_a_real_new_question_is_left_alone():
+    def llm(prompt):
+        return '{"reply":"押金總共多少錢?退租時有拍照嗎?","facts":{},"ready":false}'
+
+    turn = si.run_smart_intake_turn([], {}, llm, "generic")
+    assert turn.reply.startswith("押金總共多少錢")
+
+
+def test_answer_to_a_directly_asked_field_is_filed_even_if_the_model_drops_it():
+    # The 8B extractor routinely returns facts:{} for a turn. When code asked the
+    # question, code files the answer — the user's words, verbatim.
+    history = [
+        {"role": "user", "content": "樓上很吵"},
+        {"role": "assistant", "content": "你希望達成什麼結果?"},
+        {"role": "user", "content": "我只想要他們停止,不用賠錢"},
+    ]
+
+    def llm(prompt):
+        return '{"reply":"了解,還有其他細節嗎?","facts":{},"ready":false}'
+
+    turn = si.run_smart_intake_turn(history, {}, llm, "generic", pending_key="goal")
+    assert turn.facts["goal"] == "我只想要他們停止,不用賠錢"
+
+
+def test_the_model_wins_when_it_did_extract_the_field():
+    history = [{"role": "user", "content": "我要拿回押金一萬六"}]
+
+    def llm(prompt):
+        return '{"reply":"好的,還有嗎?","facts":{"goal":"拿回押金 16000 元"},"ready":false}'
+
+    turn = si.run_smart_intake_turn(history, {}, llm, "generic", pending_key="goal")
+    assert turn.facts["goal"] == "拿回押金 16000 元"
+
+
+def test_prompt_lists_the_still_missing_fields():
+    prompt = si.build_intake_prompt([], {"problem": "房東不退押金"}, "generic")
+    missing_block = prompt.split("還沒問到的欄位")[1]
+    assert "goal" in missing_block
+    assert "problem:" not in missing_block             # already known -> not asked again
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
