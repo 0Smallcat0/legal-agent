@@ -187,11 +187,43 @@ def _asks_something(reply: str) -> bool:
     return any(mark in (reply or "") for mark in ("?", "？"))
 
 
+# Questions that hand the legal judgement BACK to the user. Measured on the web
+# demo's first model-driven turn: 「你覺得房東扣你的押金是公平的嗎?」 — it has a
+# question mark and is not a repeat, so the earlier guard let it through, and the
+# visitor is asked the exact thing they came to find out.
+_OPINION_SEEKING = ("你覺得", "你認為", "合理嗎", "公平嗎", "對不對", "違法嗎",
+                    "合法嗎", "有沒有錯", "該不該")
+
+
+def _asks_for_a_verdict(reply: str) -> bool:
+    return any(phrase in (reply or "") for phrase in _OPINION_SEEKING)
+
+
 def _char_overlap(a: str, b: str) -> float:
     sa, sb = set(a or ""), set(b or "")
     if not sa or not sb:
         return 0.0
     return len(sa & sb) / len(sa | sb)
+
+
+def _re_asks_a_filled_field(reply: str, facts: dict, problem_type: str) -> bool:
+    """True when the reply asks about a field that is ALREADY answered.
+
+    Measured on the web demo: the visitor wrote 「公寓大廈有管委會」, the field was
+    filled, and the model's next question was 「…公寓大廈有管委會嗎?」. The reply
+    asks something (so the question-mark guard passes) and is not a repeat of an
+    earlier assistant line (so that guard passes too) — but it is a question the
+    user has answered, which is the same insult by another route.
+    """
+    from legal_agent.dialogue.intake import _FIELD_HINTS
+
+    open_keys = [k for k in field_keys(problem_type) if k not in facts]
+    filled_keys = [k for k in field_keys(problem_type) if k in facts]
+
+    def mentions(key: str) -> bool:
+        return any(word in reply for word in _FIELD_HINTS.get(key, ()))
+
+    return any(mentions(k) for k in filled_keys) and not any(mentions(k) for k in open_keys)
 
 
 def _stalled(reply: str, history: list[dict]) -> bool:
@@ -203,7 +235,7 @@ def _stalled(reply: str, history: list[dict]) -> bool:
     exists to answer — then repeated that same sentence for four turns straight.
     The model drives the intake, but code guarantees it moves.
     """
-    if not _asks_something(reply):
+    if not _asks_something(reply) or _asks_for_a_verdict(reply):
         return True
     for message in history:
         if message.get("role") != "assistant":
@@ -237,14 +269,28 @@ def run_smart_intake_turn(history: list[dict], facts: dict, llm,
     turn = parse_intake_response(
         llm(build_intake_prompt(history, facts, problem_type)), facts, problem_type,
     )
-    if pending_key and pending_key not in turn.facts:
-        answer = _last_user_message(history)
-        if answer:
-            turn.facts[pending_key] = answer
+    answer = _last_user_message(history)
+    if pending_key and pending_key not in turn.facts and answer:
+        turn.facts[pending_key] = answer
+    # Deterministic assist UNDER the model: if the user's words unambiguously
+    # answer a still-open field, file them there even when the extractor missed
+    # it. Measured on the web demo — the visitor wrote 「公寓大廈有管委會」 and the
+    # next model question was 「有管委會的公寓大廈,還是透天/無管委會?」.
+    if answer:
+        from legal_agent.dialogue.intake import _route
+
+        open_keys = {k for k in field_keys(problem_type) if k not in turn.facts}
+        routed = _route(answer, open_keys)
+        if routed is not None:
+            turn.facts[routed] = answer
     if turn.ready:
         return turn
     missing = _missing_fields(turn.facts, problem_type)
-    if missing and _stalled(turn.reply, history):
+    stalled = (
+        _stalled(turn.reply, history)
+        or _re_asks_a_filled_field(turn.reply, turn.facts, problem_type)
+    )
+    if missing and stalled:
         return IntakeTurn(reply=missing[0].question, facts=turn.facts,
                           ready=False, asked=missing[0].key)
     return turn

@@ -67,7 +67,8 @@ class TriageResult:
     kind: str                     # "noise" | "other" | "ambiguous"
     problem_type: str | None      # "noise" | f"other:{cat}" | None
     question: str | None = None   # discriminating question (ambiguous case)
-    message: str | None = None    # routing notice shown to the user
+    label: str | None = None      # 「租屋」「勞資」… — for a human one-liner
+    message: str | None = None    # said only when it carries something ACTIONABLE
     # True when the message must be said IMMEDIATELY, before any intake — the
     # personal-safety route carries the 110 / 113 pointer. A domain notice
     # (「聽起來像租屋問題」) is useful in a UI that shows it, and noise in a CLI
@@ -84,11 +85,10 @@ def classify(message: str) -> TriageResult:
     low = (message or "").lower()
     if _hits(low, _SAFETY):
         return TriageResult(
-            "other", "other:safety",
+            "other", "other:safety", label="人身安全",
             message=(
-                "你描述的涉及人身安全(騷擾/跟蹤/暴力/恐嚇)。這類問題走通用流程,"
-                "不套用噪音問診;如果現在有危險,請直接撥 110,"
-                "親密關係暴力可撥 113 或洽家庭暴力防治中心。"
+                "先講最要緊的:如果現在有危險,請直接撥 110;"
+                "親密關係或家庭暴力可撥 113,或聯繫當地家庭暴力防治中心。"
             ),
             urgent=True,
         )
@@ -96,12 +96,10 @@ def classify(message: str) -> TriageResult:
         return TriageResult("noise", "noise")
     for cat, label, keywords in _OTHER:
         if _hits(low, keywords):
-            return TriageResult(
-                "other", f"other:{cat}",
-                message=(
-                    f"你描述的比較像「{label}」問題。「住宅噪音」有專屬問診流程,"
-                    "其他問題走通用流程(同一套檢索與五道關卡,語料涵蓋民法、租賃住宅"
-                    "條例、消保法、勞基法、道交條例等)。"
-                ),
-            )
+            # No message: the domain is reported as a one-line acknowledgement by
+            # the dialogue layer. It used to explain the system's own plumbing
+            # (「住宅噪音有專屬問診流程,其他問題走通用流程(同一套檢索與五道關卡…)」)
+            # before asking its first question — implementation detail, said to
+            # someone who came with a problem.
+            return TriageResult("other", f"other:{cat}", label=label)
     return TriageResult("ambiguous", None, question=DISCRIMINATING_QUESTION)

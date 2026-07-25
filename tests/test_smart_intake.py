@@ -178,6 +178,32 @@ def test_stalled_reply_is_replaced_by_the_next_missing_question():
     assert "?" in turn.reply and turn.ready is False
 
 
+def test_a_question_about_an_already_answered_field_is_replaced():
+    # Web demo: the visitor wrote 「公寓大廈有管委會」 (which the router files as
+    # building_type) and the model's next question was 「…公寓大廈有管委會嗎?」.
+    history = [{"role": "user", "content": "公寓大廈有管委會"}]
+
+    def llm(prompt):
+        return ('{"reply":"你說樓上小孩跑跳。公寓大廈有管委會嗎?",'
+                '"facts":{"noise_type":"跑跳","timing":"晚上"},"ready":false}')
+
+    turn = si.run_smart_intake_turn(history, {}, llm, "noise")
+    assert turn.facts["building_type"] == "公寓大廈有管委會"   # routed, not asked
+    assert "管委會" not in turn.reply
+
+
+def test_a_question_that_asks_the_user_for_the_verdict_is_replaced():
+    # Web demo, first model-driven turn: 「你覺得房東扣你的押金是公平的嗎?」 — it
+    # has a question mark and is not a repeat, so the repeat/no-question guard
+    # passed it, and the visitor was asked the very thing they came to find out.
+    def llm(prompt):
+        return '{"reply":"你覺得房東扣你的押金是公平的嗎?","facts":{},"ready":false}'
+
+    turn = si.run_smart_intake_turn([], {}, llm, "generic")
+    assert "你覺得" not in turn.reply
+    assert "?" in turn.reply
+
+
 def test_reply_without_a_question_is_replaced_too():
     def llm(prompt):
         return '{"reply":"我了解你的狀況。","facts":{"problem":"房東不退押金"},"ready":false}'

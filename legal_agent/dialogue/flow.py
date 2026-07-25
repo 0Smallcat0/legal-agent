@@ -31,9 +31,11 @@ class Stage(str, Enum):
 DONE_WORDS = {"沒有了", "沒了", "就這樣", "夠了", "可以了", "沒有其他", "沒別的了",
               "不知道", "不清楚", "沒印象"}
 DONE_PHRASES = ("請幫我分析", "請分析", "開始分析", "幫我看", "可以分析", "直接分析")
-# Hard cap on intake turns — a checklist that cannot be completed must not trap
-# the user inside it forever.
-MAX_INTAKE_TURNS = 6
+# Hard cap on intake turns. Three, not six: measured this session, retrieval on
+# the user's OWN opening words already reaches 19/20 of the articles a careful
+# person would want (evals/real_sessions.json), so questions four through six
+# bought paperwork, not accuracy.
+MAX_INTAKE_TURNS = 3
 
 
 def wants_analysis(message: str) -> bool:
@@ -51,6 +53,7 @@ class SessionState:
     user_text: str | None = None   # the opening complaint (fed to Mechanism 5)
     asked_discriminating: bool = False  # the one ambiguous-case question was used
     intake_turns: int = 0          # answers taken so far (cap: MAX_INTAKE_TURNS)
+    pending_key: str | None = None  # field the LAST turn asked directly (smart intake)
 
 
 @dataclass
@@ -72,12 +75,16 @@ class PipelineResult:
 
 
 def _render_batch(batch: list[intake.IntakeField]) -> str:
-    lines = ["請幫我確認幾個問題(可逐項分行回答):"]
-    for i, f in enumerate(batch, 1):
-        lines.append(f"{i}. {f.question}")
-    # Say the exit exists. A visitor who has run out of facts should not have to
-    # guess that 「請幫我分析」 works.
-    lines.append("(不知道或問夠了,直接說「請幫我分析」即可)")
+    """ONE question, phrased as a question — not a numbered form.
+
+    The model-free path used to open with 「請幫我確認幾個問題(可逐項分行回答)」 and
+    a numbered list. In a chat box that reads as paperwork, and the user answers
+    one item anyway. Ask the next thing; say the exit exists.
+    """
+    if not batch:
+        return ""
+    lines = [batch[0].question]
+    lines.append("(不知道就說「不知道」;想直接看結果就說「請幫我分析」)")
     return "\n".join(lines)
 
 
@@ -105,9 +112,9 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
             # who wrote 「樓上小孩跑跳、拖椅子」 was asked 「噪音主要是什麼?」 four
             # turns running. Their own words are the best answer to that field.
             state.collected_facts.setdefault("noise_type", user_message)
-            batch = intake.next_questions(state)
+            batch = intake.next_questions(state)[:1]
             state.pending_questions = [f.key for f in batch]
-            return "好的,聽起來是住宅噪音問題。\n" + _render_batch(batch), state
+            return "了解,住宅噪音的問題。再問一件事就好——\n" + _render_batch(batch), state
         if result.kind == "other" or state.asked_discriminating:
             # Generic fallback (spec §3.4): non-noise problems get the shallow
             # intake instead of a dead end — the corpus covers far more than
@@ -119,13 +126,14 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
                 # reply (when they differ) — nothing the user typed is dropped
                 parts = [p.strip() for p in (state.user_text, user_message) if p and p.strip()]
                 state.collected_facts["problem"] = " / ".join(dict.fromkeys(parts))
-            batch = intake.next_questions(state)
+            batch = intake.next_questions(state)[:1]
             state.pending_questions = [f.key for f in batch]
-            # Triage's own note is shown when it has one — for a personal-safety
-            # complaint it carries the 110 / 113 pointer, which matters more than
-            # anything the pipeline will say two turns later.
+            # A human acknowledgement of what they described, then ONE question.
+            # Triage's message is added only when it carries something actionable
+            # (the personal-safety route's 110 / 113 pointer).
+            opener = f"了解,{result.label}的問題。" if result.label else "了解。"
             preface = f"{result.message}\n" if result.message else ""
-            return preface + "好的,先幫我補齊幾個關鍵事實。\n" + _render_batch(batch), state
+            return preface + opener + "再問一件事就好——\n" + _render_batch(batch), state
         state.asked_discriminating = True
         return result.question, state
 
@@ -139,6 +147,7 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
         # than an unfinishable questionnaire.
         stop = wants_analysis(user_message) or state.intake_turns >= MAX_INTAKE_TURNS
         if batch and not stop:
+            batch = batch[:1]
             state.pending_questions = [f.key for f in batch]
             return _render_batch(batch), state
         state.pending_questions = []
@@ -146,6 +155,56 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
         return _render_ready(state), state
 
     return "已在 READY_FOR_STAGE3;請呼叫 advance_to_stage3() 進入 Stage 3+4。", state
+
+
+def handle_turn_smart(state: SessionState, user_message: str,
+                      history: list[dict], intake_llm) -> tuple[str, SessionState]:
+    """LLM-driven intake with the SAME (reply, state) contract as handle_turn.
+
+    The CLI has driven its intake with the model since 07-19; the web demo kept
+    asking a scripted checklist even with Ollama running right there, because it
+    only used the model for the Stage-3 narrative. Same conversation, either
+    front end — and when no model is available, callers fall back to
+    `handle_turn`, which is what keeps the demo working on HF Spaces free CPU.
+
+    NO retrieval here (spec §3.3): this only calls `intake_llm`.
+    """
+    from legal_agent.dialogue.smart_intake import field_keys, run_smart_intake_turn
+
+    preface = ""
+    if state.user_text is None:
+        state.user_text = user_message
+        result = triage.classify(user_message)
+        state.problem_type = (
+            "noise" if result.kind == "noise" else (result.problem_type or "generic")
+        )
+        if state.problem_type == "noise":
+            state.collected_facts.setdefault("noise_type", user_message)
+        else:
+            state.collected_facts.setdefault("problem", user_message)
+        if result.urgent and result.message:
+            preface = f"{result.message}\n"
+        state.stage = Stage.INTAKE
+
+    ptype = "noise" if state.problem_type == "noise" else "generic"
+    turn = run_smart_intake_turn(
+        history, state.collected_facts, intake_llm, ptype, state.pending_key,
+    )
+    state.collected_facts = turn.facts
+    state.pending_key = turn.asked
+    state.intake_turns += 1
+
+    ready = (
+        turn.ready
+        or wants_analysis(user_message)
+        or all(key in state.collected_facts for key in field_keys(ptype))
+        or state.intake_turns >= MAX_INTAKE_TURNS
+    )
+    if ready:
+        state.pending_questions = []
+        state.stage = Stage.READY_FOR_STAGE3
+        return preface + _render_ready(state), state
+    return preface + turn.reply, state
 
 
 def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None) -> PipelineResult:
