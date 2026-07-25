@@ -338,5 +338,87 @@ def test_rank5_practice_in_law_section_flagged_as_misplaced(practice_conn):
     assert "位階誤植" in r.reason
 
 
+# ── False positives found by USING the assistant (six lived sessions) ────────
+# Every case below is a CORRECT answer the verifier used to flag, or a real
+# fabrication that must still be caught after the fix.
+def test_common_abbreviation_resolves_to_corpus_name(real_conn):
+    ans = ("依社維法第72條,製造噪音或深夜喧嘩,妨害公眾安寧,不聽禁止者,"
+           "處新臺幣一萬元以下罰鍰。")
+    [r] = verify_answer(ans, [], conn=real_conn, corpus_conn=real_conn)
+    assert r.citation.statute_id == "社會秩序維護法"
+    assert r.flagged is False
+
+
+def test_cross_reference_inside_quoted_article_is_not_a_missing_source(real_conn):
+    # 勞基§32-1's own text says 「雇主依第三十二條第一項…」. Read as a standalone
+    # citation, the statute name became 「雇主依」 and the user got three scary
+    # 「corpus 查無此法源」 warnings on a correct answer.
+    ans = "依公寓大廈管理條例第47條,住戶違反第十六條第一項規定者,由主管機關處罰。"
+    results = verify_answer(ans, [], conn=real_conn, corpus_conn=real_conn)
+    assert [r.citation.article_no for r in results] == ["第47條", "第16條"]
+    assert results[1].citation.inferred_id is True      # name inherited, not written
+    assert not any(r.flagged for r in results)
+
+
+def test_unnamed_reference_to_a_ghost_article_is_still_flagged(real_conn):
+    ans = "依民法第184條負損害賠償責任,另依第9999條亦得請求。"
+    results = verify_answer(ans, [], conn=real_conn, corpus_conn=real_conn)
+    ghost = next(r for r in results if r.citation.article_no == "第9999條")
+    assert ghost.citation.statute_id == "民法"          # inherited, then checked
+    assert ghost.flagged is True
+
+
+def test_two_citations_in_one_sentence_are_not_graded_on_each_others_numbers(real_conn):
+    ans = ("依社會秩序維護法第72條處新臺幣一萬元以下罰鍰,"
+           "依民法第195條得請求非財產上之損害賠償。")
+    results = verify_answer(ans, [], conn=real_conn, corpus_conn=real_conn)
+    assert not any(r.flagged for r in results), [r.reason for r in results if r.flagged]
+
+
+def test_cross_reference_quoted_from_a_retrieved_source_is_not_called_recall(real_conn):
+    # The 警察分工原則 names 噪音管制法第8條/第9條 in its own body. When the model
+    # quotes it, 「模型可能憑記憶補充」 is simply false — but the referenced article
+    # was not retrieved, so its content stays unchecked. Both things must be said.
+    from legal_agent.data.models import Statute
+
+    routing = Statute(
+        "分工原則", "",
+        "環保主管機關受理:燃放爆竹(噪音管制法第8條);超過管制標準者(噪音管制法第九條)。",
+        "2020-01-01", None, "行政實務見解", "http://x",
+    )
+    ans = ("實務見解:以下為主管機關實務見解/處理原則,非法律明文,僅供參考。"
+           "依噪音管制法第8條由環保機關處理,另噪音管制法第9條亦同。"
+           "又依噪音管制法第99條,住戶應保持安寧。")
+    results = {r.citation.article_no: r for r in
+               verify_answer(ans, [routing], corpus_conn=real_conn)}
+    assert results["第8條"].flagged is False and "交叉引用" in results["第8條"].reason
+    assert results["第9條"].flagged is False        # written 第九條 in the source
+    assert results["第99條"].flagged is True        # not in the quoted text -> recall
+
+
+def test_bracketed_and_spaced_citation_forms_are_extracted(real_conn):
+    # 「根據《民法》第9999條」 used to extract NOTHING — the verifier never saw a
+    # pure fabrication because of how the model punctuated it.
+    for form in ("根據《民法》第184條,負損害賠償責任。",
+                 "(《民法》第184條)因故意或過失不法侵害他人之權利者。",
+                 "依「民法」第184條規定。",
+                 "民法 第184條 規定。"):
+        [r] = verify_answer(form, [], conn=real_conn, corpus_conn=real_conn)
+        assert (r.citation.statute_id, r.citation.article_no) == ("民法", "第184條"), form
+        assert r.flagged is False, form
+
+    [ghost] = verify_answer("根據《民法》第9999條,亦得請求。", [],
+                            conn=real_conn, corpus_conn=real_conn)
+    assert ghost.flagged is True
+
+
+def test_amount_before_its_citation_is_still_checked(real_conn):
+    # The clause clip must not become a hole: a claim written BEFORE its
+    # citation still belongs to it.
+    ans = "違者可處新臺幣999999元罰鍰,依社會秩序維護法第72條辦理。"
+    [r] = verify_answer(ans, [], conn=real_conn, corpus_conn=real_conn)
+    assert r.flagged is True and "999999" in r.reason
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

@@ -26,6 +26,12 @@ class Citation:
     article_no: str               # "第X條" for 條-style; "" for 文號-style
     paragraph: str | None = None
     item: str | None = None
+    # True when the statute name was NOT written at this citation and had to be
+    # inherited from the previous named one (「雇主依第三十二條第一項…」 inside a
+    # quoted article). Such a reference still gets the exists axis, but not the
+    # content axis: its surrounding sentence is the OTHER article's text, so a
+    # content comparison would measure the wrong thing.
+    inferred_id: bool = False
 
 
 @dataclass(frozen=True)
@@ -74,14 +80,24 @@ _NUM = r"[0-9０-９〇零一二三四五六七八九十百千萬兩]+"
 # (1) 統名 + 第X[-Y]條 [之Z] [+ 項/款]. The 之Z suffix is a DISTINCT article
 # (民法第800條之1 ≠ 第800條) — it must survive into article_no, never be
 # silently dropped, or a ghost 之X citation gets laundered into its real parent.
+# The statute name may be closed by a bracket or separated by whitespace before
+# 第X條 — 「根據《民法》第440條」 and 「民法 第440條」 are how models actually write.
+# Measured on a lived session: WITHOUT this, 《民法》第9999條 (a pure fabrication)
+# was extracted as nothing at all, so the citation verifier never saw it. A gate
+# that silently skips a whole writing style is worse than a noisy one.
+_NAME_CLOSE = r"[》」』】〕）)]?\s*"
 _CITATION_RE = re.compile(
-    r"(?P<name>[一-鿿]+?)第(?P<article>" + _NUM + r"(?:-" + _NUM + r")?)條"
+    r"(?P<name>[一-鿿]+?)" + _NAME_CLOSE
+    + r"第(?P<article>" + _NUM + r"(?:-" + _NUM + r")?)條"
     r"(?:之(?P<suffix>" + _NUM + r"))?"
     r"(?:第(?P<paragraph>" + _NUM + r")項)?"
     r"(?:第(?P<item>" + _NUM + r")款)?"
 )
 # (2) 文號式: ...第X號 (函釋 / 行政實務見解). Bounded by punctuation (class excludes 、,。).
 _DOCNUM_RE = re.compile(r"[一-鿿0-9０-９A-Za-z()（）]{2,40}?第" + _NUM + r"號")
+# 「第X條」 immediately after a statute name — used to recognise a cross-reference
+# that a retrieved source states in its own text.
+_CROSSREF_RE = re.compile(r"第(" + _NUM + r")條")
 
 # 實務見解-tier levels (rank >= 4): must NOT be presented as 「法律明文」.
 _PRACTICE_TIER_LEVELS = {"函釋", "行政實務見解"}
@@ -99,6 +115,9 @@ _AMOUNT_DIR_RE = re.compile(
 )
 _DOWNWARD = {"以下", "以內", "未滿"}
 _SENTENCE_BOUNDARY = "。！？!?\n；;"
+# Clause separators — used only to keep two citations in ONE sentence from
+# being graded on each other's numbers.
+_CLAUSE_BOUNDARY = "，,、"
 
 
 def _amounts(text: str) -> set[int]:
@@ -136,13 +155,29 @@ def _periods(text: str) -> dict[str, set[int]]:
     return values
 
 
-def _sentence_around(text: str, start: int, end: int) -> str:
-    left = -1
-    for ch in _SENTENCE_BOUNDARY:
-        left = max(left, text.rfind(ch, 0, start))
-    rights = [pos for pos in (text.find(ch, end) for ch in _SENTENCE_BOUNDARY) if pos != -1]
-    right = min(rights) if rights else len(text) - 1
-    return text[left + 1: right + 1]
+def _sentence_around(text: str, start: int, end: int,
+                     floor: int | None = None, ceiling: int | None = None) -> str:
+    """The sentence containing [start, end), clipped to (floor, ceiling).
+
+    The clip is what keeps citations from being graded on each other's words.
+    「依社維法第72條處一萬元以下罰鍰,依民法第195條得請求非財產上之損害賠償」 is ONE
+    sentence, and unclipped, §195 gets checked against 「一萬元」 — a flag on a
+    correct answer. Chinese legal prose puts the claim AFTER its citation, so:
+      * right bound: the next citation (claims stop where the next one starts);
+      * left bound: when another citation precedes this one in the same
+        sentence, the nearest clause comma — otherwise the sentence start, which
+        keeps 「處999999元罰鍰,依社維法第72條」 (claim before citation) checkable.
+    """
+    crowded = floor is not None
+    sentence_floor = 0 if floor is None else floor
+    left = sentence_floor - 1
+    for ch in _SENTENCE_BOUNDARY + (_CLAUSE_BOUNDARY if crowded else ""):
+        left = max(left, text.rfind(ch, sentence_floor, start))
+    limit = len(text) if ceiling is None else ceiling
+    rights = [pos for pos in (text.find(ch, end, limit) for ch in _SENTENCE_BOUNDARY)
+              if pos != -1]
+    right = min(rights) + 1 if rights else limit
+    return text[left + 1: right]
 
 
 def _amount_directions(text: str) -> dict[int, set[str]]:
@@ -228,9 +263,66 @@ def _known_ids(retrieved_context: list[Statute], conn: sqlite3.Connection | None
     return {s.statute_id for s in retrieved_context}
 
 
+# Everyday short names for corpus statutes. A model (and a person) writes 刑法,
+# not 中華民國刑法 — and the verifier used to answer 「corpus 查無此法源」 to a
+# perfectly correct citation. An alias may only point at an id that EXISTS in
+# the corpus, so this can never launder an invented statute into a real one.
+_ALIASES = {
+    "刑法": "中華民國刑法",
+    "勞基法": "勞動基準法",
+    "社維法": "社會秩序維護法",
+    "消保法": "消費者保護法",
+    "公寓大廈條例": "公寓大廈管理條例",
+    "大廈管理條例": "公寓大廈管理條例",
+    "租賃住宅條例": "租賃住宅市場發展及管理條例",
+    "道交條例": "道路交通管理處罰條例",
+    "道路交通處罰條例": "道路交通管理處罰條例",
+    "家暴法": "家庭暴力防治法",
+    "噪音法": "噪音管制法",
+}
+# Shapes a Taiwanese statute name can end with. An unresolved run that looks
+# like this is a NAMED source the corpus does not have (flag it — this is how
+# the fake_statute mutations get caught). An unresolved run that does not is
+# prose (「雇主依」、「或使勞工於」), i.e. an anaphoric reference.
+_STATUTE_SHAPE_RE = re.compile(
+    r"(法|條例|辦法|規則|準則|細則|通則|標準|要點|綱要|公約|自治條例|處理原則)$"
+)
+# Explicit back-references. They end in 法/條例 but name nothing.
+_ANAPHORA_NAMES = ("同法", "本法", "該法", "前法", "同條例", "本條例", "該條例",
+                   "同辦法", "本辦法", "該辦法")
+# Sentence particles that glue onto a statute name in prose.
+_LEADING_PARTICLES = ("依據", "根據", "依照", "按照", "參照", "違反",
+                      "依", "按", "及", "與", "和", "另", "並", "或", "暨")
+
+
 def _resolve_id(name_run: str, known_ids: set[str]) -> str:
     matches = [kid for kid in known_ids if name_run.endswith(kid)]
-    return max(matches, key=len) if matches else name_run
+    if matches:
+        return max(matches, key=len)
+    alias_hits = [
+        canonical for short, canonical in _ALIASES.items()
+        if name_run.endswith(short) and canonical in known_ids
+    ]
+    if alias_hits:
+        return max(alias_hits, key=len)
+    # Unresolved: strip the sentence particle so the warning reads
+    # 「corpus 查無此法源:台灣安寧保障法第3條」 rather than 「…:依台灣安寧保障法第3條」.
+    stripped = name_run
+    for particle in _LEADING_PARTICLES:
+        if stripped.startswith(particle) and len(stripped) > len(particle):
+            stripped = stripped[len(particle):]
+            break
+    return stripped
+
+
+def _is_anaphoric(name_run: str, resolved: str, known_ids: set[str]) -> bool:
+    """True when this citation names no statute of its own: either an explicit
+    back-reference (同法/本法) or a run of ordinary prose (「雇主依」)."""
+    if resolved in known_ids:
+        return False
+    if name_run.endswith(_ANAPHORA_NAMES):
+        return True
+    return not _STATUTE_SHAPE_RE.search(name_run)
 
 
 def _slices(statute_id, article_no, retrieved_context, conn):
@@ -242,6 +334,33 @@ def _slices(statute_id, article_no, retrieved_context, conn):
         return [Statute(r[0], r[1], r[2], r[3], r[4], r[5], r[6]) for r in rows]
     return [s for s in retrieved_context
             if s.statute_id == statute_id and s.article_no == article_no]
+
+
+def _quoted_in_retrieved(citation: Citation, retrieved_context: list[Statute]) -> bool:
+    """True when 「法名第X條」 occurs verbatim inside a retrieved article's text.
+
+    Statutes and 實務見解 cross-reference each other constantly, and a model
+    quoting a retrieved source reproduces those references. Treating them as
+    unretrieved citations produced three warnings on the best noise answer the
+    system has ever given.
+    """
+    if not citation.article_no:
+        return False
+    want = _parse_number(citation.article_no.strip("第條"))
+    if want is None:
+        return False
+    for statute in retrieved_context:
+        content = statute.content or ""
+        at = content.find(citation.statute_id)
+        while at != -1:
+            # 「噪音管制法第8條」 and 「噪音管制法第九條」 must both count: compare the
+            # PARSED number, not the glyphs.
+            window = content[at + len(citation.statute_id): at + len(citation.statute_id) + 12]
+            m = _CROSSREF_RE.match(window)
+            if m and _parse_number(m.group(1)) == want:
+                return True
+            at = content.find(citation.statute_id, at + 1)
+    return False
 
 
 def _missing_reason(citation: Citation, corpus_conn: sqlite3.Connection | None) -> str:
@@ -296,18 +415,34 @@ def _canonical_article(article: str, suffix: str | None) -> str | None:
 
 
 def _iter_citations(answer_text: str, known_ids: set[str]):
-    """Yield (Citation, start_pos) for both 條-style and 文號-style references."""
+    """Yield (Citation, start_pos) for both 條-style and 文號-style references.
+
+    Citations are walked in document order so an unnamed reference can inherit
+    the statute named before it — quoted articles are full of them
+    (勞基法§32-1's own text says 「雇主依第三十二條第一項…」), and reading each as
+    a standalone citation of a statute called 「雇主依」 produced three scary
+    「corpus 查無此法源」 warnings on a correct answer in a real session.
+    """
+    last_named: str | None = None
     for m in _CITATION_RE.finditer(answer_text):
         article_no = _canonical_article(m.group("article"), m.group("suffix"))
         if article_no is None:
             continue
+        name_run = m.group("name")
+        statute_id = _resolve_id(name_run, known_ids)
+        inferred = False
+        if _is_anaphoric(name_run, statute_id, known_ids) and last_named is not None:
+            statute_id, inferred = last_named, True
+        elif statute_id in known_ids:
+            last_named = statute_id
         yield (
             Citation(
                 raw=m.group(0),
-                statute_id=_resolve_id(m.group("name"), known_ids),
+                statute_id=statute_id,
                 article_no=article_no,
                 paragraph=_fmt(m.group("paragraph"), "項"),
                 item=_fmt(m.group("item"), "款"),
+                inferred_id=inferred,
             ),
             m.start(),
         )
@@ -350,8 +485,30 @@ def verify_answer(
     law_span = _law_section_span(answer_text)
     results: list[VerificationResult] = []
 
-    for citation, pos in _iter_citations(answer_text, known):
+    # Sorted by position so each citation's claim scope can be clipped to its
+    # neighbours (the two extractors below run in separate passes, so document
+    # order is not the yield order).
+    found = sorted(_iter_citations(answer_text, known), key=lambda cp: cp[1])
+    for index, (citation, pos) in enumerate(found):
+        prev_end = (
+            found[index - 1][1] + len(found[index - 1][0].raw) if index else None
+        )
+        next_start = found[index + 1][1] if index + 1 < len(found) else None
         slices = _slices(citation.statute_id, citation.article_no, retrieved_context, conn)
+        if not slices and _quoted_in_retrieved(citation, retrieved_context):
+            # The reference appears VERBATIM inside a retrieved source's own text
+            # (the 警察分工原則 names 噪音管制法第8條/第9條 in its body). The model
+            # copied it from material it was given, so 「模型可能憑記憶補充」 is
+            # false — but the referenced article itself was not retrieved, so its
+            # content stays unchecked and unrelied-upon. Say exactly that.
+            results.append(VerificationResult(
+                citation, exists=False, content_match=False, in_force=False,
+                verbatim_source=None, flagged=False,
+                reason=(f"{citation.statute_id}{citation.article_no} "
+                        "係檢索到的法源內文中的交叉引用(逐字出現於檢索結果),"
+                        "本次未另行檢索該條,故未核對其內容"),
+            ))
+            continue
         if not slices:
             # Retrieval-first is NOT relaxed — exists stays False and the claim
             # stays flagged. But the two failures mean very different things to
@@ -368,8 +525,18 @@ def verify_answer(
         in_force = bool(in_force_slices)
         source = in_force_slices[0] if in_force else max(slices, key=lambda s: s.effective_from)
 
-        claim_scope = _sentence_around(answer_text, pos, pos + len(citation.raw))
-        content_match, cm_reason = _content_consistent(claim_scope, source.content)
+        if citation.inferred_id:
+            # Unnamed back-reference: the sentence around it belongs to the
+            # article being QUOTED, not to this one. Existence and in-force
+            # still apply; comparing content would grade the wrong text.
+            claim_scope = ""
+            content_match, cm_reason = True, ""
+        else:
+            claim_scope = _sentence_around(
+                answer_text, pos, pos + len(citation.raw),
+                floor=prev_end, ceiling=next_start,
+            )
+            content_match, cm_reason = _content_consistent(claim_scope, source.content)
 
         # 位階誤植: 實務見解-tier source presented inside the 「法律明文」 section.
         misplaced = (
@@ -380,7 +547,7 @@ def verify_answer(
 
         # Optional 4th axis — only spend the model on structurally clean citations.
         semantic_ok, sem_reason = True, ""
-        if semantic_llm is not None and content_match and in_force:
+        if semantic_llm is not None and content_match and in_force and not citation.inferred_id:
             from legal_agent.anti_hallucination.semantic_check import semantic_consistent
             semantic_ok, sem_reason = semantic_consistent(
                 claim_scope, source.content, semantic_llm
