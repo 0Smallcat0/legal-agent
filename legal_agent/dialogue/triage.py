@@ -29,6 +29,17 @@ _NOISE = [
     "跑跳", "跑來跑去", "拖椅子", "拖桌", "蹦蹦", "砰砰", "哭鬧", "尖叫",
     "打球", "跳繩", "甩門", "摔門", "彈鋼琴", "唱歌",
 ]
+# Personal-safety complaints are checked BEFORE noise, and that ordering is the
+# whole point. Measured on a lived session: 「前男友…半夜按我家電鈴,還在我上班的
+# 地方等我,我很害怕」 hit the noise keyword 「半夜」, so someone describing being
+# stalked was handed the noise questionnaire — 「你住公寓大廈還是透天?」 — and the
+# answer came back citing 社維法§72 深夜喧嘩 and the 噪音 routing principle.
+_SAFETY = [
+    "家暴", "暴力", "打我", "動手", "恐嚇", "威脅", "跟蹤", "騷擾", "糾纏",
+    "前男友", "前女友", "前夫", "前妻", "保護令", "很害怕", "會怕", "性騷",
+    "跟監", "堵我", "等我下班",
+]
+
 _OTHER = [
     ("leak", "漏水", ["漏水", "滲水", "壁癌", "水管", "天花板"]),
     ("threat", "言語衝突/恐嚇", ["恐嚇", "威脅", "辱罵", "謾罵", "挑釁", "衝突", "罵", "嗆"]),
@@ -53,6 +64,15 @@ def _hits(low: str, keywords: list[str]) -> bool:
 def classify(message: str) -> TriageResult:
     """Coarse-classify the opening complaint. NO retrieval, NO LLM."""
     low = (message or "").lower()
+    if _hits(low, _SAFETY):
+        return TriageResult(
+            "other", "other:safety",
+            message=(
+                "你描述的涉及人身安全(騷擾/跟蹤/暴力/恐嚇)。這類問題走通用流程,"
+                "不套用噪音問診;如果現在有危險,請直接撥 110,"
+                "親密關係暴力可撥 113 或洽家庭暴力防治中心。"
+            ),
+        )
     if _hits(low, _NOISE):
         return TriageResult("noise", "noise")
     for cat, label, keywords in _OTHER:

@@ -161,6 +161,28 @@ def test_lexicon_phrase_pulls_in_an_article_the_users_words_never_reach(gap_conn
     assert ("測試法", "第2條") in refs      # the decoy is not evicted
 
 
+def test_promotion_never_evicts_an_article_the_same_phrases_point_at():
+    # Measured on a stalking session: 家暴法§14 sat at rank 6 of an 8-slot
+    # window, so it was 「already in the window」 and not promoted — and then
+    # three promotions trimmed the window to five and dropped it.
+    from legal_agent.data.models import Statute
+    from legal_agent.retrieval import retriever as r
+
+    def art(no, content):
+        return Statute("測試法", no, content, "2010-01-01", None, "法律", "http://x")
+
+    phrase = "為騷擾、接觸、跟蹤、通話、通信或其他非必要之聯絡行為"
+    ranked = [(art(f"第{i}條", "無關內容"), float(20 - i)) for i in range(1, 6)]
+    ranked.append((art("第6條", f"禁止相對人{phrase}。"), 14.0))       # phrase-matched, tail
+    ranked += [(art(f"第{i}條", "無關內容"), float(20 - i)) for i in (7, 8)]
+    candidates = [s for s, _ in ranked] + [art("第99條", f"…{phrase}…")]
+
+    out = r._promote_lexicon_phrases("騷擾", candidates, ranked, k=8)
+    refs = [s.article_no for s, _ in out]
+    assert "第6條" in refs, refs      # protected: it matches the triggered phrase
+    assert len(refs) == 8
+
+
 def test_promotion_does_not_move_the_honesty_floor(gap_conn, monkeypatch):
     from legal_agent.retrieval import retriever
 

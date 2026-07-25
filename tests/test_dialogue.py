@@ -37,6 +37,16 @@ def test_triage_non_noise_routes_to_the_generic_flow():
     assert r.message and "通用流程" in r.message
 
 
+def test_personal_safety_beats_the_noise_keywords():
+    # Measured on a lived session: 「前男友…半夜按我家電鈴…我很害怕」 hit the noise
+    # keyword 半夜, so someone describing being stalked got the noise
+    # questionnaire (「你住公寓大廈還是透天?」) and an answer about 深夜喧嘩.
+    r = triage.classify("我跟前男友分手後他一直傳訊息、半夜按我家電鈴,還在我上班的地方等我,我很害怕")
+    assert r.problem_type == "other:safety"
+    assert r.message and "110" in r.message and "113" in r.message
+    assert triage.classify("鄰居半夜對我大聲辱罵、威脅我").problem_type == "other:safety"
+
+
 def test_triage_recognises_noise_described_as_behaviour():
     # How the complaint is actually typed — no 「噪音」, no 「吵」 anywhere.
     for complaint in ("樓上小孩每天晚上跑跳到十一二點,還會拖椅子",

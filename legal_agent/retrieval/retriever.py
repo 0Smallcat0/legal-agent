@@ -251,7 +251,28 @@ def _promote_lexicon_phrases(
                 break                            # one article per phrase
     if not promote:
         return ranked[:k]
-    keep = ranked[: max(k - len(promote), 0)]
+
+    # Making room must not evict an article the SAME phrases point at. Measured
+    # on a stalking session: 家暴法§14 (what a 保護令 can order) sat at rank 6,
+    # was therefore 「already in the window」 and not promoted — and then the three
+    # promotions cut the window to five and dropped it. Trim the unprotected tail
+    # first; only cut a phrase-matched article if there is nothing else to give.
+    room = max(k - len(promote), 0)
+    window_items = ranked[:k]
+    protected = [
+        i for i, (statute, _score) in enumerate(window_items)
+        if any(phrase in (statute.content or "") for phrase in phrases)
+    ]
+    keep_idx = list(range(len(window_items)))
+    for i in reversed(range(len(window_items))):
+        if len(keep_idx) <= room:
+            break
+        if i in protected:
+            continue
+        keep_idx.remove(i)
+    while len(keep_idx) > room:          # only phrase-matched items left to cut
+        keep_idx.pop()
+    keep = [window_items[i] for i in sorted(keep_idx)]
     return (keep + promote)[:k]
 
 
