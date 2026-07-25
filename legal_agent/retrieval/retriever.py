@@ -166,7 +166,22 @@ def _retrieve_scored(
     ranked = [(candidates[i], float(scores[i])) for i in matches]
 
     fused = _dense_fuse(_expand(dense_query or query), candidates, ranked, k=k)
-    return (fused if fused is not None else ranked)[:k]
+    window = fused if fused is not None else ranked
+    return _promote_lexicon_phrases(query, candidates, window, k)
+
+
+# TRIED AND REJECTED — per-statute cap inside the top-k window. One statute
+# routinely floods the window (公寓大廈條例 took 7 of 8 seats on an upstairs-noise
+# question), so capping each statute's seats looked obvious. Measured, it loses
+# on BOTH harnesses because real answers legitimately cluster inside one code
+# (瑕疵擔保 = 民法§354+§359; 加班費 = 勞基§22+§24+§30):
+#   cap  golden pass/partial/miss   six lived sessions hit@8
+#   off        18/7/1                     9/14 (64%)
+#   2          15/10/1                    5/14 (36%)
+#   3          16/9/1                     5/14 (36%)
+#   4          17/8/1                     7/14 (50%)
+# The flooding is real; a blunt per-statute cap is the wrong instrument for it.
+# Vocabulary (retrieval/lexicon.py) fixed the same cases without the cost.
 
 
 def _expand(text: str) -> str:
@@ -177,6 +192,67 @@ def _expand(text: str) -> str:
         return text
     from legal_agent.retrieval.lexicon import expand
     return expand(text)
+
+
+# Lexicon phrases as a THIRD retrieval channel, not just a ranking nudge.
+# Measured on six lived sessions: expansion could not save the vocabulary-gap
+# cases it was written for, because inclusion is decided by the user's own words
+# (deliberately — see above) and those queries share NO token with the target
+# article. 「樓上小孩跑跳、拖椅子」 never reaches 社維§72; 「收到三天就當機」 never
+# reaches 民法§354. The dense channel ranks them 8-25, too deep for the 3
+# reserved seats to reach.
+# The lexicon's statutory side is VERBATIM article text, so a phrase hit is an
+# exact pointer, not a fuzzy guess: 「製造噪音或深夜喧嘩」 occurs in exactly one
+# article. Promote at most N such articles to the window tail, carrying an
+# honest BM25 score of 0.0 — the honesty tier reads the TOP score, which still
+# comes from a genuine user-word match, so 「資料不足」 keeps its meaning.
+# N swept on both harnesses (stub-LLM golden v2 pass/partial/miss of 26
+# scorable · six lived sessions hit@8):
+#   N=0  18/7/1 · 9/14 (64%)      N=1  19/6/1 · 9/14 (64%)
+#   N=2  18/7/1 · 10/14 (71%)     N=3  17/8/1 · 12/14 (86%)
+#   N=4  13/11/2 · 12/14 (86%)
+# N=3 is the knee: real-wording recall +22 points for one golden case sliding
+# pass -> partial (pass+partial stays 25/26). N=4 buys nothing and starts
+# evicting answers outright.
+LEXICON_RESERVED_SEATS = 3
+
+
+def _promote_lexicon_phrases(
+    query: str,
+    candidates: list[Statute],
+    ranked: list[tuple[Statute, float]],
+    k: int,
+) -> list[tuple[Statute, float]]:
+    """Give the top-k window up to LEXICON_RESERVED_SEATS articles that contain a
+    triggered lexicon phrase verbatim. No-op when expansion is off, no phrase
+    fires, or every hit is already in the window."""
+    if LEXICON_RESERVED_SEATS <= 0 or getattr(config, "QUERY_EXPANSION", "off") != "on":
+        return ranked[:k]
+    from legal_agent.retrieval.lexicon import expansions
+
+    phrases = expansions(query)
+    if not phrases:
+        return ranked[:k]
+
+    def key_of(s: Statute) -> tuple[str, str, str]:
+        return (s.statute_id, s.article_no, s.effective_from)
+
+    window = {key_of(s) for s, _ in ranked[:k]}
+    promote: list[tuple[Statute, float]] = []
+    taken: set[tuple[str, str, str]] = set()
+    for phrase in phrases:
+        if len(promote) >= LEXICON_RESERVED_SEATS:
+            break
+        for c in candidates:                     # point-in-time filtered already
+            key = key_of(c)
+            if phrase in c.content and key not in window and key not in taken:
+                promote.append((c, 0.0))
+                taken.add(key)
+                break                            # one article per phrase
+    if not promote:
+        return ranked[:k]
+    keep = ranked[: max(k - len(promote), 0)]
+    return (keep + promote)[:k]
 
 
 # Dense reserved seats: RRF's dual-presence bonus systematically buries a
