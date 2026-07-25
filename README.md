@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-200%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-228%20passing-brightgreen)
 ![Judgments](https://img.shields.io/badge/judgments-1%2C367%20harvested-blue)
 
 > RAG systems cite sources that don't exist — and the fabrication reads exactly
@@ -139,14 +139,22 @@ them moved *down*.
 | what | number |
 |---|---|
 | Verifier catch rate, seeded errors over **every article** (fake statute / ghost article / ghost 之X / wrong amount / flipped direction / swapped period / out-of-force) | **10 435/10 435 (100%), 0/2 560 false positives** |
-| Golden-set statute coverage (30 cases, llama3.1 8B, gated, hybrid retrieval) | **96% pass+partial** (69% strict) |
+| Golden-set statute coverage (30 cases, llama3.1 8B, gated, hybrid retrieval) | **100% pass+partial** (73% strict, 0 misses) |
+| Retrieval recall on six problems typed as people actually type them (hit@8) | **12/14 (86%)** — was 7/14 before the 07-25 pass |
 | Honesty-tier accuracy / anti-sycophancy premise detection | **77% (23/30) / 100% (30/30)** |
-| Reference judgments surfaced beside the answer (counted, never scored) | **21/30 cases**, 20 carrying a 主文 award figure |
+| Reference judgments surfaced beside the answer (counted, never scored) | **11/30 cases**, 10 carrying a 主文 award figure ² |
 | Bare model (no pipeline): memory-cited statutes traceable to a vetted source | **0–5%** (llama3.1 / qwen3) ¹ |
 | Gated: every citation checked; small-model over-reach flagged inline with the verbatim article | **30–40% flagged** — *the model errs; the user knows* ¹ |
 
 ¹ The two ablation rows were measured on the original 11-article corpus and
-have not been re-run at v2 scale; every other row is current. Honesty-tier
+have not been re-run at v2 scale; every other row is current.
+
+² That row went *down* (from 21/30) on purpose. Judgments are now joined on the
+articles the answer actually cites, not on the whole retrieved window — which is
+what stopped a 本票 case appearing under a noise question. Precision up, coverage
+halved; both halves of the trade are on the table.
+
+Honesty-tier
 accuracy *fell* from the 11-article era's 84% — out-of-scope detection is
 genuinely harder in 2 560 articles, and RESULTS.md §0 shows why absolute BM25
 cannot separate the remaining cases.
@@ -192,6 +200,7 @@ python -m legal_agent.data.judicial_api --limit 200
 python -m legal_agent.evaluation.mutation                               # verifier catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json  # Tier-1 golden set (30 cases)
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json   # threshold sweep
+python -m legal_agent.evaluation.real_recall                      # six lived sessions (retrieval only, no model)
 
 # talk to it (default backend: free local Ollama — https://ollama.com)
 #   ollama pull llama3.1     # once
@@ -228,7 +237,7 @@ documented cause of RAG degradation) — enforced by a test, not a convention.
 ## Status & roadmap
 
 **MVP complete, tested, and measured.** The full pipeline — data → retrieval →
-five gates → dialogue → solution ladder — is implemented and green (200 tests),
+five gates → dialogue → solution ladder — is implemented and green (228 tests),
 runs end-to-end for free on a local model, ships an interactive demo
 (`app.py`), and carries a reproducible evaluation suite with published numbers
 ([`evals/RESULTS.md`](evals/RESULTS.md)).

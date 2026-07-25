@@ -189,5 +189,58 @@ def test_ablation_records_model_errors_without_losing_batch(real_conn, monkeypat
     assert "未計入" in report.render()
 
 
+# ── Real-session recall harness ──────────────────────────────────────────────
+def test_real_recall_scores_hits_and_misses(tmp_path):
+    import json
+
+    from legal_agent.evaluation.real_recall import run_real_recall
+
+    db = tmp_path / "r.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    load_noise_statutes(conn)          # includes 社會秩序維護法第72條
+
+    cases = [{
+        "id": "noise", "label": "噪音",
+        "query": "鄰居深夜喧嘩,製造噪音妨害安寧,已經勸過也報過警",
+        "expected_statutes": ["社會秩序維護法第72條", "測試法第999條"],
+    }]
+    path = tmp_path / "cases.json"
+    path.write_text(json.dumps(cases, ensure_ascii=False), encoding="utf-8")
+
+    report = run_real_recall(path, conn=conn)
+    [case] = report.cases
+    assert case.hit == ["社會秩序維護法第72條"]
+    assert case.missed == ["測試法第999條"]      # not in the corpus -> honest miss
+    assert report.hit_total == 1 and report.expected_total == 2
+    assert "hit@k" in report.render()
+    conn.close()
+
+
+def test_real_sessions_file_only_expects_articles_that_exist():
+    # The file is a measurement instrument: an expectation the corpus cannot
+    # contain would make the number meaningless.
+    import re
+    import sqlite3
+
+    from legal_agent.config import DB_PATH
+    from legal_agent.evaluation.real_recall import load_cases
+
+    if not Path(DB_PATH).exists():
+        pytest.skip("corpus DB not built")
+    conn = sqlite3.connect(DB_PATH)
+    pattern = re.compile(r"^(?P<sid>.+?)(?P<ano>第[0-9-]+條)$")
+    for case in load_cases(ROOT / "evals" / "real_sessions.json"):
+        for ref in case["expected_statutes"]:
+            m = pattern.match(ref)
+            assert m, ref
+            assert conn.execute(
+                "SELECT 1 FROM statutes WHERE statute_id = ? AND article_no = ?",
+                (m.group("sid"), m.group("ano")),
+            ).fetchone(), ref
+    conn.close()
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
