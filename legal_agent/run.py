@@ -296,8 +296,10 @@ def main(argv=None) -> int:
 
     llm = build_runtime_llm()   # exits cleanly if the backend is missing/unusable
 
+    from legal_agent.data.bootstrap import ensure_corpus
     from legal_agent.data.database import connect
 
+    ensure_corpus(config.DB_PATH)   # fresh clone: build schema + corpus, once
     conn = connect(config.DB_PATH)
     provider = getattr(config, "LLM_PROVIDER", "anthropic")
     smart = provider != "manual" and getattr(config, "SMART_INTAKE", True)

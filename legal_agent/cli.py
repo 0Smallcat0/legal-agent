@@ -321,6 +321,7 @@ def main(argv: list[str] | None = None) -> int:
         prog="legal_agent.cli", description="住宅噪音 statute 資料輸入 / 讀回工具"
     )
     sub = parser.add_subparsers(dest="command", required=True)
+    sub.add_parser("setup", help="一鍵建庫:schema + 官方語料(冪等,已載入就跳過)")
     sub.add_parser("seed", help="建立四個位階(FK 前置,冪等)")
     sub.add_parser("add", help="逐條互動輸入條文")
     sub.add_parser("list", help="讀回並檢查已輸入條文")
@@ -329,7 +330,11 @@ def main(argv: list[str] | None = None) -> int:
     init_db(DB_PATH)          # idempotent: guarantee the tables exist
     conn = connect(DB_PATH)   # reuse existing connection logic (FK ON + Row factory)
     try:
-        if args.command == "seed":
+        if args.command == "setup":
+            from legal_agent.data.bootstrap import ensure_corpus
+
+            print(f"語料就緒:{ensure_corpus(DB_PATH)} 條(冪等,已載入就跳過)")
+        elif args.command == "seed":
             cmd_seed(conn)
         elif args.command == "add":
             cmd_add(conn)

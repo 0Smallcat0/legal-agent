@@ -26,9 +26,8 @@ import gradio as gr
 from legal_agent import config
 from legal_agent.anti_hallucination.honesty import grade_honesty
 from legal_agent.anti_hallucination.verifier import verify_answer
-from legal_agent.data.database import connect, init_db
-from legal_agent.data.seed import seed_source_hierarchy
-from legal_agent.data.source_ingest import load_proposals
+from legal_agent.data.bootstrap import ensure_corpus
+from legal_agent.data.database import connect
 from legal_agent.dialogue.flow import (
     SessionState,
     Stage,
@@ -262,21 +261,12 @@ LOADING_HTML = (
 
 # ── data bootstrap ───────────────────────────────────────────────────────────
 def ensure_db() -> None:
-    """Idempotent: build the SQLite schema and load the hand-verified corpus."""
-    init_db(config.DB_PATH)
-    conn = connect(config.DB_PATH)
-    try:
-        seed_source_hierarchy(conn)
-        # Corpus source of truth = official-XML proposals (2 560 articles across
-        # 11 statutes, plus the police routing note and one capped historical
-        # slice). The old hand-typed noise_seed is superseded — loading it
-        # here would create duplicate current slices next to the XML rows.
-        for proposal_name in ("moj_bulk_v1_proposal.json", "noise_routing_proposal.json"):
-            proposal_path = config.CORPUS_DIR / proposal_name
-            if proposal_path.exists():
-                load_proposals(proposal_path, conn)
-    finally:
-        conn.close()
+    """Idempotent: build the SQLite schema and load the corpus.
+
+    The body moved to data/bootstrap.py so the terminal entry point and a fresh
+    clone get the same one-call setup the web demo always had.
+    """
+    ensure_corpus(config.DB_PATH)
 
 
 # ── html renderers ───────────────────────────────────────────────────────────
