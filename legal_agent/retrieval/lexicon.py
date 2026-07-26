@@ -119,6 +119,17 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 消費借貸 / 欠錢不還 (民法§474, §478, §233, §203) ──
+    # 「朋友借二十萬說三個月還,一年多都推說沒錢,有借據跟本票」 was REFUSED with
+    # 「這個問題我的資料庫沒有涵蓋」 — but the corpus answers both questions he
+    # asked: §478 how to demand it back, §233+§203 whether interest runs (5% a
+    # year by default). Nothing in 借據/本票/推說沒錢 overlaps 消費借貸/遲延利息.
+    (("借錢", "借款", "欠錢", "還錢", "借據", "本票", "欠我", "討債", "催討",
+      "借出去", "沒還"),
+     ("稱消費借貸者", "借用人應於約定期限內，返還與借用物種類、品質、數量相同之物",
+      "貸與人亦得定一個月以上之相當期限，催告返還",
+      "債權人得請求依法定利率計算之遲延利息", "週年利率為百分之五")),
+
     # ── 繼承 (民法§1138, §1141) ──
     # §1144 answers 「媽媽分多少」 and §1151 answers 「大哥可以自己動用嗎」 — the
     # two questions a session actually asked. Both were outside the window while
