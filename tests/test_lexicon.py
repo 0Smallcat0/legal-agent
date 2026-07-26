@@ -40,6 +40,16 @@ def test_everyday_words_reach_statutory_vocabulary():
     assert "按人數平均繼承" in expansions("父親過世遺產怎麼分")
 
 
+def test_co_ownership_survives_a_passing_mention_of_inheritance():
+    """Measured defect: 「我跟哥哥一人一半繼承了一間房子,我想賣他不肯」 filled its
+    whole window with 繼承編 (§1138–§1176) off the single word 繼承. The question
+    is partition of co-owned property; 繼承 only says how they got it."""
+    out = expansions("我跟哥哥一人一半繼承了一間房子,我想賣掉分錢,他堅持不賣還自己住在裡面")
+    assert "得隨時請求分割共有物" in out              # §823 — the actual remedy
+    assert "按其應有部分，對於共有物之全部，有使用收益之權" in out   # §818 — the price of sole use
+    assert "按人數平均繼承" in out                    # the inheritance row still fires
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

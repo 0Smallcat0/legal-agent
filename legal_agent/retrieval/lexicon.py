@@ -119,6 +119,19 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 共有物 / 妨害除去 (民法§818, §823, §824, §767) ──
+    # 「我跟哥哥一人一半繼承了一間房子,我想賣他不肯,他還自己住在裡面」 filled its
+    # whole window with 繼承編 (§1138–§1176) off the word 繼承, while the question
+    # is co-ownership: §823 lets any co-owner demand partition at any time, §824
+    # is how a court does it, §818 is why one co-owner living there alone owes
+    # the other for use, and §767 is how you get an encroacher removed.
+    (("共有", "持分", "應有部分", "一人一半", "各二分之一", "不肯賣", "分割",
+      "占用", "佔用", "拆掉", "無權占有"),
+     ("得隨時請求分割共有物", "共有物之分割，依共有人協議之方法行之",
+      "按其應有部分，對於共有物之全部，有使用收益之權",
+      "所有人對於無權占有或侵奪其所有物者，得請求返還之",
+      "對於妨害其所有權者，得請求除去之")),
+
     # ── 消費借貸 / 欠錢不還 (民法§474, §478, §233, §203) ──
     # 「朋友借二十萬說三個月還,一年多都推說沒錢,有借據跟本票」 was REFUSED with
     # 「這個問題我的資料庫沒有涵蓋」 — but the corpus answers both questions he

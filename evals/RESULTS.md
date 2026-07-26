@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/30 (90%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **42/46 (91%)** | `evaluation/real_recall.py`, 21 lived problems |
+| retrieval recall, real user wording | **45/49 (92%)** | `evaluation/real_recall.py`, 22 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -53,6 +53,10 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
 - **The 8B model is the weakest component** and is treated that way: it repeats
   itself on long article lists and uses only part of what it is given. What must
   be right — citations, judgments, the tier — is not left to it.
+- **Each lexicon row is also a new way to be wrong.** Three separate rounds, a
+  row added to fix one session hijacked the next one's window off a word said in
+  passing (買房 → warranty, 前妻 → DV route, 繼承 → 繼承編 over a co-ownership
+  question). Every added row now ships with the counter-example as a test.
 - **The ablation row is stale** (see the table).
 
 ## Measured, then NOT shipped
