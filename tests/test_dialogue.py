@@ -100,6 +100,18 @@ def test_personal_safety_beats_the_noise_keywords():
     assert triage.classify("鄰居半夜對我大聲辱罵、威脅我").problem_type == "other:safety"
 
 
+def test_being_someones_ex_is_not_a_safety_signal():
+    # Regression: 前夫/前妻/前男友/分手 were safety keywords for one round, so a
+    # divorced father asking about visitation was told 「請撥 110」 and had his
+    # question answered out of 家暴法 — the model even called it 違反保護令罪.
+    r = triage.classify("我跟前妻離婚,監護權判給她,她現在都不讓我見小孩")
+    assert r.problem_type == "other:family"
+    assert r.urgent is False
+    # the harm words still route, with the 110/113 pointer
+    stalked = triage.classify("前男友一直傳訊息,還跟蹤我,我很害怕")
+    assert stalked.problem_type == "other:safety" and stalked.urgent is True
+
+
 def test_triage_recognises_noise_described_as_behaviour():
     # How the complaint is actually typed — no 「噪音」, no 「吵」 anywhere.
     for complaint in ("樓上小孩每天晚上跑跳到十一二點,還會拖椅子",

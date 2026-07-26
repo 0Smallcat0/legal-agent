@@ -34,10 +34,14 @@ _NOISE = [
 # 地方等我,我很害怕」 hit the noise keyword 「半夜」, so someone describing being
 # stalked was handed the noise questionnaire — 「你住公寓大廈還是透天?」 — and the
 # answer came back citing 社維法§72 深夜喧嘩 and the 噪音 routing principle.
+# HARM words only. Relationship words (前夫/前妻/前男友/分手) were in this list
+# for one round and misfired immediately: a divorced father asking about
+# visitation was told 「你描述的涉及人身安全…請撥 110」 and had his question
+# answered out of 家暴法. Being someone's ex is not a safety signal.
 _SAFETY = [
     "家暴", "暴力", "打我", "動手", "恐嚇", "威脅", "跟蹤", "騷擾", "糾纏",
-    "前男友", "前女友", "前夫", "前妻", "保護令", "很害怕", "會怕", "性騷",
-    "跟監", "堵我", "等我下班",
+    "保護令", "很害怕", "會怕", "性騷", "跟監", "堵我", "等我下班",
+    "一直傳訊息", "按我家電鈴",
 ]
 
 # The everyday domains the corpus actually covers. Without these rows the
