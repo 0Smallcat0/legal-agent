@@ -113,6 +113,33 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("以善良管理人之注意，保管租賃物", "致租賃物毀損、滅失者，負損害賠償責任",
       "依約定之方法或依物之性質而定之方法為使用、收益")),
 
+    # ── 轉租 / 二房東 (民法§443, §444) ──
+    # 「跟二房東租的,真正的房東說不知道有轉租」 retrieved 租賃住宅條例§30 — which
+    # is about a LICENSED 包租業, not a private sublessor — and the model
+    # answered out of it. §443 is what decides whether the head landlord can
+    # terminate, §444 whether the head tenancy survives.
+    (("轉租", "二房東", "分租", "頂讓", "接手租約"),
+     ("承租人非經出租人承諾，不得將租賃物轉租於他人",
+      "出租人得終止契約", "其與出租人間之租賃關係，仍為繼續")),
+
+    # ── 職業災害 (勞基法§59) ──
+    # 「工作時手指被夾傷,老闆說自己不小心」 retrieved 民法§188/§487-1 and 勞基§63-1
+    # (dispatched workers) — everything except the article that answers the two
+    # questions asked: who pays the medical bill and the wages during recovery.
+    (("職災", "職業災害", "工作時受傷", "上班受傷", "夾傷", "壓傷", "燙傷",
+      "工傷", "公傷", "工安"),
+     ("勞工因遭遇職業災害而致死亡、失能、傷害或疾病時",
+      "雇主應補償其必需之醫療費用", "雇主應按其原領工資數額予以補償")),
+
+    # ── 預付型交易 / 店家倒閉 (消保法§17, 民法§226, §256) ──
+    # 「買了三萬元療程套票,店突然關門」 scored under the insufficiency floor and
+    # was refused — but the corpus does cover it: 預付型交易之履約擔保 is a named
+    # item in 消保法§17, and 給付不能 -> 解除契約 is 民法§226/§256.
+    (("套票", "預付", "儲值", "課程包", "點數", "倒閉", "關門", "跑路",
+      "停業", "聯絡不上"),
+     ("預付型交易之履約擔保", "致給付不能者，債權人得請求賠償損害",
+      "債權人於有第二百二十六條之情形時，得解除其契約")),
+
     # ── 未成年子女權利義務 / 會面交往 (民法§1055, §1055-1) ──
     # 「監護權判給她,約定每兩週看小孩一次,她都不讓我見」 retrieved 家暴法§31/§61
     # and the model concluded 「可能構成違反保護令罪」 — there is no protective
