@@ -100,6 +100,16 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("缺少出賣人所保證之品質者", "出賣人故意不告知物之瑕疵者亦同",
       "無滅失或減少其價值之瑕疵", "買受人得解除其契約或請求減少其價金")),
 
+    # ── 約定專用 / 車位 / 共用部分 (公寓大廈條例§33, §7) ──
+    # 「我買房子時有含一個車位,管委會要把地下室改成儲藏室出租」 was answered out of
+    # 民法§358/§443/§435 — sale-warranty and tenancy — partly because 買房 is a
+    # trigger on the warranty row. §33 is the article: a resolution touching a
+    # 約定專用 part does not take effect without that owner's consent.
+    (("車位", "停車位", "約定專用", "共用部分", "區分所有權", "權狀", "地下室",
+      "頂樓平台", "公共設施"),
+     ("應經該專有部分區分所有權人同意", "區分所有權人會議之決議，未經依下列各款事項辦理者，不生效力",
+      "共用部分不得獨立使用供做專有部分")),
+
     # ── 名譽 / 公然侮辱 / 誹謗 (刑法§309, §310, 民法§195) ──
     # 「有人在社區臉書社團留言罵我人渣、說我偷東西」 retrieved 民法§793/§791/§790
     # and §190 — 相鄰關係 and animals — because 社區/鄰居 are neighbour words and
@@ -110,8 +120,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
     # ── 繼承 (民法§1138, §1141) ──
-    (("遺產", "繼承", "過世", "身故", "應繼分"),
-     ("遺產繼承人", "同一順序之繼承人", "按人數平均繼承")),
+    # §1144 answers 「媽媽分多少」 and §1151 answers 「大哥可以自己動用嗎」 — the
+    # two questions a session actually asked. Both were outside the window while
+    # 特留分/扶養/遺囑執行人 articles filled it.
+    (("遺產", "繼承", "過世", "身故", "應繼分", "分遺產", "存摺印章", "遺囑"),
+     ("遺產繼承人", "同一順序之繼承人", "按人數平均繼承",
+      "配偶有相互繼承遺產之權，其應繼分",
+      "在分割遺產前，各繼承人對於遺產全部為公同共有")),
 
     # ── 租賃 (租賃住宅條例§7) ──
     (("押金", "保證金", "退租", "房東"),
