@@ -110,6 +110,24 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("車禍", "擦撞", "撞到", "機車", "汽車", "肇事"),
      ("非依軌道行駛之動力車輛", "在使用中加損害於他人")),
 
+    # ── 定型化契約 / 退費 (消保法§11-1, §12, 民法§247-1) ──
+    # Measured on a lived session: 「健身房兩年約,店家說不能退」 retrieved
+    # 民法§976 (解除婚約!), §561 and 勞基§11 — everything in the corpus that
+    # mentions 終止契約. The articles that decide a membership dispute say
+    # 定型化契約 / 顯失公平, words no gym member would ever type.
+    (("解約", "退費", "退錢", "違約金", "會員", "定型化", "審閱", "綁約",
+      "不能退", "手續費"),
+     ("定型化契約中之條款違反誠信原則，對消費者顯失公平者，無效",
+      "應有三十日以內之合理期間，供消費者審閱全部條款內容",
+      "按其情形顯失公平者，該部分約定無效", "加重他方當事人之責任者")),
+
+    # ── 工作物所有人責任 (民法§191) ──
+    # 「樓上水管破裂漏到我家」 got 租賃住宅條例§8 — a LANDLORD's repair duty —
+    # for an owner-occupied flat. §191 is the article that puts the loss on the
+    # owner of the thing that broke.
+    (("漏到", "破裂", "爆管", "淹到", "泡壞", "滲到", "掉落", "外牆"),
+     ("土地上之建築物或其他工作物所致他人權利之損害", "由工作物之所有人負賠償責任")),
+
     # ── 親密關係騷擾 (家暴法§63-1, §14, §2) ──
     # Measured on a lived session: 「前男友一直傳訊息、在我上班的地方等我」 retrieved
     # 家暴法§2/§13 only, and the 8B model asserted 「這是家庭暴力」 for someone who
