@@ -35,7 +35,10 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("賠償", "求償", "賠錢", "告他", "提告", "損失", "損害",
       "失眠", "就醫", "生病", "受傷", "健康", "身心", "耗弱",
       "骨折", "住院", "請假", "沒收入", "醫藥費", "醫療費"),
-     ("不法侵害他人之權利", "負損害賠償責任",
+     # Sharpened after the seat-ordering change: 「不法侵害他人之權利」 matches
+     # §184/§185/§187/§188/§189 and 「負損害賠償責任」 matches 18 articles, so
+     # neither points anywhere. The full clause is unique to §184.
+     ("因故意或過失，不法侵害他人之權利者", "違反保護他人之法律，致生損害於他人者",
       # §193 — the article a hurt person actually needs: lost earning capacity
       # and the extra cost of living with the injury. A session asking exactly
       # that ("請假兩個月沒收入") got §191-2 and §192 (死亡) instead.
