@@ -56,8 +56,9 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
 - **Three reserved seats, more than three good pointers.** Seats now go to the
   phrases that identify ONE article, but when several do, the tie-break is table
   position — which has nothing to do with what was asked. 刑§309 (公然侮辱) loses
-  its seat to the general tort row on an insult session. A 4th seat was measured
-  and buys nothing: 46/49 and 19/7/0, identical to three.
+  its seat to the general tort row on an insult session. Widening was measured
+  and rejected: a 4th seat is identical to three (46/49, 19/7/0) and a 5th costs
+  both harnesses (45/49, 18/8/0) by trimming the ranked window.
 - **Each lexicon row is also a new way to be wrong.** Three separate rounds, a
   row added to fix one session hijacked the next one's window off a word said in
   passing (買房 → warranty, 前妻 → DV route, 繼承 → 繼承編 over a co-ownership
