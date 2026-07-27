@@ -105,8 +105,15 @@ def next_questions(session_state) -> list[IntakeField]:
     """Return the next batch of still-unanswered fields (2-3), or [] when the
     whole checklist is complete. Reads session_state.collected_facts (duck-typed
     to avoid a circular import with flow)."""
+    asked = getattr(session_state, "asked_keys", set())   # duck-typed: fakes omit it
     for batch in _checklist(session_state):
-        unanswered = [f for f in batch if f.key not in session_state.collected_facts]
+        # Already asked and still blank means they did not want to answer it.
+        # Skipping to the NEXT batch beats re-asking the same sentence, which is
+        # the 「不夠智能」 complaint in its purest form.
+        unanswered = [
+            f for f in batch
+            if f.key not in session_state.collected_facts and f.key not in asked
+        ]
         if unanswered:
             return unanswered
     return []
@@ -121,8 +128,13 @@ def next_questions(session_state) -> list[IntakeField]:
 FIELD_HINTS: dict[str, tuple[str, ...]] = {
     "building_type": ("公寓", "大廈", "透天", "管委會", "套房", "華廈", "宿舍", "社區"),
     "evidence": ("錄音", "錄影", "照片", "截圖", "分貝", "檢測", "沒有證據", "沒錄"),
+    # 「口頭要求被拒」 is an actions_taken answer that matched none of these and
+    # was demoted to narrative — the cost of refusing to label what we cannot
+    # recognise. 要求 is also a goal hint on purpose: the ambiguity sends the
+    # line to the field that was actually asked.
     "actions_taken": ("報警", "報過警", "里長", "申訴", "檢舉", "調解", "溝通過",
-                      "按門鈴", "反映"),
+                      "按門鈴", "反映", "口頭", "談過", "催", "被拒", "要求",
+                      "存證", "寄信"),
     "impact": ("睡不好", "失眠", "精神", "健康", "上班", "壓力", "受不了", "耳鳴"),
     "timing": ("半夜", "深夜", "凌晨", "白天", "晚上", "每天", "偶爾", "持續"),
     "goal": ("我想", "希望", "拿回", "要求", "請求", "賠償", "停止", "解約"),
@@ -137,6 +149,18 @@ def route_answer(line: str, unanswered: set[str]) -> str | None:
         if any(word in line for word in FIELD_HINTS.get(key, ()))
     ]
     return hits[0] if len(hits) == 1 else None
+
+
+def _answers_the_question_asked(line: str, pending: list[str]) -> bool:
+    """True when the line matches the hint words of a field we actually asked
+    about this turn. Checking ALL fields' hints instead is too loose: 「釘孔是掛
+    照片留下的」 hit the evidence hints — a field the generic checklist never asks
+    — and thereby claimed the goal slot. Fields with no hint list keep the old
+    positional behaviour, since nothing better is known about them."""
+    return any(
+        any(word in line for word in FIELD_HINTS[key])
+        for key in pending if key in FIELD_HINTS
+    ) or any(key not in FIELD_HINTS for key in pending)
 
 
 def record_answers(session_state, message: str) -> None:
@@ -157,8 +181,15 @@ def record_answers(session_state, message: str) -> None:
         if target is not None:
             facts[target] = line
             open_keys.discard(target)
-        else:
+        elif _answers_the_question_asked(line, session_state.pending_questions):
             positional.append(line)
+        else:
+            # It answers nothing we asked. Filing it positionally is a guess, and
+            # a wrong guess is worse than a blank: the visitor SEES it. Measured
+            # on the model-free web demo — 「我想拿回押金」 shown as 已採取行動,
+            # 「租約到期才搬走」 as 目標, every field shifted one place. Keep the
+            # words verbatim where they belong: the free-text description.
+            facts["problem"] = f"{facts['problem']} / {line}" if facts.get("problem") else line
 
     # The leftover lines pair with the still-open asked fields IN ORDER — each
     # list needs its own cursor, or a routed line silently eats a positional slot.

@@ -53,6 +53,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
 - **The 8B model is the weakest component** and is treated that way: it repeats
   itself on long article lists and uses only part of what it is given. What must
   be right — citations, judgments, the tier — is not left to it.
+- **The model-free intake under-labels on purpose.** Without a local model (the
+  HF Spaces configuration) filing is keyword-driven, and a line matching no hint
+  word is kept as narrative instead of taking the pending field's label. It was
+  the other way round and every field came out one place off — a visitor's
+  「我想拿回押金」 was displayed as 已採取行動. The trade is real: 「口頭要求被拒」
+  was a true 已採取行動 answer that no hint word recognised, so the hint lists
+  have to grow with what people actually type.
 - **Three reserved seats, more than three good pointers.** Seats now go to the
   phrases that identify ONE article, but when several do, the tie-break is table
   position — which has nothing to do with what was asked. 刑§309 (公然侮辱) loses

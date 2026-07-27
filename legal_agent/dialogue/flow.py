@@ -61,6 +61,7 @@ class SessionState:
     asked_discriminating: bool = False  # the one ambiguous-case question was used
     intake_turns: int = 0          # answers taken so far (cap: MAX_INTAKE_TURNS)
     pending_key: str | None = None  # field the LAST turn asked directly (smart intake)
+    asked_keys: set[str] = field(default_factory=set)  # never ask the same field twice
 
 
 @dataclass
@@ -121,6 +122,7 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
             state.collected_facts.setdefault("noise_type", user_message)
             batch = intake.next_questions(state)[:1]
             state.pending_questions = [f.key for f in batch]
+            state.asked_keys.update(state.pending_questions)
             return "了解,住宅噪音的問題。再問一件事就好——\n" + _render_batch(batch), state
         if result.kind == "other" or state.asked_discriminating:
             # Generic fallback (spec §3.4): non-noise problems get the shallow
@@ -135,6 +137,7 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
                 state.collected_facts["problem"] = " / ".join(dict.fromkeys(parts))
             batch = intake.next_questions(state)[:1]
             state.pending_questions = [f.key for f in batch]
+            state.asked_keys.update(state.pending_questions)
             # A human acknowledgement of what they described, then ONE question.
             # Triage's message is added only when it carries something actionable
             # (the personal-safety route's 110 / 113 pointer).
@@ -156,6 +159,7 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
         if batch and not stop:
             batch = batch[:1]
             state.pending_questions = [f.key for f in batch]
+            state.asked_keys.update(state.pending_questions)
             return _render_batch(batch), state
         state.pending_questions = []
         state.stage = Stage.READY_FOR_STAGE3
