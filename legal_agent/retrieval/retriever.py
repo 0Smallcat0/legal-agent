@@ -119,10 +119,12 @@ def _load_in_force(conn: sqlite3.Connection, as_of_date: str | None) -> list[Sta
 # Measured over the real sessions: 2-3 of 8 seats in EVERY landlord-tenant case
 # went to 服務業 articles a tenant has no use for.
 _INDUSTRY_SUBJECTS = ("租賃住宅服務業", "包租業", "代管業", "營業保證金", "全國聯合會")
-# …unless the person is actually dealing with one of those businesses. 二房東 is
-# deliberately absent: an ordinary sublessor is not a licensed 包租業, and those
-# cases are decided by 民法§443/§444.
-_INDUSTRY_IN_QUESTION = ("包租", "代管", "仲介", "服務業", "租屋網", "業者")
+# …unless the person is actually dealing with one of those businesses. The words
+# have to name the RENTAL trade: 仲介 and 業者 were in this list for one round and
+# a 房仲 house-purchase question pulled 條例§24 (營業保證金) straight back — a
+# 不動產經紀業 is not a 租賃住宅服務業. 二房東 is absent for the same reason: an
+# ordinary sublessor is not a licensed 包租業, and those cases are 民法§443/§444.
+_INDUSTRY_IN_QUESTION = ("包租", "代管", "租賃住宅服務業", "租屋網", "租賃業者")
 
 
 def _drop_industry_regulation(query: str, candidates: list[Statute]) -> list[Statute]:

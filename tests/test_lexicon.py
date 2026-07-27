@@ -50,6 +50,16 @@ def test_co_ownership_survives_a_passing_mention_of_inheritance():
     assert "按人數平均繼承" in out                    # the inheritance row still fires
 
 
+def test_how_much_do_i_owe_reaches_the_measure_of_damages():
+    """Measured: 「我到底該賠多少」 for a scratched car returned 道路交通管理處罰
+    條例 penalty articles — administrative fines, not what one driver owes
+    another. Liability and the SIZE of it are different questions."""
+    out = expansions("我擦撞到別人的車只有一道刮痕,對方要我賠八萬還算停業損失,我到底該賠多少")
+    assert "不法毀損他人之物者，被害人得請求賠償其物因毀損所減少之價額" in out   # §196
+    assert "可得預期之利益，視為所失利益" in out                                # §216
+    assert "損害之發生或擴大，被害人與有過失者，法院得減輕賠償金額" in out       # §217
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
