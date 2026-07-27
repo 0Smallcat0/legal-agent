@@ -111,6 +111,15 @@ def test_asking_whether_someone_must_pay_reaches_the_tort_clause():
     assert "因故意或過失，不法侵害他人之權利者" not in expansions("違約金賠付方式怎麼寫")
 
 
+def test_money_sent_by_mistake_reaches_unjust_enrichment():
+    """返還不當得利 is the 12th most common 案由 in the harvested judgments and the
+    session set had never covered it: 「轉帳打錯,三萬匯給不認識的人」 was refused at
+    資料不足 while 民法§179 sat in the corpus saying exactly that."""
+    out = expansions("我網銀轉帳打錯帳號,三萬塊匯給一個不認識的人,他說錢已經花掉了不還我")
+    assert "無法律上之原因而受利益，致他人受損害者，應返還其利益" in out   # §179
+    assert "受領人於受領時，知無法律上之原因或其後知之者" in out          # §182
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
