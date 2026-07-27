@@ -131,6 +131,19 @@ def test_intake_first_batch_is_2_to_3():
     assert [f.key for f in batch] == ["noise_type", "timing"]
 
 
+# What a person actually types for each noise field. Placeholder strings like
+# 「a_evidence」 no longer work here on purpose: a line that answers nothing is
+# now kept as narrative instead of being stamped with the pending field's label.
+REALISTIC_ANSWERS = {
+    "noise_type": "腳步聲跟拖椅子的聲音",
+    "timing": "每天晚上十一點,持續半年了",
+    "building_type": "公寓大廈,有管委會",
+    "evidence": "有錄影,沒有分貝檢測",
+    "actions_taken": "跟管委會反映過,也報過警",
+    "impact": "睡不好,白天上班很累",
+}
+
+
 def test_intake_walks_all_batches_then_completes():
     s = _intake_state()
     seen = 0
@@ -141,10 +154,30 @@ def test_intake_walks_all_batches_then_completes():
         assert 2 <= len(batch) <= 3          # every turn asks 2-3
         seen += 1
         s.pending_questions = [f.key for f in batch]
-        intake.record_answers(s, "\n".join(f"a_{f.key}" for f in batch))
+        s.asked_keys.update(s.pending_questions)     # as flow.handle_turn does
+        intake.record_answers(s, "\n".join(REALISTIC_ANSWERS[f.key] for f in batch))
     assert seen == 3
-    assert set(s.collected_facts) == set(intake.ALL_FIELD_KEYS)
+    assert set(s.collected_facts) >= set(intake.ALL_FIELD_KEYS)
     assert intake.next_questions(s) == []    # complete
+
+
+def test_a_line_that_answers_nothing_is_not_given_the_pending_label():
+    """Measured on the model-free web demo (the HF Spaces configuration): asked
+    「你希望達成什麼結果?」 the visitor typed lease details, and every field ended
+    up one place off — their goal 「我想拿回押金」 was shown as 已採取行動. Under-
+    labelling is the safe error here; the words are kept verbatim either way."""
+    s = SessionState(problem_type="generic", pending_questions=["goal"],
+                     collected_facts={"problem": "退租後房東要扣押金"})
+    s.asked_keys.add("goal")
+    intake.record_answers(s, "租約到期才搬走,押金16000,有書面租約")
+    assert "goal" not in s.collected_facts
+    assert "押金16000" in s.collected_facts["problem"]      # nothing is dropped
+
+    # …and the real goal, whenever it arrives, is filed correctly.
+    s.pending_questions = ["actions_taken"]
+    intake.record_answers(s, "我想拿回押金")
+    assert s.collected_facts["goal"] == "我想拿回押金"
+    assert "actions_taken" not in s.collected_facts
 
 
 def test_record_answers_maps_lines_positionally():
