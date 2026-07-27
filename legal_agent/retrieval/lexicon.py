@@ -126,6 +126,17 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 不當得利 (民法§179, §181, §182) ──
+    # 返還不當得利 is the 12th most common 案由 in the harvested judgments and the
+    # session set had never covered it: 「轉帳打錯,三萬匯給不認識的人,他說花掉了
+    # 不還」 was REFUSED at 資料不足 with a top score of 47.7, while §179 sat in the
+    # corpus saying exactly that. §182 answers the 「已經花掉了」 defence.
+    (("匯錯", "轉帳打錯", "打錯帳號", "匯給不認識", "不當得利", "多付", "溢繳",
+      "代墊", "多給", "重複付款", "退回來", "沒有理由拿"),
+     ("無法律上之原因而受利益，致他人受損害者，應返還其利益",
+      "不當得利之受領人，除返還其所受之利益外",
+      "受領人於受領時，知無法律上之原因或其後知之者")),
+
     # ── 消滅時效 (民法§197, §125, §129, §144) ──
     # 「三年前有人撞到我,現在還能求償嗎?」 got 民法§184/§191-2/§193 — who is
     # liable — and not one article about whether it is too late, which is the

@@ -13,9 +13,9 @@ system makes — it never means "this statute does not exist."
 |---|---|---|
 | seeded defects caught, every article | **10,435/10,435 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
-| honesty tier | **27/30 (90%)** | same run (decided from retrieval scores, so model-independent) |
+| honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **61/61 (100%)** | `evaluation/real_recall.py`, 27 lived problems |
+| retrieval recall, real user wording | **63/63 (100%)** | `evaluation/real_recall.py`, 28 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -40,10 +40,20 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
 
 ## Honest limits
 
+- **The honesty tier reads a score the vocabulary table inflates.** BM25 runs on
+  the EXPANDED query, so the tier measures how much of my own lexicon fired, not
+  how well the corpus covers the question. Measured on three sessions
+  (expansion on / off): an out-of-scope 本票裁定 goes 153.0 / 50.2 — confident
+  instead of refused — while an in-scope 時效 question goes 156.6 / **16.1**, so
+  simply scoring the user's raw words would refuse the case that belongs. The
+  out-of-scope question outscores the in-scope one unexpanded, which is why no
+  threshold separates them: `oos-09-promissory-note` and `oos-10-debt-relief`
+  are in the golden set failing, and the number moved from 27/30 to 27/32 to
+  say so.
 - **marginal vs normal is not separable by BM25.** The score ranges overlap
-  (marginal 85–268, normal 126–331), and all three remaining tier misses are
-  this. That needs a better relevance signal, not a better constant — dense
-  cosine was measured as a candidate and interleaves the same way.
+  (marginal 85–268, normal 126–331). That needs a better relevance signal, not a
+  better constant — dense cosine was measured as a candidate and interleaves the
+  same way.
 - **Judgment coverage is thin exactly where it matters.** Of 1,367 harvested,
   386 (28%) cite an article in our corpus, and the thinnest domains are the
   everyday ones (租賃住宅條例 2, 消保法 4). A day's civil feed is 交通損賠 /
