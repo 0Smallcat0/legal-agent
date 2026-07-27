@@ -122,6 +122,20 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 損害賠償範圍 (民法§196, §216, §217) ──
+    # 「我到底該賠多少」 is a different question from 「他要負責嗎」, and the window
+    # for a scratched car was 道路交通管理處罰條例 penalty articles — administrative
+    # fines, not what one driver owes another. §196 is the measure for a damaged
+    # THING, §216 is what 所失利益 (the other side's 停業損失 claim) means, §217 is
+    # the reduction when the victim shares the blame.
+    (("賠多少", "該賠", "求償金額", "獅子大開口", "太誇張", "漫天", "開價",
+      "刮傷", "刮痕", "擦撞", "凹痕", "修車", "板金", "估價單",
+      "停業", "營業損失", "折舊", "過失比例", "肇責"),
+     ("不法毀損他人之物者，被害人得請求賠償其物因毀損所減少之價額",
+      "應以填補債權人所受損害及所失利益為限",
+      "可得預期之利益，視為所失利益",
+      "損害之發生或擴大，被害人與有過失者，法院得減輕賠償金額")),
+
     # ── 共有物 / 妨害除去 (民法§818, §823, §824, §767) ──
     # 「我跟哥哥一人一半繼承了一間房子,我想賣他不肯,他還自己住在裡面」 filled its
     # whole window with 繼承編 (§1138–§1176) off the word 繼承, while the question

@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/30 (90%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **46/49 (94%)** | `evaluation/real_recall.py`, 22 lived problems |
+| retrieval recall, real user wording | **49/52 (94%)** | `evaluation/real_recall.py`, 23 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -53,6 +53,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
 - **The 8B model is the weakest component** and is treated that way: it repeats
   itself on long article lists and uses only part of what it is given. What must
   be right — citations, judgments, the tier — is not left to it.
+- **Administrative-fine articles are the next precision leak, unshipped.**
+  「令其限期改正…屆期不改正者,處新臺幣三萬元以上三十萬元以下罰鍰」 articles
+  (條例§38-1, 消保法§56-1, and the whole of 道路交通管理處罰條例) are long, full
+  of common words and money amounts, and answer a question nobody asked. A
+  filter is easy to write and impossible to justify: the same shape shipped one
+  round earlier moved no published number either. Measuring precision comes
+  first — 社維法§72 is also a 罰鍰 article and is the flagship noise answer, so
+  the filter cannot be 「drop 罰鍰」.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over

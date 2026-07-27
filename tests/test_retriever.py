@@ -262,6 +262,13 @@ def test_trade_regulation_is_dropped_unless_the_question_is_about_the_trade(tmp_
         # …but someone dealing with a 包租業 still gets the trade's own rules.
         trade = [(s.statute_id, s.article_no) for s in retrieve("包租業不退我押金", conn=conn)]
         assert ("測試法", "第2條") in trade
+
+        # 仲介 and 業者 were exception words for one round, and a 房仲 house
+        # purchase pulled the rental trade's 營業保證金 article straight back —
+        # a 不動產經紀業 is not a 租賃住宅服務業.
+        broker = [(s.statute_id, s.article_no)
+                  for s in retrieve("我透過房仲買房付的押金仲介不退", conn=conn)]
+        assert ("測試法", "第2條") not in broker
     finally:
         conn.close()
 
