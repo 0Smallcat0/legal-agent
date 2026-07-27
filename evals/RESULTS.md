@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/30 (90%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **59/61 (97%)** | `evaluation/real_recall.py`, 27 lived problems |
+| retrieval recall, real user wording | **60/61 (98%)** | `evaluation/real_recall.py`, 27 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -61,6 +61,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   round earlier moved no published number either. Measuring precision comes
   first — 社維法§72 is also a 罰鍰 article and is the flagship noise answer, so
   the filter cannot be 「drop 罰鍰」.
+- **民法§184 is the last standing miss, and the window it loses to is itself the
+  evidence.** An owner-occupied flat flooded from upstairs gets 民法§430/§423/§437
+  — a LANDLORD's repair duty — because 漏水 fires the tenancy row and nothing
+  knows the asker owns the place. Three seats go to that and to 相鄰關係, and the
+  general tort clause loses. The fix is not another tie-break (measured, see
+  below); it is knowing who the asker is.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
@@ -102,6 +108,10 @@ Each of these looked obviously right and lost on the numbers:
   **0 judgments become newly usable**.
 - **query-term weighting**, and the **first lexicon design** (expansion terms
   entering the match decision, which manufactured false hits).
+- **ranking corroborated lexicon rows by the STRENGTH of their evidence**
+  (how high the corroborating article sits) rather than yes/no. 民法§191 at rank
+  1 does look like better proof of a topic than a tenancy article at rank 8 —
+  and it costs 民法§818 without recovering 民法§184 (59/61 against 60/61).
 - **breaking lexicon ties by how MANY triggers matched** (instead of table
   position) — it recovers 民法§354 for a house-purchase case, and costs the
   golden set two strict passes (19 -> 17). One real hit is not worth two.

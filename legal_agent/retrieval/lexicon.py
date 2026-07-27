@@ -32,7 +32,11 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # ── 侵權 / 損害賠償 (民法§184, §195) ──
     # 「受損害」 is the trigger, not just the word 「賠償」: golden cases show
     # people describe the HARM (失眠、就醫) and never name the remedy.
-    (("賠償", "求償", "賠錢", "告他", "提告", "損失", "損害",
+    # 「我可以要求他賠嗎」 matched none of these — 賠 only appeared inside 賠償 and
+    # 賠錢 — so 民法§184 never fired for an upstairs leak. Bare 賠 is deliberately
+    # not a trigger: it sits inside 違約金/賠償責任 in every contract dispute and
+    # would push the tort articles into all of them.
+    (("賠償", "求償", "賠錢", "他賠", "要賠", "賠我", "誰賠", "告他", "提告", "損失", "損害",
       "失眠", "就醫", "生病", "受傷", "健康", "身心", "耗弱",
       "骨折", "住院", "請假", "沒收入", "醫藥費", "醫療費"),
      # Sharpened after the seat-ordering change: 「不法侵害他人之權利」 matches
@@ -289,8 +293,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 「樓上水管破裂漏到我家」 got 租賃住宅條例§8 — a LANDLORD's repair duty —
     # for an owner-occupied flat. §191 is the article that puts the loss on the
     # owner of the thing that broke.
+    # §184 rides along on purpose: §191 is a presumption of fault layered on the
+    # general tort clause, and an answer that cites the presumption without the
+    # basis is half an answer. It also puts the phrase in a row the ranking
+    # corroborates — its own row is not, and that is why it kept losing seats.
     (("漏到", "破裂", "爆管", "淹到", "泡壞", "滲到", "掉落", "外牆"),
-     ("土地上之建築物或其他工作物所致他人權利之損害", "由工作物之所有人負賠償責任")),
+     ("土地上之建築物或其他工作物所致他人權利之損害", "由工作物之所有人負賠償責任",
+      "因故意或過失，不法侵害他人之權利者")),
 
     # ── 親密關係騷擾 (家暴法§63-1, §14, §2) ──
     # Measured on a lived session: 「前男友一直傳訊息、在我上班的地方等我」 retrieved
@@ -304,9 +313,14 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "為騷擾、接觸、跟蹤、通話、通信或其他非必要之聯絡行為",
       "持續性監視、跟追或掌控他人行蹤及活動之行為", "民事保護令")),
 
-    # ── 擅自進入住宅 (刑法§306) ──
+    # ── 擅自進入住宅 (刑法§306, 民法§423) ──
+    # 刑§306 was the only article here, so a tenant asking 「房東自己開門進我房間,
+    # 這樣算侵犯我的權利嗎」 got the criminal side and nothing civil. §423 is the
+    # civil basis: the landlord owes a 租賃物 that stays fit for the agreed use,
+    # and walking in unannounced is exactly what that promise excludes.
     (("擅自進入", "自己開門", "沒經過我同意", "闖進", "侵入", "備份鑰匙", "偷進"),
-     ("無故侵入他人住宅", "受退去之要求而仍留滯者")),
+     ("無故侵入他人住宅", "受退去之要求而仍留滯者",
+      "保持其合於約定使用、收益之狀態")),
 
     # ── 資遣 / 預告 (勞基法§16, §17) ──
     (("資遣", "被辭", "叫我走", "不用來了", "非自願離職", "預告", "遣散"),

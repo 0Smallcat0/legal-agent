@@ -296,6 +296,12 @@ def _promote_lexicon_phrases(
         and any(phrase in (s.content or "") for s, _ in ranked[:k])
     }
 
+    # TRIED AND REJECTED — ranking corroborated rows by the STRENGTH of their
+    # evidence (how high the corroborating article sits) instead of treating
+    # corroboration as a yes/no. 民法§191 at rank 1 does look like better proof of
+    # the topic than a tenancy article at rank 8, and it costs 民法§818 without
+    # recovering 民法§184: 59/61 against 60/61, golden unchanged at 19/7/0.
+
     matches: list[tuple[int, int, int, str, list[Statute]]] = []
     for position, phrase in enumerate(phrases):
         hits = [c for c in candidates if phrase in c.content]
