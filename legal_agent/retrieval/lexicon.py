@@ -122,6 +122,27 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 承攬瑕疵 / 裝修工程 (民法§492, §493, §494, §505) ──
+    # 「師傅裝修廚房,水管沒接好會漏水,還催我付尾款」 returned the tenancy and
+    # 相鄰關係 chapters off the word 漏水 — nobody in that story is a tenant.
+    # 承攬 is its own chapter and it answers the whole question: §492 is the
+    # quality owed, §493 is 定期限請求修補 then self-repair at the contractor's
+    # cost, §494 is 解除契約或減少報酬, §505 is when the balance falls due.
+    (("裝修", "裝潢", "施工", "師傅", "工班", "尾款", "估價單", "驗收",
+      "貼歪", "做壞", "承攬", "定作", "工程合約"),
+     ("承攬人完成工作，應使其具備約定之品質",
+      "定作人得定相當期限，請求承攬人修補之",
+      "定作人得自行修補，並得向承攬人請求償還修補必要之費用",
+      "定作人得解除契約或請求減少報酬",
+      "報酬應於工作交付時給付之")),
+
+    # ── 預扣工資 (勞動基準法§26) ──
+    # 「遲到三次還打破設備,直接從薪水扣八千」 got §22 (全額直接給付) but not the
+    # article that says the deduction itself is forbidden. 違約金 is deliberately
+    # NOT a trigger — it would push a labour article into every contract case.
+    (("扣薪", "預扣", "扣我薪水", "從薪水扣", "薪水被扣", "工資被扣", "薪水少了"),
+     ("雇主不得預扣勞工工資作為違約金或賠償費用",)),
+
     # ── 損害賠償範圍 (民法§196, §216, §217) ──
     # 「我到底該賠多少」 is a different question from 「他要負責嗎」, and the window
     # for a scratched car was 道路交通管理處罰條例 penalty articles — administrative

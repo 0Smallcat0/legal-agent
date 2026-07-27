@@ -60,6 +60,26 @@ def test_how_much_do_i_owe_reaches_the_measure_of_damages():
     assert "損害之發生或擴大，被害人與有過失者，法院得減輕賠償金額" in out       # §217
 
 
+def test_renovation_reaches_the_contract_for_work_chapter():
+    """Measured: 「師傅裝修廚房,水管沒接好會漏水,還催我付尾款」 returned the
+    tenancy and 相鄰關係 chapters off the word 漏水. Nobody in that story is a
+    tenant; 承攬 is its own chapter and answers the whole question."""
+    out = expansions("我找師傅裝修廚房,做完發現水管沒接好會漏水,他還一直催我付尾款")
+    assert "定作人得定相當期限，請求承攬人修補之" in out              # §493
+    assert "定作人得解除契約或請求減少報酬" in out                    # §494
+
+
+def test_a_pay_deduction_reaches_the_article_that_forbids_it():
+    out = expansions("公司說我遲到還打破設備,直接從薪水扣了八千")
+    assert "雇主不得預扣勞工工資作為違約金或賠償費用" in out           # 勞基§26
+
+    # 違約金 alone must NOT reach it: the same word appears in every contract
+    # dispute, and a labour article has no business in those windows.
+    assert "雇主不得預扣勞工工資作為違約金或賠償費用" not in expansions(
+        "契約寫違約金十萬,對方要我付"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
