@@ -137,6 +137,33 @@ def _drop_industry_regulation(query: str, candidates: list[Statute]) -> list[Sta
     ]
 
 
+# 漏水 and 修繕 fire the tenancy vocabulary whoever is asking, so an
+# OWNER-OCCUPIED flat flooded from upstairs was handed 民法§430/§437/§423 — a
+# LANDLORD's repair duty. Measured: 4 of 8 seats there and 3 of 8 in a
+# house-purchase session, neither of which mentions a landlord at all.
+_TENANCY_SUBJECTS = ("承租人", "出租人", "租賃物", "租賃契約", "租賃住宅")
+# Said only when the asker owns the place…
+_OWNER_OCCUPIED = ("自有住宅", "自己的房子", "我買的", "我的房子", "我是屋主",
+                   "屋主是我", "已經過戶", "交屋")
+# …and only believed when nothing in the question puts a tenancy in the room.
+# A landlord asking about their OWN rented-out flat says 房東/租約/房客, and a
+# tenant says 押金/退租, so either way the articles stay.
+_TENANCY_IN_QUESTION = ("房東", "租約", "租屋", "承租", "押金", "退租", "二房東",
+                        "包租", "房客", "租金")
+
+
+def _drop_tenancy_when_owner_occupied(query: str, candidates: list[Statute]) -> list[Statute]:
+    """Drop landlord-and-tenant articles when the asker has said they own it."""
+    if not any(word in query for word in _OWNER_OCCUPIED):
+        return candidates
+    if any(word in query for word in _TENANCY_IN_QUESTION):
+        return candidates
+    return [
+        c for c in candidates
+        if not any(word in (c.content or "") for word in _TENANCY_SUBJECTS)
+    ]
+
+
 def _retrieve_scored(
     query: str,
     as_of_date: str | None,
@@ -168,6 +195,7 @@ def _retrieve_scored(
         return []
 
     candidates = _drop_industry_regulation(query, candidates)
+    candidates = _drop_tenancy_when_owner_occupied(query, candidates)
     if not candidates:
         return []
 
