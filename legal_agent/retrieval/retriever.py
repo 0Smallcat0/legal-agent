@@ -276,16 +276,37 @@ def _promote_lexicon_phrases(
     # still lost their seat to a broad one that fired earlier in the table.
     # (Not the tie-break rejected in RESULTS.md — that ordered by how many
     # TRIGGERS matched; this orders by how many ARTICLES the phrase resolves to.)
-    matches: list[tuple[int, int, str, list[Statute]]] = []
+    # When several phrases are equally selective the tie-break used to be table
+    # position, which has nothing to do with what was asked: 「付了十萬斡旋金,屋主
+    # 不賣了」 spent all three seats on 定型化契約 and 買賣瑕疵 phrases and never
+    # reached 民法§248, even though 民法§249 — the other half of the same answer —
+    # was already sitting in the window. So prefer a phrase whose OWN ROW already
+    # has an article in the window: the ranking has corroborated that topic, and
+    # finishing it beats opening a new one on a tie.
+    from legal_agent.retrieval.lexicon import LEXICON
+
+    row_of = {}
+    for index, (_triggers, statutory) in enumerate(LEXICON):
+        for term in statutory:
+            row_of.setdefault(term, index)
+    corroborated = {
+        row_of[phrase]
+        for phrase in phrases
+        if phrase in row_of
+        and any(phrase in (s.content or "") for s, _ in ranked[:k])
+    }
+
+    matches: list[tuple[int, int, int, str, list[Statute]]] = []
     for position, phrase in enumerate(phrases):
         hits = [c for c in candidates if phrase in c.content]
         if hits:
-            matches.append((len(hits), position, phrase, hits))
-    matches.sort(key=lambda m: (m[0], m[1]))     # selective first, then table order
+            rank = 0 if row_of.get(phrase) in corroborated else 1
+            matches.append((len(hits), rank, position, phrase, hits))
+    matches.sort(key=lambda m: (m[0], m[1], m[2]))   # selective, corroborated, table
 
     promote: list[tuple[Statute, float]] = []
     taken: set[tuple[str, str, str]] = set()
-    for _count, _position, _phrase, hits in matches:
+    for _count, _rank, _position, _phrase, hits in matches:
         if len(promote) >= LEXICON_RESERVED_SEATS:
             break
         for c in hits:

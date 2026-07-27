@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/30 (90%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **54/57 (95%)** | `evaluation/real_recall.py`, 25 lived problems |
+| retrieval recall, real user wording | **59/61 (97%)** | `evaluation/real_recall.py`, 27 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -75,12 +75,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   「我想拿回押金」 was displayed as 已採取行動. The trade is real: 「口頭要求被拒」
   was a true 已採取行動 answer that no hint word recognised, so the hint lists
   have to grow with what people actually type.
-- **Three reserved seats, more than three good pointers.** Seats now go to the
-  phrases that identify ONE article, but when several do, the tie-break is table
-  position — which has nothing to do with what was asked. 刑§309 (公然侮辱) loses
-  its seat to the general tort row on an insult session. Widening was measured
-  and rejected: a 4th seat is identical to three (46/49, 19/7/0) and a 5th costs
-  both harnesses (45/49, 18/8/0) by trimming the ranked window.
+- **Three reserved seats, more than three good pointers** — mostly solved. Seats
+  go to the phrases that identify ONE article, and among those, to a row the
+  ranking has already corroborated (one of its articles is in the window):
+  finishing a confirmed topic beats opening a new one. That recovered 民法§248
+  and 刑§309, the two the old table-position tie-break lost. Widening was
+  measured and rejected instead: a 4th seat is identical to three and a 5th
+  costs both harnesses (45/49, 18/8/0) by trimming the ranked window.
 - **Each lexicon row is also a new way to be wrong.** Three separate rounds, a
   row added to fix one session hijacked the next one's window off a word said in
   passing (買房 → warranty, 前妻 → DV route, 繼承 → 繼承編 over a co-ownership

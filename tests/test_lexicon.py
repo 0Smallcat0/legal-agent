@@ -80,6 +80,18 @@ def test_a_pay_deduction_reaches_the_article_that_forbids_it():
     )
 
 
+def test_earnest_money_and_the_limitation_clock_are_reachable():
+    """Two questions ordinary people ask first, neither of which the liability
+    articles answer: 「斡旋金拿得回來嗎」 and 「這麼久了還來得及嗎」."""
+    deposit = expansions("我付了十萬斡旋金,屋主後來不賣了,想全額拿回來")
+    assert "由他方受有定金時，推定其契約成立" in deposit                       # §248
+    assert "契約因可歸責於受定金當事人之事由" in deposit                        # §249
+
+    late = expansions("三年前有人騎車撞到我,現在還能跟他求償嗎?來不來得及")
+    assert any("二年間不行使而消滅" in term for term in late)                  # §197
+    assert "消滅時效，因左列事由而中斷" in late                                 # §129
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
