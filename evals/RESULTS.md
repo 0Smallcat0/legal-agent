@@ -110,6 +110,14 @@ Each of these looked obviously right and lost on the numbers:
 - **per-statute cap on the retrieval window** — one statute really does flood it
   (7 of 8 seats), but capping loses on both harnesses, because real answers
   legitimately cluster inside one code (民法§354+§359).
+- **three separate signals for 「is this question out of scope」**, all measured
+  against the five out-of-scope golden cases and all overlapping the in-scope
+  range: dense cosine (0.611–0.649 out of scope, 0.569–0.770 in scope — the
+  earlier rejection re-confirmed with two new cases), BM25 on the user's RAW
+  words (out-of-scope 本票裁定 50.2 beats in-scope 時效 16.1, i.e. inverted), and
+  the share of query terms appearing in no article (0.62–0.74 against 0.38–0.70).
+  The tier cannot be rescued by a better number; 票據法 and 消費者債務清理條例
+  are simply not in the corpus, and nothing in a score knows that.
 - **dense cosine as the insufficiency signal** — scale-comparable across queries,
   so it should have beaten raw BM25; the out-of-scope cases are the three lowest
   but the weakest in-scope case sits between them.
