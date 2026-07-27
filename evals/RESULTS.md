@@ -53,6 +53,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
 - **The 8B model is the weakest component** and is treated that way: it repeats
   itself on long article lists and uses only part of what it is given. What must
   be right — citations, judgments, the tier — is not left to it.
+- **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
+  leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
+  gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
+  the real set, now 0/176). Dropping them moved no published number — the freed
+  seats went to on-topic articles that were not the expected ones — which is
+  precisely the blind spot: the harnesses ask whether the right article is in
+  the window, never what else the visitor has to read.
 - **The model-free intake under-labels on purpose.** Without a local model (the
   HF Spaces configuration) filing is keyword-driven, and a line matching no hint
   word is kept as narrative instead of taking the pending field's label. It was

@@ -235,5 +235,36 @@ def test_a_broad_phrase_does_not_outrank_one_that_identifies_a_single_article():
     assert promoted == ["第9條"], f"the one seat went to a phrase pointing nowhere: {promoted}"
 
 
+def test_trade_regulation_is_dropped_unless_the_question_is_about_the_trade(tmp_path):
+    """Measured over the real sessions: 2-3 of 8 seats in EVERY landlord-tenant
+    case went to 租賃住宅服務業 articles (營業保證金, 罰鍰) — the longest articles
+    in that statute, which is exactly why BM25 kept handing them seats."""
+    db = tmp_path / "trade.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    conn.executemany(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("測試法", "第1條", "押金之金額，不得逾二個月之租金總額，出租人應返還押金。",
+             "2010-01-01", None, "法律", "http://x/1"),
+            ("測試法", "第2條", "租賃住宅服務業之營業保證金，應由全國聯合會繳存，押金不予退還。",
+             "2010-01-01", None, "法律", "http://x/2"),
+        ],
+    )
+    conn.commit()
+    try:
+        tenant = [(s.statute_id, s.article_no) for s in retrieve("房東不退我押金", conn=conn)]
+        assert ("測試法", "第1條") in tenant
+        assert ("測試法", "第2條") not in tenant
+
+        # …but someone dealing with a 包租業 still gets the trade's own rules.
+        trade = [(s.statute_id, s.article_no) for s in retrieve("包租業不退我押金", conn=conn)]
+        assert ("測試法", "第2條") in trade
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
