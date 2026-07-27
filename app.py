@@ -245,7 +245,7 @@ EMPTY_STATE = """
   <b>諮詢結果會顯示在這裡</b>
   完成左側問答、事實齊備後,系統會檢索一次並給出:
   <ol>
-    <li>適用法源(逐字條文,依相關度排序)</li>
+    <li>適用法源(逐字條文,依檢索排序)</li>
     <li>說明(法律明文 / 實務見解 / 分析研判)</li>
     <li>建議處理順序(低成本優先,訴訟最後)</li>
   </ol>
@@ -325,7 +325,7 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
             relevance = "語彙/語意比對命中(與提問無字面重疊)"
         else:
             width = max(4, round(sc / top * 100))
-            relevance = f"相關度 {width}%"
+            relevance = f"字面相關度 {width}%"
         excerpt = escape(s.content[:56].replace("\n", " "))
         fulltext = (
             f'<details><summary>條文全文</summary><pre>{escape(s.content)}</pre></details>'

@@ -113,6 +113,28 @@ def _load_in_force(conn: sqlite3.Connection, as_of_date: str | None) -> list[Sta
     return [_row_to_statute(r) for r in rows]
 
 
+# 租賃住宅市場發展及管理條例 regulates the leasing-SERVICE INDUSTRY as well as
+# landlord and tenant, and its industry chapters are long — 營業保證金 rules,
+# 服務業 penalty schedules — so BM25 hands them seats on any 租賃 question.
+# Measured over the real sessions: 2-3 of 8 seats in EVERY landlord-tenant case
+# went to 服務業 articles a tenant has no use for.
+_INDUSTRY_SUBJECTS = ("租賃住宅服務業", "包租業", "代管業", "營業保證金", "全國聯合會")
+# …unless the person is actually dealing with one of those businesses. 二房東 is
+# deliberately absent: an ordinary sublessor is not a licensed 包租業, and those
+# cases are decided by 民法§443/§444.
+_INDUSTRY_IN_QUESTION = ("包租", "代管", "仲介", "服務業", "租屋網", "業者")
+
+
+def _drop_industry_regulation(query: str, candidates: list[Statute]) -> list[Statute]:
+    """Drop trade-regulation articles when the question is not about the trade."""
+    if any(word in query for word in _INDUSTRY_IN_QUESTION):
+        return candidates
+    return [
+        c for c in candidates
+        if not any(word in (c.content or "") for word in _INDUSTRY_SUBJECTS)
+    ]
+
+
 def _retrieve_scored(
     query: str,
     as_of_date: str | None,
@@ -140,6 +162,10 @@ def _retrieve_scored(
         if own_conn is not None:
             own_conn.close()
 
+    if not candidates:
+        return []
+
+    candidates = _drop_industry_regulation(query, candidates)
     if not candidates:
         return []
 
