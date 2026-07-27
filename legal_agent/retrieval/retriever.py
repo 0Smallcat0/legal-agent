@@ -238,14 +238,31 @@ def _promote_lexicon_phrases(
         return (s.statute_id, s.article_no, s.effective_from)
 
     window = {key_of(s) for s, _ in ranked[:k]}
+
+    # Spend the seats on the phrases that actually POINT somewhere. A phrase is
+    # only a pointer when it identifies one article: 「公然侮辱人者」 matches 刑§309
+    # and nothing else, while 「負損害賠償責任」 matches 18 articles and
+    # 「土地所有人」 33 — promoting the first candidate that happens to contain one
+    # of those is noise wearing precision's clothes. Measured: 刑§309 for an
+    # insult session and 民§354 for a house purchase both had a unique phrase and
+    # still lost their seat to a broad one that fired earlier in the table.
+    # (Not the tie-break rejected in RESULTS.md — that ordered by how many
+    # TRIGGERS matched; this orders by how many ARTICLES the phrase resolves to.)
+    matches: list[tuple[int, int, str, list[Statute]]] = []
+    for position, phrase in enumerate(phrases):
+        hits = [c for c in candidates if phrase in c.content]
+        if hits:
+            matches.append((len(hits), position, phrase, hits))
+    matches.sort(key=lambda m: (m[0], m[1]))     # selective first, then table order
+
     promote: list[tuple[Statute, float]] = []
     taken: set[tuple[str, str, str]] = set()
-    for phrase in phrases:
+    for _count, _position, _phrase, hits in matches:
         if len(promote) >= LEXICON_RESERVED_SEATS:
             break
-        for c in candidates:                     # point-in-time filtered already
+        for c in hits:
             key = key_of(c)
-            if phrase in c.content and key not in window and key not in taken:
+            if key not in window and key not in taken:
                 promote.append((c, 0.0))
                 taken.add(key)
                 break                            # one article per phrase

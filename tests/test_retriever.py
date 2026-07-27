@@ -198,5 +198,42 @@ def test_promotion_does_not_move_the_honesty_floor(gap_conn, monkeypatch):
     assert max(sc for _s, sc in pairs) == max(sc for _s, sc in before)
 
 
+def test_a_broad_phrase_does_not_outrank_one_that_identifies_a_single_article():
+    """Measured: 民法§354 and 刑§309 each had a phrase matching exactly one
+    article and still lost their reserved seat, because seats were spent in
+    table order and 「負損害賠償責任」 (18 articles) / 「土地所有人」 (33) fired
+    first. A phrase that matches half a chapter points nowhere."""
+    from legal_agent.data.models import Statute
+    from legal_agent.retrieval import retriever as r
+
+    def statute(no: str, content: str) -> Statute:
+        return Statute(
+            statute_id="測試法", article_no=no, content=content,
+            effective_from="2010-01-01", effective_to=None,
+            hierarchy_level="法律", source_url=f"http://x/{no}",
+        )
+
+    # 「共通語」 is in three articles; 「唯一語」 is in one. Only one seat exists.
+    broad = [statute(f"第{i}條", "共通語 之規定") for i in (1, 2, 3)]
+    precise = statute("第9條", "唯一語 之規定")
+    candidates = [*broad, precise]
+    ranked = [(statute("第7條", "窗內"), 5.0)]
+
+    monkey = r.LEXICON_RESERVED_SEATS
+    try:
+        r.LEXICON_RESERVED_SEATS = 1
+        import legal_agent.retrieval.lexicon as lexicon
+        real_expansions, real_expansion = lexicon.expansions, r.config.QUERY_EXPANSION
+        lexicon.expansions = lambda _q: ["共通語", "唯一語"]   # broad first, as the table would
+        r.config.QUERY_EXPANSION = "on"
+        out = r._promote_lexicon_phrases("q", candidates, ranked, k=2)
+    finally:
+        r.LEXICON_RESERVED_SEATS = monkey
+        lexicon.expansions, r.config.QUERY_EXPANSION = real_expansions, real_expansion
+
+    promoted = [s.article_no for s, score in out if score == 0.0]
+    assert promoted == ["第9條"], f"the one seat went to a phrase pointing nowhere: {promoted}"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
