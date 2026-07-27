@@ -273,5 +273,44 @@ def test_trade_regulation_is_dropped_unless_the_question_is_about_the_trade(tmp_
         conn.close()
 
 
+def test_a_seat_finishes_the_topic_the_window_already_confirms():
+    """Measured on 「付了十萬斡旋金,屋主不賣了」: 民法§249 was already in the
+    window and 民法§248 — the other half of the same answer — never got a seat,
+    because three equally-selective phrases from other rows came first in table
+    order. Table order says nothing about what was asked; a row the ranking has
+    already corroborated does."""
+    from legal_agent.data.models import Statute
+    from legal_agent.retrieval import lexicon
+    from legal_agent.retrieval import retriever as r
+
+    def statute(no: str, content: str) -> Statute:
+        return Statute(
+            statute_id="測試法", article_no=no, content=content,
+            effective_from="2010-01-01", effective_to=None,
+            hierarchy_level="法律", source_url=f"http://x/{no}",
+        )
+
+    in_window = statute("第1條", "甲語 之規定")      # row 0, already ranked
+    same_row = statute("第2條", "乙語 之規定")       # row 0, the other half
+    other_row = statute("第3條", "丙語 之規定")      # row 1, unrelated topic
+
+    saved = (lexicon.LEXICON, lexicon.expansions, r.LEXICON_RESERVED_SEATS,
+             r.config.QUERY_EXPANSION)
+    try:
+        lexicon.LEXICON = [(("t0",), ("甲語", "乙語")), (("t1",), ("丙語",))]
+        lexicon.expansions = lambda _q: ["丙語", "甲語", "乙語"]   # 丙語 FIRST in order
+        r.LEXICON_RESERVED_SEATS = 1
+        r.config.QUERY_EXPANSION = "on"
+        out = r._promote_lexicon_phrases(
+            "q", [in_window, same_row, other_row], [(in_window, 9.0)], k=2,
+        )
+    finally:
+        (lexicon.LEXICON, lexicon.expansions, r.LEXICON_RESERVED_SEATS,
+         r.config.QUERY_EXPANSION) = saved
+
+    promoted = [s.article_no for s, score in out if score == 0.0]
+    assert promoted == ["第2條"], f"the seat opened a new topic instead: {promoted}"
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

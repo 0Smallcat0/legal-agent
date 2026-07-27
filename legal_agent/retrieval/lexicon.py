@@ -122,6 +122,31 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 消滅時效 (民法§197, §125, §129, §144) ──
+    # 「三年前有人撞到我,現在還能求償嗎?」 got 民法§184/§191-2/§193 — who is
+    # liable — and not one article about whether it is too late, which is the
+    # entire question. §197 is the two-year/ten-year clock for tort, §125 the
+    # fifteen-year default, §129 what interrupts it, §144 what 「已過時效」 actually
+    # does (the debtor may refuse; the claim is not erased).
+    (("還能", "來不來得及", "來得及", "過期", "時效", "多久以前", "幾年前",
+      "三年前", "五年前", "很久以前", "拖了很久", "早就", "還可以告"),
+     ("因侵權行為所生之損害賠償請求權，自請求權人知有損害及賠償義務人時起，二年間不行使而消滅",
+      "請求權，因十五年間不行使而消滅",
+      "消滅時效，因左列事由而中斷",
+      "時效完成後，債務人得拒絕給付")),
+
+    # ── 定金 / 斡旋金 (民法§248, §249) ──
+    # 「付了十萬斡旋金,屋主後來不賣了」 returned 定型化契約 and 買賣瑕疵 articles
+    # and not one 定金 article. §248 is what handing money over means, §249 is
+    # the whole answer sheet: returned when the deal completes, forfeited when
+    # the payer walks, DOUBLED when the receiver walks, returned when neither is
+    # to blame.
+    (("定金", "訂金", "斡旋", "加倍返還", "頭款"),
+     ("由他方受有定金時，推定其契約成立",
+      "契約履行時，定金應返還或作為給付之一部",
+      "契約因可歸責於付定金當事人之事由，致不能履行時，定金不得請求返還",
+      "契約因可歸責於受定金當事人之事由")),
+
     # ── 承攬瑕疵 / 裝修工程 (民法§492, §493, §494, §505) ──
     # 「師傅裝修廚房,水管沒接好會漏水,還催我付尾款」 returned the tenancy and
     # 相鄰關係 chapters off the word 漏水 — nobody in that story is a tenant.
