@@ -92,6 +92,25 @@ def test_earnest_money_and_the_limitation_clock_are_reachable():
     assert "消滅時效，因左列事由而中斷" in late                                 # §129
 
 
+def test_a_landlord_letting_himself_in_has_a_civil_side_too():
+    """刑§306 was the only article the trespass row carried, so a tenant asking
+    「房東自己開門進我房間,算侵犯我的權利嗎」 got the criminal answer and nothing
+    civil. §423 is the promise a tenancy makes about exclusive use."""
+    out = expansions("房東沒有事先講就自己開門進我房間,他說他有備份鑰匙想進就進")
+    assert "無故侵入他人住宅" in out                       # 刑§306
+    assert "保持其合於約定使用、收益之狀態" in out          # 民法§423
+
+
+def test_asking_whether_someone_must_pay_reaches_the_tort_clause():
+    # 「我可以要求他賠嗎」 matched nothing: 賠 only existed inside 賠償 and 賠錢.
+    assert "因故意或過失，不法侵害他人之權利者" in expansions(
+        "樓上水管破裂漏到我家,天花板整片壞掉,我可以要求他賠嗎"
+    )
+    # Bare 賠 stays out of the trigger list — only the forms that name the other
+    # party do — so a contract clause about 賠付 does not drag in tort articles.
+    assert "因故意或過失，不法侵害他人之權利者" not in expansions("違約金賠付方式怎麼寫")
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
