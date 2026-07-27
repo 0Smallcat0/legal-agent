@@ -312,5 +312,39 @@ def test_a_seat_finishes_the_topic_the_window_already_confirms():
     assert promoted == ["第2條"], f"the seat opened a new topic instead: {promoted}"
 
 
+def test_an_owner_occupier_is_not_handed_a_landlords_repair_duty(tmp_path):
+    """漏水 and 修繕 fire the tenancy vocabulary whoever is asking, so an
+    owner-occupied flat flooded from upstairs got 民法§430/§437/§423 — measured
+    at 4 of 8 seats there and 3 of 8 in a house-purchase session, neither of
+    which mentions a landlord at all."""
+    db = tmp_path / "owner.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    conn.executemany(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("測試法", "第1條", "土地上之建築物漏水致他人權利之損害，由所有人負賠償責任。",
+             "2010-01-01", None, "法律", "http://x/1"),
+            ("測試法", "第2條", "租賃物如有修繕之必要，出租人應負責，承租人得催告之。",
+             "2010-01-01", None, "法律", "http://x/2"),
+        ],
+    )
+    conn.commit()
+    try:
+        owner = [(s.statute_id, s.article_no)
+                 for s in retrieve("自有住宅樓上漏水,修繕費誰負責", conn=conn)]
+        assert ("測試法", "第1條") in owner
+        assert ("測試法", "第2條") not in owner
+
+        # A tenant — or a landlord asking about their own let flat — keeps them.
+        tenant = [(s.statute_id, s.article_no)
+                  for s in retrieve("我租的房子漏水,房東不修繕", conn=conn)]
+        assert ("測試法", "第2條") in tenant
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
