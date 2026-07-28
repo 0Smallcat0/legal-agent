@@ -126,6 +126,24 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 人格權 / 姓名權 / 肖像 (民法§18, §19, §195) ──
+    # 「有人用我的照片跟名字開假帳號到處借錢」 returned the 消費借貸 chapter — the
+    # word 借錢 belongs to the impostor, not to the asker. §18 is the right to
+    # have the infringement STOPPED, §19 the same for a name, §195 the money.
+    (("假帳號", "冒用我的名字", "盜用照片", "冒名", "假冒", "肖像",
+      "用我的照片", "盜用我的", "冒充我", "人格權"),
+     ("人格權受侵害時，得請求法院除去其侵害",
+      "姓名權受侵害者，得請求法院除去其侵害，並得請求損害賠償",
+      "不法侵害他人之身體、健康、名譽、自由、信用、隱私、貞操")),
+
+    # ── 權利濫用 (民法§148) ──
+    # 「隔壁緊貼我家窗戶砌了三米高的牆,他自己那邊根本沒在用,擺明要擋我的光」 got
+    # the 越界建築 articles — the wall is on HIS OWN land and crosses nothing.
+    # §148 is the article for a right exercised mainly to harm someone.
+    (("擋光", "擋通風", "讓我不好過", "為了報復", "存心", "故意刁難",
+      "根本沒在用", "純粹為了", "找我麻煩", "以損害他人"),
+     ("權利之行使，不得違反公共利益，或以損害他人為主要目的",)),
+
     # ── 不完全給付 (民法§227) ──
     # 「裝好的冷氣一直漏水,修了四次還是壞」 returned the TENANCY articles plus
     # §494 — the asker BOUGHT it. §227 is the article for a thing delivered but
@@ -189,7 +207,11 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("脫產", "過戶給", "移轉給", "名下唯一", "假買賣", "撤銷贈與", "轉到別人名下",
       "把財產轉走", "名下沒有財產", "五鬼搬運"),
      ("債務人所為之無償行為，有害及債權者，債權人得聲請法院撤銷之",
-      "債務人怠於行使其權利時，債權人因保全債權")),
+      "債務人怠於行使其權利時，債權人因保全債權",
+      # A sham sale is 通謀虛偽 before it is anything else: 「賣給老婆的弟弟,價金
+      # 市價三成,根本沒有金流」 is §87, and §87 makes it void outright rather than
+      # merely revocable.
+      "表意人與相對人通謀而為虛偽意思表示者，其意思表示無效")),
 
     # ── 委任 / 代辦 (民法§541, §544, §549) ──
     # 「委託代辦處理修繕補助,給了八萬,他沒送件也不退」 returned the TENANCY chapter

@@ -295,6 +295,27 @@ def test_one_co_owner_can_sue_an_outsider_alone():
     )
 
 
+def test_a_sham_sale_is_void_before_it_is_revocable():
+    out = expansions("他把店面賣給老婆的弟弟,價金市價三成又沒有金流,這種假買賣能不能打掉")
+    assert "表意人與相對人通謀而為虛偽意思表示者，其意思表示無效" in out          # §87
+    assert "債務人所為之無償行為，有害及債權者，債權人得聲請法院撤銷之" in out    # §244
+
+
+def test_an_impostor_account_reaches_the_right_to_stop_it():
+    """「有人用我的照片跟名字開假帳號到處借錢」 returned the 消費借貸 chapter — 借錢
+    is what the impostor does, not what the asker is asking about."""
+    out = expansions("有人用我的照片跟名字開假帳號,到處加我朋友借錢,我想讓他停止")
+    assert "人格權受侵害時，得請求法院除去其侵害" in out                        # §18
+    assert "姓名權受侵害者，得請求法院除去其侵害，並得請求損害賠償" in out       # §19
+
+
+def test_a_spite_wall_reaches_abuse_of_right():
+    # The wall is on HIS OWN land and crosses nothing, so 越界建築 does not apply.
+    assert "權利之行使，不得違反公共利益，或以損害他人為主要目的" in expansions(
+        "隔壁在自己地上砌三米高的牆擋我的光,他那邊根本沒在用,就是要讓我不好過"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

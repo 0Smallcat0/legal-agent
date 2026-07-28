@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **126/133 (95%)** | `evaluation/real_recall.py`, 56 lived problems |
+| retrieval recall, real user wording | **132/140 (94%)** | `evaluation/real_recall.py`, 59 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -105,6 +105,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   worse (107/113, 18/8/0). The expectations were written before each run and
   relabelling them afterwards would be grading my own work, so the number carries
   the misses.
+- **Corroboration cuts both ways, three times measured.** Giving a reserved seat
+  to a row the ranking already confirms recovered 民法§248 and 刑§309; it also
+  hands the seats to a topic that is confirmed but WRONG. 繼承編 for a living
+  father (fixed by knowing he is alive), 租賃 for a bought air conditioner (fixed
+  by knowing he bought it), and now 越界建築 for a spite wall that crosses no
+  boundary — 民法§148 fires and never gets a seat. Three alternatives were
+  measured and all lost: no corroboration at all, a saturation cap, and ranking
+  by the strength of the evidence.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
