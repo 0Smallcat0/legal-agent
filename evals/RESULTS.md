@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **105/106 (99%)** | `evaluation/real_recall.py`, 44 lived problems |
+| retrieval recall, real user wording | **111/113 (98%)** | `evaluation/real_recall.py`, 47 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -84,11 +84,15 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   three times in a row (賠多少, 不當得利, 離婚). Scenarios now come from the
   docket for exactly that reason, and the next wrong answer is still in a session
   nobody has run yet.
-- **The one standing miss is a seat trade, and the expectation stays as written.**
-  民法§478 (when a loan falls due) loses its seat to §244 and §242 in a session
-  whose subject is the TRANSFER, not the loan. That ordering is right for the
-  question, and the expectation was written before the run — relabelling it
-  afterwards would be grading my own work, so the number reads 105/106.
+- **Both standing misses are seat trades, and the expectations stay as written.**
+  民法§478 loses to §244/§242 in a session about a TRANSFER, and 民法§184 loses to
+  the three §213 restitution phrases in a session about getting a wall repaired.
+  Both orderings are right for their question. Adding §184 to the restitution row
+  changed nothing — a fourth phrase in a row with three seats never gets one — so
+  it was not shipped. The seat sweep was re-run on 47 sessions instead of the 22
+  it was first measured on and says the same thing: 4 seats identical (111/113,
+  19/7/0), 5 seats worse (107/113, 18/8/0). Relabelling the expectations
+  afterwards would be grading my own work, so the number reads 111/113.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
