@@ -332,6 +332,29 @@ def test_a_disputed_clause_reaches_how_contracts_are_read():
     assert "當事人互相表示意思一致者，無論其為明示或默示，契約即為成立" in out  # §153
 
 
+def test_two_debts_reach_set_off():
+    """「我借他三十萬他沒還,我也欠他二十萬貨款,可以互相抵掉嗎」 returned the loan and
+    sale articles — both debts, neither answer."""
+    out = expansions("我借給合夥人三十萬他沒還,我也欠他二十萬貨款,可以互相抵掉只還差額嗎")
+    assert "抵銷，應以意思表示，向他方為之" in out                                    # §335
+    assert any("互為抵銷" in term for term in out)                                    # §334
+
+
+def test_a_waiver_of_statutory_minimums_is_void():
+    """「自願不加勞保、自願放棄加班費」 returned §24/§32/§36/§39 — how overtime is
+    CALCULATED — which quietly assumes the waiver worked."""
+    out = expansions("公司要我簽同意書自願不加勞保也自願放棄加班費,不簽就不錄用,算不算數")
+    assert "法律行為，違反強制或禁止之規定者，無效" in out                    # §71
+    assert "雇主與勞工所訂勞動條件，不得低於本法所定之最低標準" in out         # 勞基§1
+
+
+def test_a_paternity_question_is_not_a_divorce_question():
+    # 「我們正在談離婚」 in the same story pulled the whole window into 離婚.
+    assert "夫妻之一方或子女能證明子女非為婚生子女者，得提起否認之訴" in expansions(
+        "婚姻中生的小孩做了親子鑑定不是我的,戶政還登記我是父親,想解除父子關係"
+    )                                                                        # §1063
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
