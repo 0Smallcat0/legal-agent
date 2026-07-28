@@ -268,6 +268,19 @@ def test_a_joint_debtor_reaches_what_happens_after_paying():
     assert "得向他債務人請求償還各自分擔之部分" in out                        # §281
 
 
+def test_a_divorce_does_not_end_the_duty_to_a_child():
+    """「前夫說監護權判給我他就不用付扶養費」 put §1118-1 — how to REDUCE a
+    maintenance duty — at rank 1, the opposite of what this asker needs."""
+    out = expansions("離婚後前夫說監護權判給我,他就沒有義務再付扶養費,一年多沒給了")
+    assert "父母對於未成年子女之扶養義務，不因結婚經撤銷或離婚而受影響" in out   # §1116-2
+
+
+def test_a_resolution_passed_without_notice_reaches_both_halves():
+    out = expansions("管委會開會決議每戶加收兩萬,我完全沒收到開會通知")
+    assert "應由召集人於開會前十日以書面載明開會內容，通知各區分所有權人" in out  # 條例§30
+    assert "社員得於決議後三個月內請求法院撤銷其決議" in out                     # 民法§56
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

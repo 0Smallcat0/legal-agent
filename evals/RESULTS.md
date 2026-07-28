@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **111/113 (98%)** | `evaluation/real_recall.py`, 47 lived problems |
+| retrieval recall, real user wording | **117/119 (98%)** | `evaluation/real_recall.py`, 50 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -33,12 +33,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
 - **Golden set** auto-scores statute coverage only. Legal correctness is printed
   side by side for a human — a harness that auto-passed legal judgement would be
   the same sin the project exists to avoid.
-- **Where the next case comes from** is itself measured now. Diffing the
-  articles the 1,266 harvested judgments actually cite against every
-  `expected_statutes` in both eval sets leaves a ranked list of blind spots —
-  239 corpus articles are cited by real disputes, the sets expected 92 of them.
-  民法§188 (僱用人連帶責任), §252 (違約金酌減) and §92 (被詐欺得撤銷) came off the
-  top of that list, and all three were wrong.
+- **Where the next case comes from** is itself measured. Real disputes cite 239
+  corpus articles; the question is which of them the system never reaches. The
+  first version of this measure diffed against `expected_statutes` and was too
+  loose — an article can be retrieved every time and simply never be expected.
+  It now diffs against what the sessions actually SURFACE, which immediately
+  showed 民法§1111 as a false gap: that session was correct and had never been
+  stored. 民法§188, §252, §92, §1116-2 and 公寓大廈條例§30 all came off the top of
+  the list, and every one of them was a real failure.
 - **Real-session recall** measures retrieval alone, from the user's own words, so
   the number does not depend on how well the intake performed that day.
 - **Judgments** are counted, never scored: there is no ground truth for "the

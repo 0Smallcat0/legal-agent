@@ -126,6 +126,26 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 離婚後的子女扶養費 (民法§1116-2, §1084) ──
+    # 「前夫說監護權判給我他就不用付扶養費」 put 民法§1118-1 — how to REDUCE a
+    # maintenance duty — at rank 1, which is the opposite of what this asker
+    # needs. §1116-2 is the flat rebuttal: a parent's duty to a minor child
+    # survives the divorce.
+    (("扶養費", "小孩的錢", "監護權判給", "不付扶養費", "沒給扶養費",
+      "離婚後不付", "追討扶養費", "每月付"),
+     ("父母對於未成年子女之扶養義務，不因結婚經撤銷或離婚而受影響",)),
+
+    # ── 會議決議的效力 (民法§56, 公寓大廈條例§30, §34) ──
+    # 「管委會開會決議每戶加收兩萬,我完全沒收到通知」 got §33/§11/§10/§14 and two
+    # TENANCY articles. §30 is the ten-days-in-writing notice the meeting owed
+    # them, §56 is the three months they have to ask a court to set the
+    # resolution aside, §34 is the minutes that should have followed.
+    (("沒收到通知", "沒通知我", "開會通知", "決議", "會議紀錄", "撤銷決議",
+      "沒有出席", "臨時動議", "加收"),
+     ("應由召集人於開會前十日以書面載明開會內容，通知各區分所有權人",
+      "社員得於決議後三個月內請求法院撤銷其決議",
+      "區分所有權人會議應作成會議紀錄，載明開會經過及決議事項")),
+
     # ── 回復原狀 (民法§213, §214, §215) ──
     # 「隔壁施工把我家牆壁震出裂縫,對方說給五萬了事,我要的是修回原狀」 returned the
     # 承攬 chapter off the word 施工 — the asker is the NEIGHBOUR, not the person
