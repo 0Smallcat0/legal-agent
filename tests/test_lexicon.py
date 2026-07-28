@@ -254,6 +254,20 @@ def test_an_agent_who_kept_the_money_reaches_the_mandate_chapter():
     ))
 
 
+def test_a_neighbour_wanting_it_fixed_reaches_restitution():
+    """「隔壁施工把我家牆壁震出裂縫,對方說給五萬了事」 returned the 承攬 chapter off
+    the word 施工 — the asker is the NEIGHBOUR, not the person who hired anyone."""
+    out = expansions("隔壁施工把我家牆壁震出裂縫,對方說給五萬了事,我要的是修回原狀")
+    assert "應回復他方損害發生前之原狀" in out                               # §213
+    assert "債權人得請求支付回復原狀所必要之費用，以代回復原狀" in out         # §213 III
+
+
+def test_a_joint_debtor_reaches_what_happens_after_paying():
+    out = expansions("三個人一起簽的借據寫連帶債務人,債主只找我一個要全部,付了能不能跟他們要")
+    assert "連帶債務之債權人，得對於債務人中之一人或數人或其全體" in out       # §273
+    assert "得向他債務人請求償還各自分擔之部分" in out                        # §281
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

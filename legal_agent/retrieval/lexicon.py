@@ -126,6 +126,31 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 回復原狀 (民法§213, §214, §215) ──
+    # 「隔壁施工把我家牆壁震出裂縫,對方說給五萬了事,我要的是修回原狀」 returned the
+    # 承攬 chapter off the word 施工 — the asker is the NEIGHBOUR, not the person
+    # who hired anyone. §213 says restoration is the primary remedy and lets the
+    # victim demand the COST of it; §214 and §215 are when money replaces it.
+    (("修回原狀", "恢復原狀", "回復原狀", "修好", "弄壞我家", "震裂", "裂縫",
+      "賠錢了事", "不是要錢", "打發我", "修到跟原本一樣"),
+     ("應回復他方損害發生前之原狀",
+      "債權人得請求支付回復原狀所必要之費用，以代回復原狀",
+      "不能回復原狀或回復顯有重大困難者，應以金錢賠償其損害")),
+      # 民法§184 was tried here too — §213 is what liability owes, §184 is what
+      # makes it liable — and changed nothing: a fourth phrase in a row with
+      # three seats simply never gets one. Left out rather than shipped as
+      # decoration; the miss is recorded in RESULTS.md as a seat trade.
+
+    # ── 連帶債務的內部分擔 (民法§273, §280, §281) ──
+    # 「三個人一起簽的借據,債主只找我一個要全部」 reached §273 — yes, he may — but
+    # not the other half the asker actually asked: what happens after I pay.
+    # §280 splits it equally between them, §281 is the right to collect it back.
+    (("連帶", "一起借", "三個人簽", "只找我一個", "全部都找我", "求償",
+      "分擔", "共同債務人", "保證人"),
+     ("連帶債務之債權人，得對於債務人中之一人或數人或其全體",
+      "連帶債務人相互間，除法律另有規定或契約另有訂定外，應平均分擔義務",
+      "得向他債務人請求償還各自分擔之部分")),
+
     # ── 脫產 / 詐害債權 (民法§244, §242) ──
     # 「他欠我一百萬,查到上個月把名下唯一的房子過戶給兒子」 returned the 消費借貸
     # articles — he owes me — and nothing about undoing the transfer, which was
