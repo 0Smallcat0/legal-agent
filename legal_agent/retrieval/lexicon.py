@@ -126,6 +126,16 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 不完全給付 (民法§227) ──
+    # 「裝好的冷氣一直漏水,修了四次還是壞」 returned the TENANCY articles plus
+    # §494 — the asker BOUGHT it. §227 is the article for a thing delivered but
+    # delivered badly, and its second paragraph is what covers the water-stained
+    # wall and the buckled floor, which 瑕疵擔保 alone does not.
+    (("修了幾次", "修過四次", "修不好", "一直故障", "還是壞", "重複維修",
+      "保固", "不完全給付", "換新的", "瑕疵"),
+     ("因可歸責於債務人之事由，致為不完全給付者",
+      "因不完全給付而生前項以外之損害者，債權人並得請求賠償")),
+
     # ── 離婚後的子女扶養費 (民法§1116-2, §1084) ──
     # 「前夫說監護權判給我他就不用付扶養費」 put 民法§1118-1 — how to REDUCE a
     # maintenance duty — at rank 1, which is the opposite of what this asker
@@ -409,7 +419,11 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("得隨時請求分割共有物", "共有物之分割，依共有人協議之方法行之",
       "按其應有部分，對於共有物之全部，有使用收益之權",
       "所有人對於無權占有或侵奪其所有物者，得請求返還之",
-      "對於妨害其所有權者，得請求除去之")),
+      "對於妨害其所有權者，得請求除去之",
+      # 「共有地被工廠堆廢棄物,堂哥說懶得管,我一個人能不能告」 — §821 is the
+      # answer and nothing in the row reached it: a co-owner may sue a third
+      # party over the WHOLE thing without the others.
+      "各共有人對於第三人，得就共有物之全部為本於所有權之請求")),
 
     # ── 消費借貸 / 欠錢不還 (民法§474, §478, §233, §203) ──
     # 「朋友借二十萬說三個月還,一年多都推說沒錢,有借據跟本票」 was REFUSED with

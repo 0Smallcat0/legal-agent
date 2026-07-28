@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **117/119 (98%)** | `evaluation/real_recall.py`, 50 lived problems |
+| retrieval recall, real user wording | **122/126 (97%)** | `evaluation/real_recall.py`, 53 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -86,15 +86,17 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   three times in a row (賠多少, 不當得利, 離婚). Scenarios now come from the
   docket for exactly that reason, and the next wrong answer is still in a session
   nobody has run yet.
-- **Both standing misses are seat trades, and the expectations stay as written.**
-  民法§478 loses to §244/§242 in a session about a TRANSFER, and 民法§184 loses to
-  the three §213 restitution phrases in a session about getting a wall repaired.
-  Both orderings are right for their question. Adding §184 to the restitution row
-  changed nothing — a fourth phrase in a row with three seats never gets one — so
-  it was not shipped. The seat sweep was re-run on 47 sessions instead of the 22
-  it was first measured on and says the same thing: 4 seats identical (111/113,
-  19/7/0), 5 seats worse (107/113, 18/8/0). Relabelling the expectations
-  afterwards would be grading my own work, so the number reads 111/113.
+- **Three reserved seats is now the binding constraint, and the misses are all
+  the same shape.** 民法§478 loses to §244/§242 (a session about a TRANSFER),
+  §184 loses to the §213 restitution phrases (a wall to be repaired), and
+  §354/§359 lose to 消保法§12/§247-1 (a defective air conditioner, where BM25 put
+  消保法§11-1 second and made the 定型化契約 row corroborated). Each ordering is
+  defensible for its own question; what they share is that four good pointers
+  cannot fit in three seats. Widening was measured twice — once on 22 sessions,
+  again on 47 — and lost both times: 4 seats identical (111/113, 19/7/0), 5 seats
+  worse (107/113, 18/8/0). The expectations were written before each run and
+  relabelling them afterwards would be grading my own work, so the number carries
+  the misses.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over

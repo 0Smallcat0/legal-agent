@@ -281,6 +281,20 @@ def test_a_resolution_passed_without_notice_reaches_both_halves():
     assert "社員得於決議後三個月內請求法院撤銷其決議" in out                     # 民法§56
 
 
+def test_a_thing_repaired_four_times_reaches_incomplete_performance():
+    out = expansions("裝好的冷氣一直漏水,修了四次還是壞,保固快過了")
+    assert "因可歸責於債務人之事由，致為不完全給付者" in out              # §227
+    assert "因不完全給付而生前項以外之損害者，債權人並得請求賠償" in out   # §227 II
+
+
+def test_one_co_owner_can_sue_an_outsider_alone():
+    """「共有地被工廠堆廢棄物,堂哥說懶得管,我一個人能不能告」 — the row reached the
+    articles co-owners use against EACH OTHER and none about outsiders."""
+    assert "各共有人對於第三人，得就共有物之全部為本於所有權之請求" in expansions(
+        "我跟堂哥各持分一半的空地被工廠堆廢棄物,堂哥不配合,我一個人能不能告"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
