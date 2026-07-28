@@ -135,6 +135,30 @@ def test_an_old_debt_reaches_the_articles_that_size_it():
     assert "約定利率，超過週年百分之十六者，超過部分之約定，無效" in out  # §205
 
 
+def test_an_adult_asked_to_support_an_absent_parent():
+    """「我爸五歲就離家沒付過扶養費,現在中風要我付安養費」 returned the 未成年子女
+    監護 chapter. The asker is 38; §1118-1 is the article that answers them."""
+    out = expansions("我爸在我五歲就離家沒付過扶養費,現在中風住院社工要我付安養費")
+    assert "得請求法院減輕其扶養義務" in out                      # §1118-1
+    assert "對負扶養義務者無正當理由未盡扶養義務" in out          # §1118-1 第2款
+    assert "左列親屬，互負扶養之義務" in out                      # §1114
+
+
+def test_divorce_is_reachable_at_all():
+    """「老公外遇還動手,我想離婚他死不肯簽」 was REFUSED at 資料不足 while §1052
+    lists nine grounds — none of which needs the other side to agree."""
+    out = expansions("我老公外遇還動手打我,我想離婚他死不肯簽")
+    assert "夫妻之一方，有下列情形之一者，他方得向法院請求離婚" in out   # §1052
+    assert "對於未成年子女權利義務之行使或負擔" in out                  # §1055
+
+
+def test_disclaiming_an_inheritance_reaches_the_deadline():
+    # The asker literally asked 「有沒有期限」 and the three-month article was absent.
+    out = expansions("我爸過世留下債務,銀行說貸款要我們還,聽說可以拋棄繼承")
+    assert "應於知悉其得繼承之時起三個月內，以書面向法院為之" in out      # §1174
+    assert "繼承人對於被繼承人之債務，以因繼承所得遺產為限，負清償責任" in out  # §1148
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
