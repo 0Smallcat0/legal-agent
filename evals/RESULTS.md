@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **85/85 (100%)** | `evaluation/real_recall.py`, 36 lived problems |
+| retrieval recall, real user wording | **93/93 (100%)** | `evaluation/real_recall.py`, 39 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -99,12 +99,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   and 刑§309, the two the old table-position tie-break lost. Widening was
   measured and rejected instead: a 4th seat is identical to three and a 5th
   costs both harnesses (45/49, 18/8/0) by trimming the ranked window.
-- **Each lexicon row is also a new way to be wrong.** Five times now, a row
+- **Each lexicon row is also a new way to be wrong.** Seven times now, a row
   added to fix one session hijacked another off a word said in passing (買房 →
   warranty, 前妻 → DV route, 繼承 → 繼承編, 仲介 → the rental trade, 分期 → the
-  instalment articles over a prepaid-voucher case). The growing session set is
-  what catches it — the last one was caught in the same run that introduced it —
-  and every added row ships with the counter-example as a test.
+  instalment articles, 管委會 → the arrears articles over a noise complaint) or
+  by sitting in the wrong row (民法§1164 in the co-ownership row cost an
+  inheritance case its §1141). Two of the seven were caught in the same run that
+  introduced them, which is what the growing session set buys; every added row
+  ships with the counter-example as a test.
 - **The ablation row is stale** (see the table).
 
 ## Measured, then NOT shipped

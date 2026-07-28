@@ -185,6 +185,32 @@ def test_an_instalment_demand_is_capped_by_the_article_that_caps_it():
     )
 
 
+def test_arrears_reach_the_article_the_committee_is_suing_under():
+    out = expansions("管委會說我欠三年管理費要告我,含滯納金六萬多")
+    assert "經定相當期間催告仍不給付者，管理負責人或管理委員會得訴請法院命其給付" in out  # §21
+    assert "共用部分、約定共用部分之修繕、管理、維護，由管理負責人或管理委員會為之" in out  # §10
+
+    # 管委會 alone must NOT fire it: it appears in most noise sessions, where this
+    # row's phrases took the seats 社維法§72 needed — golden fell 19 -> 17 once.
+    assert not any("管理負責人或管理委員會得訴請法院" in term
+                   for term in expansions("樓上很吵,我跟管委會反映過好幾次都沒用"))
+
+
+def test_unpaid_goods_reach_the_duty_to_pay():
+    """「出貨三批四十幾萬,對方拖了快一年」 was REFUSED at 資料不足."""
+    out = expansions("出貨給一家公司三批貨四十幾萬,月結六十天,對方拖著不付款")
+    assert "買受人對於出賣人，有交付約定價金及受領標的物之義務" in out   # §367
+    assert "債權人得請求依法定利率計算之遲延利息" in out                # §233
+
+
+def test_estate_partition_uses_the_estate_article():
+    """§1164 belongs in the inheritance row, not the co-ownership one — putting it
+    there cost oos-02-inheritance its 民法§1141 (golden 19 -> 18)."""
+    assert "繼承人得隨時請求分割遺產" in expansions("我爸過世三年遺產一直沒分,哥哥不肯談")
+    # the general co-ownership question is unaffected and still gets §823
+    assert "得隨時請求分割共有物" in expansions("房子我跟哥哥各二分之一,我想賣他不肯")
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
