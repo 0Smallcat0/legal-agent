@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **173/188 (92%)** | `evaluation/real_recall.py`, 83 lived problems |
+| retrieval recall, real user wording | **177/193 (92%)** | `evaluation/real_recall.py`, 86 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -135,6 +135,10 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   in the case itself. The standing rule against relabelling expectations exists
   to stop post-hoc inflation; an expectation that was wrong when written is a
   different thing, and saying which is which is the whole point.
+- **Some answers need arithmetic, not vocabulary.** 「借三十萬,三個月後返還四十五
+  萬」 never says 利息 or 利率, so nothing in a keyword table reaches 民法§205 —
+  the rate is implied by the amounts. Forcing triggers for it would only misfire
+  on other sessions, so it stays a miss with the reason recorded in the case.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
