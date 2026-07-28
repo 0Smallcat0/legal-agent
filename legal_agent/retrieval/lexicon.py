@@ -126,6 +126,31 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 僱用人連帶責任 (民法§188, §185) ──
+    # 「貨運公司的車送貨時撞到我,司機叫我找公司,公司說是司機的事」 got §184/§196/
+    # §216 — the driver's liability and its size — and nothing about WHO to sue,
+    # which was the whole question. §188 puts the employer on the hook alongside
+    # the employee; §185 covers the several-wrongdoers case.
+    (("受僱人", "執行職務", "員工撞", "司機", "送貨時", "外送員", "上班時撞",
+      "找公司", "公司要不要負責", "僱用人", "職務範圍"),
+     ("受僱人因執行職務，不法侵害他人之權利者，由僱用人與行為人連帶負損害賠償責任",
+      "數人共同不法侵害他人之權利者，連帶負損害賠償責任")),
+
+    # ── 違約金過高 (民法§252) ──
+    # 「才上三個月想解約,合約要我付剩餘期數再加三萬違約金」 reached 消保法§12 and
+    # 民法§247-1 — whether the clause is void — but not §252, which is what a
+    # court actually does with a penalty that is merely excessive.
+    (("違約金", "罰款太高", "提前解約", "賠剩下的", "剩餘期數", "解約金"),
+     ("約定之違約金額過高者，法院得減至相當之數額",)),
+
+    # ── 被詐欺或脅迫而簽約 (民法§92, §93) ──
+    # 「櫃姐說是體驗紀錄,結果是兩年二十四期的療程契約」 was REFUSED at 資料不足.
+    # §92 is the right to rescind, §93 is the one-year clock on doing it.
+    (("被騙簽", "話術", "沒說是契約", "誤導", "詐欺", "被逼簽", "脅迫",
+      "免費體驗", "說是體驗", "以為是", "沒給我看內容"),
+     ("因被詐欺或被脅迫而為意思表示者，表意人得撤銷其意思表示",
+      "應於發見詐欺或脅迫終止後，一年內為之")),
+
     # ── 管理費欠繳 / 管委會 (公寓大廈條例§21, §10) ──
     # 「管委會說我欠三年管理費要告我,可是電梯壞半年沒修」 got §6/§22/§33 and three
     # TENANCY articles — the asker owns the flat. §21 is the article the committee

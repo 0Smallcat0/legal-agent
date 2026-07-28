@@ -211,6 +211,29 @@ def test_estate_partition_uses_the_estate_article():
     assert "得隨時請求分割共有物" in expansions("房子我跟哥哥各二分之一,我想賣他不肯")
 
 
+def test_a_driver_on_duty_puts_the_employer_on_the_hook():
+    """「貨運公司的車送貨時撞到我,司機叫我找公司」 got the driver's liability and its
+    size, and nothing about WHO to sue — which was the whole question."""
+    out = expansions("貨運公司的貨車送貨時撞到我,司機說他只是員工叫我找公司")
+    assert "受僱人因執行職務，不法侵害他人之權利者，由僱用人與行為人連帶負損害賠償責任" in out  # §188
+    assert "數人共同不法侵害他人之權利者，連帶負損害賠償責任" in out                        # §185
+
+
+def test_an_excessive_penalty_reaches_the_article_that_cuts_it():
+    # 消保§12 and 民法§247-1 ask whether the clause is VOID; §252 is what a court
+    # does with one that is merely excessive.
+    assert "約定之違約金額過高者，法院得減至相當之數額" in expansions(
+        "健身房提前解約要付剩餘期數再加三萬違約金"
+    )
+
+
+def test_being_talked_into_signing_reaches_rescission():
+    """「櫃姐說是體驗紀錄,結果是兩年療程契約」 was REFUSED at 資料不足."""
+    out = expansions("櫃姐說免費體驗,叫我簽同意書,結果是兩年二十四期的療程契約,沒給我看內容")
+    assert "因被詐欺或被脅迫而為意思表示者，表意人得撤銷其意思表示" in out   # §92
+    assert "應於發見詐欺或脅迫終止後，一年內為之" in out                    # §93
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
