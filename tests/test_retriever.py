@@ -299,17 +299,21 @@ def test_a_seat_finishes_the_topic_the_window_already_confirms():
     try:
         lexicon.LEXICON = [(("t0",), ("甲語", "乙語")), (("t1",), ("丙語",))]
         lexicon.expansions = lambda _q: ["丙語", "甲語", "乙語"]   # 丙語 FIRST in order
-        r.LEXICON_RESERVED_SEATS = 1
+        # TWO seats: the first is reserved for the topic the window lacks, and the
+        # second is the property this test exists for — finishing the confirmed
+        # topic beats table order.
+        r.LEXICON_RESERVED_SEATS = 2
         r.config.QUERY_EXPANSION = "on"
         out = r._promote_lexicon_phrases(
-            "q", [in_window, same_row, other_row], [(in_window, 9.0)], k=2,
+            "q", [in_window, same_row, other_row], [(in_window, 9.0)], k=3,
         )
     finally:
         (lexicon.LEXICON, lexicon.expansions, r.LEXICON_RESERVED_SEATS,
          r.config.QUERY_EXPANSION) = saved
 
     promoted = [s.article_no for s, score in out if score == 0.0]
-    assert promoted == ["第2條"], f"the seat opened a new topic instead: {promoted}"
+    assert "第2條" in promoted, f"the confirmed topic was never finished: {promoted}"
+    assert promoted[0] == "第3條", f"the reserved first seat went elsewhere: {promoted}"
 
 
 def test_an_owner_occupier_is_not_handed_a_landlords_repair_duty(tmp_path):
@@ -377,6 +381,44 @@ def test_the_succession_chapter_stays_out_while_the_person_is_alive(tmp_path):
         assert ("測試法", "第2條") in dead
     finally:
         conn.close()
+
+
+def test_one_seat_is_reserved_for_a_topic_the_window_lacks():
+    """Corroboration was handing every seat to topics the ranking had already
+    confirmed, so 民法§254 and §264 fired first and still lost. A corroborated row
+    is by definition already represented; an uncorroborated one is a whole answer
+    the window is missing, so the first seat goes to it."""
+    from legal_agent.data.models import Statute
+    from legal_agent.retrieval import lexicon
+    from legal_agent.retrieval import retriever as r
+
+    def statute(no: str, content: str) -> Statute:
+        return Statute(
+            statute_id="測試法", article_no=no, content=content,
+            effective_from="2010-01-01", effective_to=None,
+            hierarchy_level="法律", source_url=f"http://x/{no}",
+        )
+
+    in_window = statute("第1條", "甲語 之規定")      # row 0, already ranked
+    same_row = statute("第2條", "乙語 之規定")       # row 0, corroborated
+    new_topic = statute("第3條", "丙語 之規定")      # row 1, nothing in the window
+
+    saved = (lexicon.LEXICON, lexicon.expansions, r.LEXICON_RESERVED_SEATS,
+             r.config.QUERY_EXPANSION)
+    try:
+        lexicon.LEXICON = [(("t0",), ("甲語", "乙語")), (("t1",), ("丙語",))]
+        lexicon.expansions = lambda _q: ["甲語", "乙語", "丙語"]
+        r.LEXICON_RESERVED_SEATS = 1
+        r.config.QUERY_EXPANSION = "on"
+        out = r._promote_lexicon_phrases(
+            "q", [in_window, same_row, new_topic], [(in_window, 9.0)], k=2,
+        )
+    finally:
+        (lexicon.LEXICON, lexicon.expansions, r.LEXICON_RESERVED_SEATS,
+         r.config.QUERY_EXPANSION) = saved
+
+    promoted = [s.article_no for s, score in out if score == 0.0]
+    assert promoted == ["第3條"], f"the seat completed a topic already present: {promoted}"
 
 
 if __name__ == "__main__":

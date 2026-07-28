@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **164/176 (93%)** | `evaluation/real_recall.py`, 77 lived problems |
+| retrieval recall, real user wording | **168/182 (92%)** | `evaluation/real_recall.py`, 80 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -105,6 +105,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   worse (107/113, 18/8/0). The expectations were written before each run and
   relabelling them afterwards would be grading my own work, so the number carries
   the misses.
+- **One seat is now reserved for a topic the window LACKS.** Corroboration was
+  handing all three to topics the ranking had already confirmed, so 民法§254 and
+  §264 fired first and still lost. A corroborated row is by definition already
+  represented; an uncorroborated one is a whole answer that is missing. Shipping
+  it is a reshuffle, not a free win: §148, §264 and one §354 came back, §248 and
+  one §505 went out, net +1 with golden unchanged at 19/7/0. It is the fourth
+  alternative tried and the first that did not lose.
 - **Corroboration cuts both ways, three times measured.** Giving a reserved seat
   to a row the ranking already confirms recovered 民法§248 and 刑§309; it also
   hands the seats to a topic that is confirmed but WRONG. 繼承編 for a living

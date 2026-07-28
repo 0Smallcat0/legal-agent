@@ -135,6 +135,32 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("妻之受胎，係在婚姻關係存續中者，推定其所生子女為婚生子女",
       "夫妻之一方或子女能證明子女非為婚生子女者，得提起否認之訴")),
 
+    # ── 遲延給付後解除契約 (民法§254, §259) ──
+    # 「合約寫兩個月交貨,拖了五個月一直說缺料,我不想等了」 returned 消保法§19 and the
+    # 承攬 articles. §254 is the route out: set a deadline, and if it passes,
+    # rescind. §259 is what comes back afterwards.
+    (("一直不交貨", "拖了", "不想等了", "遲遲沒", "逾期交貨", "遲延交貨",
+      "催了還是沒", "說缺料"),
+     ("契約當事人之一方遲延給付者，他方當事人得定相當期限催告其履行，如於期限內不履行時，得解除其契約",
+      "由他方所受領之給付物，應返還之")),
+
+    # ── 同時履行抗辯 (民法§264) ──
+    # 「合約寫安裝完成後付尾款,他要先收錢才願意來裝」 returned the 承攬 and 定金
+    # articles. §264 is the one sentence that answers it: until the other side
+    # performs, you may withhold your own.
+    (("裝好再付", "先收錢", "還沒做完就要錢", "完工後付", "先給錢再",
+      "東西還沒給", "貨還沒到就要"),
+     ("因契約互負債務者，於他方當事人未為對待給付前，得拒絕自己之給付",)),
+
+    # ── 區分所有權人會議的出席門檻 (公寓大廈條例§31, §32) ──
+    # 「三十二戶只有五戶出席就通過動用三百萬」 reached §30 (notice), §34 (minutes)
+    # and 民法§56 (setting it aside) — everything except the threshold that decides
+    # whether there was a decision at all.
+    (("戶出席", "出席人數不足", "人數不夠", "沒有達到人數", "出席比例",
+      "幾戶出席", "重新召集"),
+     ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
+      "召集人得就同一議案重新召集會議")),
+
     # ── 死亡宣告 (民法§8, §9) ──
     # 「我爸十年前出門就沒再回來,戶政說要先有死亡宣告才能辦繼承」 returned the whole
     # 繼承編 — the step BEFORE any of that is missing. §8 is the seven-year wait
