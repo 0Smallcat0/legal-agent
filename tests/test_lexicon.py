@@ -159,6 +159,32 @@ def test_disclaiming_an_inheritance_reaches_the_deadline():
     assert "繼承人對於被繼承人之債務，以因繼承所得遺產為限，負清償責任" in out  # §1148
 
 
+def test_being_fired_reaches_whether_it_was_allowed_at_all():
+    """「叫我今天別來,理由是態度不佳」 returned §16/§17/§20 — how much severance —
+    which quietly concedes the dismissal was valid. §11 is the exhaustive list of
+    grounds, and 態度不佳 is not on it."""
+    out = expansions("公司叫我今天就別來了,理由是態度不佳跟主管不合,能不能要求回去上班")
+    assert "非有左列情事之一者，雇主不得預告勞工終止勞動契約" in out    # 勞基§11
+    assert "勞工有左列情形之一者，雇主得不經預告終止契約" in out        # 勞基§12
+
+
+def test_an_encroaching_wall_reaches_the_right_to_have_it_removed():
+    out = expansions("鄰居把圍牆蓋進我家土地五十公分,地政測量確認越界,他不肯拆")
+    assert "土地所有人建築房屋非因故意或重大過失逾越地界者" in out       # §796
+    assert "所有人對於無權占有或侵奪其所有物者，得請求返還之" in out     # §767
+
+
+def test_an_instalment_demand_is_capped_by_the_article_that_caps_it():
+    out = expansions("刷分期三十期上了三期想停,業者說要一次付完剩下的二十七期")
+    assert "除買受人遲付之價額已達全部價金五分之一外" in out            # §389
+
+    # …but a voucher session that merely MENTIONS paying by instalment must not
+    # be dragged in: 「刷卡分期還有六期沒繳完」 cost 民法§256 its seat once.
+    assert "除買受人遲付之價額已達全部價金五分之一外" not in expansions(
+        "美容店買了三萬元療程套票,做兩次店就關門了,當時刷卡分期還有六期沒繳完"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
