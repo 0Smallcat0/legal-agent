@@ -144,7 +144,11 @@ def _drop_industry_regulation(query: str, candidates: list[Statute]) -> list[Sta
 _TENANCY_SUBJECTS = ("承租人", "出租人", "租賃物", "租賃契約", "租賃住宅")
 # Said only when the asker owns the place…
 _OWNER_OCCUPIED = ("自有住宅", "自己的房子", "我買的", "我的房子", "我是屋主",
-                   "屋主是我", "已經過戶", "交屋")
+                   "屋主是我", "已經過戶", "交屋",
+                   # A bought THING counts too: 「裝好的冷氣一直漏水,修了四次」 spent
+                   # all three reserved seats on tenancy articles because 修繕 and
+                   # 漏水 had filled the ranked window with them first.
+                   "保固卡", "保固期", "含安裝", "買了一台")
 # …and only believed when nothing in the question puts a tenancy in the room.
 # A landlord asking about their OWN rented-out flat says 房東/租約/房客, and a
 # tenant says 押金/退租, so either way the articles stay.
