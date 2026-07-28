@@ -234,6 +234,26 @@ def test_being_talked_into_signing_reaches_rescission():
     assert "應於發見詐欺或脅迫終止後，一年內為之" in out                    # §93
 
 
+def test_a_debtor_moving_assets_reaches_the_revocation_right():
+    """「他欠我一百萬,查到上個月把名下唯一的房子過戶給兒子」 returned the 消費借貸
+    articles — he owes me — and nothing about undoing the transfer."""
+    out = expansions("欠我一百萬的人把名下唯一的房子過戶給他兒子說是贈與")
+    assert "債務人所為之無償行為，有害及債權者，債權人得聲請法院撤銷之" in out   # §244
+    assert "債務人怠於行使其權利時，債權人因保全債權" in out                    # §242
+
+
+def test_an_agent_who_kept_the_money_reaches_the_mandate_chapter():
+    out = expansions("我委託代辦幫我處理修繕補助,給了八萬代辦費,他沒送件也不退錢")
+    assert "受任人因處理委任事務，所收取之金錢、物品及孳息，應交付於委任人" in out  # §541
+    assert "當事人之任何一方，得隨時終止委任契約" in out                          # §549
+
+    # Bare 委任 is not a trigger: 「爸爸沒有立過任何委任或授權書」 said in passing
+    # cost the dementia session its 民法§14 once.
+    assert not any("受任人因處理委任事務" in term for term in expansions(
+        "我爸重度失智,沒有立過任何委任或授權書,弟弟把他的錢領走"
+    ))
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
