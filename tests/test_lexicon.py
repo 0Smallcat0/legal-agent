@@ -428,6 +428,26 @@ def test_an_unborn_child_already_counts():
     )                                                                    # §7
 
 
+def test_a_ten_year_disappearance_reaches_the_declaration_of_death():
+    """「我爸十年前出門就沒再回來,戶政說要先有死亡宣告」 returned the whole 繼承編 —
+    the step BEFORE any of it was missing."""
+    out = expansions("我爸十年前出門就沒再回來,報警協尋沒消息,要怎麼辦死亡宣告,要等多久")
+    assert "失蹤人失蹤滿七年後，法院得因利害關係人或檢察官之聲請，為死亡之宣告" in out  # §8
+    assert "受死亡宣告者，以判決內所確定死亡之時，推定其為死亡" in out                # §9
+
+
+def test_a_mandate_that_ended_midway_reaches_its_own_articles():
+    """A separate row rather than five phrases in the existing 委任 one: that row
+    is at three seats already, and stuffing it would only move the loss."""
+    out = expansions("代書辦到一半過世了,先付的六萬能不能拿回來,還是做多少算多少")
+    assert "委任關係，因當事人一方死亡、破產或喪失行為能力而消滅" in out              # §550
+    assert "委任關係，因非可歸責於受任人之事由，於事務處理未完畢前已終止者" in out    # §548
+
+    # …and the still-running mandate session keeps its own articles.
+    running = expansions("我委託代辦幫我處理修繕補助,給了八萬代辦費,他沒送件也不退錢")
+    assert "受任人因處理委任事務，所收取之金錢、物品及孳息，應交付於委任人" in running  # §541
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
