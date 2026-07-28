@@ -495,6 +495,26 @@ def test_a_guardian_cannot_simply_sell_the_home():
     assert "監護人於執行有關受監護人之生活、護養療治及財產管理之職務時，應尊重受監護人之意思" in out  # §1112
 
 
+def test_siblings_share_the_duty_by_means():
+    """「安養院只找我要錢,哥哥姊姊都說沒錢不出」 reached §1116 — the order among
+    people ENTITLED to support — which is the mirror of the question."""
+    out = expansions("安養院只找我要錢,哥哥姊姊都說沒錢不出,扶養是不是應該一起分擔")
+    assert "負扶養義務者有數人時，應依左列順序定其履行義務之人" in out                # §1115
+    assert "負扶養義務者有數人而其親等同一時，應各依其經濟能力，分擔義務" in out      # §1115 末項
+
+
+def test_a_customer_may_stop_the_work_and_pay_only_the_loss():
+    assert "工作未完成前，定作人得隨時終止契約。但應賠償承攬人因契約終止而生之損害" in expansions(
+        "裝潢做到一半品質很差,我想喊停找別人,他說我違約要賠他全部的錢"
+    )                                                                    # §511
+
+
+def test_an_adult_childs_debt_is_his_own():
+    out = expansions("兒子剛滿十八在外面借了十五萬,對方說我是父親要負責幫他還")
+    assert "滿十八歲為成年" in out                                        # §12
+    assert any("由其代負履行責任之契約" in term for term in out)          # §739
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
