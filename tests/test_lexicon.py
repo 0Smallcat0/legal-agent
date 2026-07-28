@@ -385,6 +385,29 @@ def test_deliberate_concealment_costs_more_than_a_mistake():
     )                                                                    # 消保§51
 
 
+def test_being_told_to_stay_home_does_not_cost_the_wage():
+    assert "僱用人受領勞務遲延者，受僱人無補服勞務之義務，仍得請求報酬" in expansions(
+        "公司叫我先不用來上班在家等通知,兩個月只給一半薪水,說我沒來上班"
+    )                                                                        # §487
+
+
+def test_a_co_debtor_paying_releases_the_others():
+    out = expansions("我是連帶保證人,朋友說他已經全部還清了,銀行還是寄存證信函來要我還")
+    assert any("他債務人亦同免其責任" in term for term in out)                # §274
+
+    # 求償 is not a trigger: it is said in every compensation question and once
+    # displaced 民法§197/§129 from a limitation-period session.
+    assert not any("他債務人亦同免其責任" in term for term in expansions(
+        "三年前有人騎車撞到我,現在我還能跟他求償嗎"
+    ))
+
+
+def test_shared_part_repairs_reach_who_pays():
+    out = expansions("頂樓平台防水層破了漏到我家,管委會說要大家分攤,這筆錢到底誰要出錢")
+    assert "共用部分、約定共用部分之修繕、管理、維護，由管理負責人或管理委員會為之" in out  # 條例§10
+    assert "共有部分之修繕費及其他負擔" in out                                        # 民法§799-1
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

@@ -135,6 +135,24 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("妻之受胎，係在婚姻關係存續中者，推定其所生子女為婚生子女",
       "夫妻之一方或子女能證明子女非為婚生子女者，得提起否認之訴")),
 
+    # ── 僱用人受領勞務遲延 (民法§487) ──
+    # 「公司說訂單少叫我先不用來,在家等通知,兩個月只給一半薪水」 returned the
+    # dismissal and wage articles. §487 is the one that answers it: an employer
+    # who refuses to accept the work still owes the pay.
+    (("叫我先不用來", "不用來上班", "在家等通知", "說我沒來上班", "待命",
+      "停工", "無薪假", "叫我在家"),
+     ("僱用人受領勞務遲延者，受僱人無補服勞務之義務，仍得請求報酬",)),
+
+    # ── 共有部分的修繕費用 (公寓大廈條例§10, 民法§799-1) ──
+    # 「頂樓防水層破了漏到我家,五樓說頂樓是他專用的,管委會說要大家分攤」 reached
+    # 條例§7 (頂樓平台不得約定專用) but nothing about who PAYS, which is what was
+    # asked. §10 II puts shared-part repair on the committee; 民法§799-1 splits the
+    # cost by share.
+    (("誰要出錢", "誰出錢修", "要大家分攤", "頂樓平台", "防水層", "外牆漏水",
+      "共用部分修繕", "費用怎麼分"),
+     ("共用部分、約定共用部分之修繕、管理、維護，由管理負責人或管理委員會為之",
+      "共有部分之修繕費及其他負擔")),
+
     # ── 無因管理 (民法§176) ──
     # 「樓上出國,水管爆了漏到我家,聯絡不上只好自己找水電修,花了兩萬八」 returned the
     # TENANCY and 相鄰關係 chapters. Nobody is renting; the asker managed someone
@@ -275,11 +293,17 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 「三個人一起簽的借據,債主只找我一個要全部」 reached §273 — yes, he may — but
     # not the other half the asker actually asked: what happens after I pay.
     # §280 splits it equally between them, §281 is the right to collect it back.
-    (("連帶", "一起借", "三個人簽", "只找我一個", "全部都找我", "求償",
+    # 求償 is OUT: it is said in every compensation question, and with §274 added
+    # this row's four phrases then displaced 民法§197/§129 from a limitation-period
+    # session (「現在我還能跟他求償嗎」).
+    (("連帶", "一起借", "三個人簽", "只找我一個", "全部都找我",
       "分擔", "共同債務人", "保證人"),
      ("連帶債務之債權人，得對於債務人中之一人或數人或其全體",
       "連帶債務人相互間，除法律另有規定或契約另有訂定外，應平均分擔義務",
-      "得向他債務人請求償還各自分擔之部分")),
+      "得向他債務人請求償還各自分擔之部分",
+      # 「朋友說他已經全部還清了,銀行還是來要我還」 — §274 is the answer and the
+      # row reached §273/§276/§280/§281 all around it.
+      "因連帶債務人中之一人為清償、代物清償、提存、抵銷或混同而債務消滅者，他債務人亦同免其責任")),
 
     # ── 脫產 / 詐害債權 (民法§244, §242) ──
     # 「他欠我一百萬,查到上個月把名下唯一的房子過戶給兒子」 returned the 消費借貸
