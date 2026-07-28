@@ -126,6 +126,28 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 監護宣告 / 無行為能力 (民法§14, §15, §75) ──
+    # 「我爸失智,弟弟拿他的存摺把錢領走,說是爸爸同意的」 filled its whole window
+    # with 繼承編 (§1138–§1176). The father is ALIVE — answering a living man's
+    # family with the rules for dividing his estate is the wrong-premise failure
+    # this project exists to avoid. §14 is how the court appoints a guardian,
+    # §15 says such a person has no capacity, and §75 is why the 「他同意的」
+    # defence fails: an expression of will made without understanding is void.
+    (("失智", "阿茲海默", "認不得", "神智不清", "意識不清", "精神障礙",
+      "監護宣告", "輔助宣告", "沒有行為能力", "無行為能力", "植物人", "重度身心障礙"),
+     ("法院得因本人、配偶、四親等內之親屬",
+      "受監護宣告之人，無行為能力",
+      "其意思表示，係在無意識或精神錯亂中所為者亦同")),
+
+    # ── 利息與定期給付的時效 (民法§126, §205) ──
+    # 「十五年前的卡債,本金八萬,剩下都是利息跟違約金」 reached §125/§129/§144 but
+    # not the two articles that decide the size of it: interest runs on a FIVE
+    # year clock, not fifteen, and anything over 16% a year is void.
+    (("利息", "違約金", "循環利息", "滾利", "利滾利", "本金", "年息", "月息",
+      "催收", "資產管理公司", "債權轉讓"),
+     ("其各期給付請求權，因五年間不行使而消滅",
+      "約定利率，超過週年百分之十六者，超過部分之約定，無效")),
+
     # ── 不當得利 (民法§179, §181, §182) ──
     # 返還不當得利 is the 12th most common 案由 in the harvested judgments and the
     # session set had never covered it: 「轉帳打錯,三萬匯給不認識的人,他說花掉了

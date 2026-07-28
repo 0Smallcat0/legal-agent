@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **63/63 (100%)** | `evaluation/real_recall.py`, 28 lived problems |
+| retrieval recall, real user wording | **70/70 (100%)** | `evaluation/real_recall.py`, 30 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -110,6 +110,13 @@ Each of these looked obviously right and lost on the numbers:
 - **per-statute cap on the retrieval window** — one statute really does flood it
   (7 of 8 seats), but capping loses on both harnesses, because real answers
   legitimately cluster inside one code (民法§354+§359).
+- **capping corroboration once a row already had N articles in the window.** A
+  session about a living man with dementia had a window that was 8/8 繼承編, so
+  the inheritance row counted as corroborated and spent 2 of 3 seats fetching a
+  ninth and tenth inheritance article. Measured against the uncapped 68/70:
+  N=1 → 65/70, N=2 → 66/70, N=3 → 68/70. Finishing a topic is worth more than
+  the one case it was meant to rescue — that case was fixed by knowing the
+  father is alive instead.
 - **three separate signals for 「is this question out of scope」**, all measured
   against the five out-of-scope golden cases and all overlapping the in-scope
   range: dense cosine (0.611–0.649 out of scope, 0.569–0.770 in scope — the

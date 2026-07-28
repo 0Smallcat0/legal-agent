@@ -120,6 +120,21 @@ def test_money_sent_by_mistake_reaches_unjust_enrichment():
     assert "受領人於受領時，知無法律上之原因或其後知之者" in out          # §182
 
 
+def test_a_living_parent_reaches_guardianship_not_inheritance():
+    out = expansions("我爸失智兩年,連我都認不得,弟弟拿他存摺印章把錢領走說是爸爸同意的")
+    assert "受監護宣告之人，無行為能力" in out                        # §15
+    assert "其意思表示，係在無意識或精神錯亂中所為者亦同" in out       # §75 — 「他同意的」
+    assert "法院得因本人、配偶、四親等內之親屬" in out                 # §14
+
+
+def test_an_old_debt_reaches_the_articles_that_size_it():
+    """§125/§129/§144 answer 「還要不要還」; §126 and §205 answer 「還多少」 — interest
+    runs on a five-year clock and anything over 16% a year is void."""
+    out = expansions("十五年前的卡債,本金八萬,剩下都是利息跟違約金,資產管理公司來催收")
+    assert "其各期給付請求權，因五年間不行使而消滅" in out             # §126
+    assert "約定利率，超過週年百分之十六者，超過部分之約定，無效" in out  # §205
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

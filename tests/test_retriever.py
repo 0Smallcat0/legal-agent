@@ -346,5 +346,38 @@ def test_an_owner_occupier_is_not_handed_a_landlords_repair_duty(tmp_path):
         conn.close()
 
 
+def test_the_succession_chapter_stays_out_while_the_person_is_alive(tmp_path):
+    """「我爸失智,弟弟拿他的存摺把錢領走」 returned a window that was 8/8 繼承編.
+    The father is alive; answering his family with the rules for dividing his
+    estate is the wrong-premise failure this project exists to avoid."""
+    db = tmp_path / "alive.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    conn.executemany(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("測試法", "第1條", "受監護宣告之人，無行為能力，其存摺財產應由監護人管理。",
+             "2010-01-01", None, "法律", "http://x/1"),
+            ("測試法", "第2條", "遺產由繼承人按應繼分繼承，存摺財產亦同。",
+             "2010-01-01", None, "法律", "http://x/2"),
+        ],
+    )
+    conn.commit()
+    try:
+        alive = [(s.statute_id, s.article_no)
+                 for s in retrieve("我爸失智認不得人,弟弟把他存摺的財產領走", conn=conn)]
+        assert ("測試法", "第1條") in alive
+        assert ("測試法", "第2條") not in alive
+
+        # An explicit death always wins — 「一人一半繼承了房子」 must still reach it.
+        dead = [(s.statute_id, s.article_no)
+                for s in retrieve("我爸過世了,存摺的財產要怎麼繼承", conn=conn)]
+        assert ("測試法", "第2條") in dead
+    finally:
+        conn.close()
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
