@@ -135,6 +135,38 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("妻之受胎，係在婚姻關係存續中者，推定其所生子女為婚生子女",
       "夫妻之一方或子女能證明子女非為婚生子女者，得提起否認之訴")),
 
+    # ── 無因管理 (民法§176) ──
+    # 「樓上出國,水管爆了漏到我家,聯絡不上只好自己找水電修,花了兩萬八」 returned the
+    # TENANCY and 相鄰關係 chapters. Nobody is renting; the asker managed someone
+    # else's affair without being asked, and §176 is what lets him bill for it.
+    # 聯絡不上 was a trigger for one run and cost a prepaid-voucher session its
+    # 民法§256 — 「老闆也聯絡不上」 is said whenever anyone has gone quiet. The
+    # trigger has to be the ACT of stepping in, not the silence that prompted it.
+    (("只好自己", "自己找水電", "先幫他", "代墊修繕", "我先處理", "幫他修",
+      "無因管理", "先付了錢幫"),
+     ("管理事務，利於本人，並不違反本人明示或可得推知之意思者",
+      "得請求本人償還其費用及自支出時起之利息")),
+
+    # ── 公同共有的權利行使 (民法§828, §820) ──
+    # 「房子登記三兄妹公同共有,兩個人同意能不能出租」 got §818/§821/§824 — the rules
+    # for 分別共有 — and not §828, which says 公同共有 needs EVERYONE unless the law
+    # says otherwise. §820 is the majority rule it borrows for mere management.
+    # Bare 公同共有 and 還沒分割 cost an estate-partition session its 民法§1164:
+    # every inheritance is 公同共有 before it is divided. The triggers are about
+    # CONSENT, which is what this row actually answers.
+    (("都點頭", "不同意就不能", "兩個人同意", "全體同意", "一個人反對",
+      "他不同意就", "要全部同意"),
+     ("公同共有物之處分及其他之權利行使，除法律另有規定外，應得公同共有人全體之同意",
+      "共有物之管理，除契約另有約定外，應以共有人過半數及其應有部分合計過半數之同意行之")),
+
+    # ── 懲罰性賠償 (消保法§51) ──
+    # 「業者自己的單子早就知道是泡水車」 reached §354/§359 — return it, cut the price —
+    # and nothing about the asker's actual question, which was whether deliberate
+    # deceit costs the seller more than an honest mistake. It does: up to five times.
+    (("他們是故意的", "故意的", "早就知道", "明知", "隱瞞", "懲罰性賠償",
+      "多要一些", "刻意不說"),
+     ("因企業經營者之故意所致之損害，消費者得請求損害額五倍以下之懲罰性賠償金",)),
+
     # ── 抵銷 (民法§334, §335) ──
     # 「我借他三十萬他沒還,我也欠他二十萬貨款,可以互相抵掉嗎」 returned the loan and
     # sale articles — both debts, neither answer. Triggers are the session's own

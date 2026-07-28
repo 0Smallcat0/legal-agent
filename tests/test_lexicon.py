@@ -355,6 +355,36 @@ def test_a_paternity_question_is_not_a_divorce_question():
     )                                                                        # §1063
 
 
+def test_stepping_in_for_an_absent_neighbour_reaches_negotiorum_gestio():
+    out = expansions("樓上出國水管爆了漏到我家,我只好自己找水電修好,花了兩萬八想跟他要")
+    assert "管理事務，利於本人，並不違反本人明示或可得推知之意思者" in out   # §176
+
+    # 聯絡不上 is NOT a trigger: it is said whenever anyone has gone quiet, and it
+    # cost a prepaid-voucher session its 民法§256 for one run.
+    assert not any("管理事務，利於本人" in term for term in expansions(
+        "美容店買了三萬元療程套票,做兩次店就關門,老闆也聯絡不上"
+    ))
+
+
+def test_joint_ownership_consent_is_not_the_partition_question():
+    out = expansions("三兄妹的房子,大哥說他不同意就不能租,兩個人同意能不能就出租")
+    assert "公同共有物之處分及其他之權利行使，除法律另有規定外，應得公同共有人全體之同意" in out  # §828
+
+    # Bare 公同共有 is NOT a trigger: every estate is 公同共有 before it is divided,
+    # and it cost a partition session its 民法§1164.
+    assert not any("應得公同共有人全體之同意" in term for term in expansions(
+        "我爸過世三年遺產一直沒分,登記三個人公同共有,我想把遺產分一分"
+    ))
+
+
+def test_deliberate_concealment_costs_more_than_a_mistake():
+    """「業者自己的單子早就知道是泡水車」 reached 瑕疵擔保 and nothing about the
+    asker's actual question — whether deliberate deceit costs the seller more."""
+    assert "因企業經營者之故意所致之損害，消費者得請求損害額五倍以下之懲罰性賠償金" in expansions(
+        "二手車業者說沒泡過水,他們自己的單子早就知道,他們是故意的,能不能多要一些"
+    )                                                                    # 消保§51
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
