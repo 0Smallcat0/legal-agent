@@ -556,6 +556,26 @@ def test_clearing_out_reaches_the_duty_to_return_the_thing():
     assert "承租人於租賃關係終止後，應返還租賃物" in out                      # §455
 
 
+def test_a_favour_asked_and_accepted_is_a_mandate():
+    """「請朋友幫我賣二手車,他說只是幫忙不是受我委託」 returned the 買賣瑕疵 articles
+    off the word 賣, with nothing that tests his claim."""
+    out = expansions("我請朋友幫我賣二手車,賣了十八萬錢不給我,他說只是幫忙不是受我委託")
+    assert "稱委任者，謂當事人約定，一方委託他方處理事務，他方允為處理之契約" in out   # §528
+    assert "受任人因處理委任事務，支出之必要費用" in out                            # §546
+
+
+def test_rent_still_accepted_keeps_the_lease_alive():
+    assert "租賃期限屆滿後，承租人仍為租賃物之使用收益，而出租人不即表示反對之意思者，視為以不定期限繼續契約" in expansions(
+        "租約到期沒續約,我照常繳房租他也照收,現在說要我兩週內搬走"
+    )                                                                    # §451
+
+
+def test_waiting_for_a_hearing_reaches_the_faster_order():
+    assert "法院核發暫時保護令或緊急保護令，得不經審理程序" in expansions(
+        "聲請保護令一個多月還沒開庭,對方昨天又來砸東西,有沒有更快的方式"
+    )                                                                    # 家暴法§16
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

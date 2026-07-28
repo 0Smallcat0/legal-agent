@@ -161,6 +161,33 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 是不是委任 (民法§528, §546) ──
+    # 「請朋友幫我賣二手車,賣了十八萬錢不給我,他說只是幫忙不是受我委託」 returned the
+    # 買賣瑕疵 articles off the word 賣. §528 defines 委任 by the agreement to
+    # handle another's affair — a favour asked and accepted is one — and §546 is
+    # the answer to his petrol claim: necessary expenses are reimbursed, not
+    # deducted at will.
+    (("只是幫忙", "不是受我委託", "請朋友幫我", "幫我賣", "代賣", "託他處理",
+      "說沒有義務"),
+     ("稱委任者，謂當事人約定，一方委託他方處理事務，他方允為處理之契約",
+      "受任人因處理委任事務，支出之必要費用")),
+
+    # ── 租約屆期後的默示更新 (民法§451) ──
+    # 「租約半年前到期,房東沒說要續約也沒叫我搬,房租照匯他也照收」 reached §440/§450
+    # and the 條例 articles — how a tenancy ENDS. §451 is why one still exists:
+    # use continued without objection turns it into an open-ended lease.
+    (("到期沒續約", "沒有簽新的約", "照常繳房租", "他也照收", "到期後還住",
+      "沒叫我搬", "說搬就搬"),
+     ("租賃期限屆滿後，承租人仍為租賃物之使用收益，而出租人不即表示反對之意思者，視為以不定期限繼續契約",)),
+
+    # ── 暫時與緊急保護令 (家暴法§16) ──
+    # 「聲請一個多月還沒開庭,對方昨天又來砸東西」 reached §9/§10/§13/§14 — the kinds
+    # of order and how to apply. §16 is the answer to 「有沒有更快的方式」: an
+    # interim or emergency order can issue without a hearing.
+    (("還沒開庭", "等太久", "更快的方式", "暫時保護令", "緊急保護令",
+      "要排開庭", "來不及等"),
+     ("法院核發暫時保護令或緊急保護令，得不經審理程序",)),
+
     # ── 僱傭或承攬 (民法§482, 勞基法§2) ──
     # 「每天打卡上班八小時,主管排班也管我請假,可是公司要我簽承攬契約」 returned the
     # entire 承攬 chapter — because the contract is CALLED 承攬, while the question
