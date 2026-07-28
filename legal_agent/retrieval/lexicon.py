@@ -161,6 +161,36 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 附合與承租人的工作物 (民法§811, §431) ──
+    # 「租五年自己花錢裝的鐵窗跟嵌入式冷氣,房東說裝上去就不能拆走」 returned the
+    # tenancy repair and return articles. §811 is why the landlord is partly
+    # right — a fitting that becomes an essential part of the building goes with
+    # it — and §431 is the tenant's side: increased value is reimbursed, and a
+    # work fixture may be taken back if the place is restored.
+    (("自己花錢裝", "拆得走", "拆走", "裝上去就", "焊上去", "嵌入式",
+      "退租時要拆"),
+     ("動產因附合而為不動產之重要成分者，不動產所有人，取得動產所有權",
+      "承租人就租賃物支出有益費用，因而增加該物之價值者")),
+
+    # ── 連帶債務是否成立 (民法§272) ──
+    # 「三個人都簽名但沒有寫連帶,對方直接要我一個人還六十萬」 returned §273/§274/
+    # §277/§280/§281 — every CONSEQUENCE of joint liability, while the question is
+    # whether it exists at all. §272 is the prerequisite: without an express term
+    # it arises only where a statute says so.
+    (("沒有寫連帶", "沒寫連帶", "要我一個人還", "全部還是三分之一",
+      "平均分擔嗎", "為什麼是我還全部"),
+     ("數人負同一債務，明示對於債權人各負全部給付之責任者，為連帶債務",
+      "無前項之明示時，連帶債務之成立，以法律有規定者為限")),
+
+    # ── 親權的行使 (民法§1084, §1089) ──
+    # 「親權判給我,前夫接去過夜就不還了,說他也是爸爸有權帶」 reached §1055 and the
+    # divorce chapter. §1084 II is the duty the right comes from, and §1089 says
+    # who exercises it when the parents disagree.
+    (("不還我", "帶走不還", "接回來", "親權判給我", "說他也是爸爸",
+      "監護權判給我", "不讓我接"),
+     ("父母對於未成年之子女，有保護及教養之權利義務",
+      "對於未成年子女之權利義務，除法律另有規定外，由父母共同行使或負擔之")),
+
     # ── 扶養義務人有數人時的分擔 (民法§1115) ──
     # 「社工跟安養院只找我要錢,哥哥姊姊都說沒錢不出」 reached §1116 — the order among
     # people ENTITLED to support — which is the mirror of the question. §1115 is

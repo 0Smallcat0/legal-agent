@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **182/199 (91%)** | `evaluation/real_recall.py`, 89 lived problems |
+| retrieval recall, real user wording | **187/205 (91%)** | `evaluation/real_recall.py`, 92 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -139,6 +139,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   萬」 never says 利息 or 利率, so nothing in a keyword table reaches 民法§205 —
   the rate is implied by the amounts. Forcing triggers for it would only misfire
   on other sessions, so it stays a miss with the reason recorded in the case.
+- **The window can hold every consequence of a rule and never state the rule.**
+  A session asking whether joint liability existed at all got §273/§274/§277/§280
+  and §281 — how joint debtors are pursued, released and reimbursed — with §272,
+  the article that says it only arises when expressly agreed, nowhere in sight.
+  The same shape hit 民法§274, §277 and §1115 in earlier rounds: the answer's
+  neighbours arrive and the answer does not.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
