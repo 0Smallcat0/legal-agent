@@ -161,6 +161,33 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 扶養義務人有數人時的分擔 (民法§1115) ──
+    # 「社工跟安養院只找我要錢,哥哥姊姊都說沒錢不出」 reached §1116 — the order among
+    # people ENTITLED to support — which is the mirror of the question. §1115 is
+    # the order among those who OWE it, and its last paragraph is the answer:
+    # same degree of kinship, share according to means.
+    (("只找我要", "都說沒錢不出", "為什麼只有我", "一起分擔", "我付掉的",
+      "兄弟姊妹都不出", "都推給我"),
+     ("負扶養義務者有數人時，應依左列順序定其履行義務之人",
+      "負扶養義務者有數人而其親等同一時，應各依其經濟能力，分擔義務")),
+
+    # ── 定作人中途終止承攬 (民法§511) ──
+    # 「裝潢做到一半,師傅品質很差我想喊停」 returned §502/§506/§512 and the 委任
+    # articles. §511 is the exact answer: before the work is finished the customer
+    # may stop it at any time, and pays for the loss that causes — not the lot.
+    (("想喊停", "不想再做下去", "中途終止", "做到一半不做", "換別人做",
+      "不想給他做了"),
+     ("工作未完成前，定作人得隨時終止契約。但應賠償承攬人因契約終止而生之損害",)),
+
+    # ── 成年 (民法§12, §739) ──
+    # 「兒子剛滿十八在外面借了十五萬,對方說我是父親要負責」 returned the joint-debt
+    # chapter — the father was never a debtor. §12 makes the son an adult, and
+    # §739 says a guarantee takes a contract, which he never signed.
+    (("剛滿十八", "已經成年", "我是父親要負責", "幫他還", "兒子欠錢",
+      "女兒欠錢", "小孩在外面借"),
+     ("滿十八歲為成年",
+      "稱保證者，謂當事人約定，一方於他方之債務人不履行債務時，由其代負履行責任之契約")),
+
     # ── 暴利行為 (民法§74) ──
     # 「我媽住院急需三十萬,對方知道我很急,借三十萬要我三個月還四十五萬」 returned the
     # 消費借貸 chapter — the loan, as if the terms were ordinary. §74 is the one
