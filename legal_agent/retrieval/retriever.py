@@ -164,6 +164,31 @@ def _drop_tenancy_when_owner_occupied(query: str, candidates: list[Statute]) -> 
     ]
 
 
+# 「我爸失智,弟弟拿他的存摺把錢領走」 returned a window that was 8/8 繼承編. The
+# father is ALIVE; answering his family with the rules for dividing his estate is
+# the wrong-premise failure this project exists to avoid.
+_INHERITANCE_SUBJECTS = ("被繼承人", "遺產", "應繼分", "繼承人", "遺囑")
+# Words that only make sense about someone still living…
+_STILL_ALIVE = ("失智", "認不得", "神智不清", "意識不清", "住院", "還在世",
+                "植物人", "臥床", "安養院", "療養院")
+# …and never believed over an explicit death. 「一人一半繼承了一間房子」 keeps the
+# chapter, which is how a co-ownership session still reaches 繼承 when it should.
+_DEATH_IN_QUESTION = ("過世", "往生", "去世", "身故", "死亡", "走了", "遺產",
+                      "繼承", "喪事", "告別式", "遺囑")
+
+
+def _drop_inheritance_while_alive(query: str, candidates: list[Statute]) -> list[Statute]:
+    """Drop the succession chapter when the person concerned is plainly alive."""
+    if not any(word in query for word in _STILL_ALIVE):
+        return candidates
+    if any(word in query for word in _DEATH_IN_QUESTION):
+        return candidates
+    return [
+        c for c in candidates
+        if not any(word in (c.content or "") for word in _INHERITANCE_SUBJECTS)
+    ]
+
+
 def _retrieve_scored(
     query: str,
     as_of_date: str | None,
@@ -196,6 +221,7 @@ def _retrieve_scored(
 
     candidates = _drop_industry_regulation(query, candidates)
     candidates = _drop_tenancy_when_owner_occupied(query, candidates)
+    candidates = _drop_inheritance_while_alive(query, candidates)
     if not candidates:
         return []
 
@@ -271,6 +297,11 @@ def _expand(text: str) -> str:
 # pass -> partial (pass+partial stays 25/26). N=4 buys nothing and starts
 # evicting answers outright.
 LEXICON_RESERVED_SEATS = 3
+# TRIED AND REJECTED — capping corroboration once a row already had N articles
+# in the window ("the ninth inheritance article is worth nothing, the first
+# 監護宣告 article is worth everything"). Measured against the uncapped 68/70:
+#   N=1 -> 65/70,  N=2 -> 66/70,  N=3 -> 68/70,  golden 19/7/0 throughout.
+# Finishing a topic is worth more than the one case it was meant to rescue.
 
 
 def _promote_lexicon_phrases(
