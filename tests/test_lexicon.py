@@ -408,6 +408,26 @@ def test_shared_part_repairs_reach_who_pays():
     assert "共有部分之修繕費及其他負擔" in out                                        # 民法§799-1
 
 
+def test_a_seal_used_without_permission_is_not_my_contract():
+    """「兒子拿我的印章跟裝潢公司簽了六十萬」 returned the whole 承攬 chapter — the
+    asker is not a party to anything yet."""
+    out = expansions("我兒子拿我的印章去跟裝潢公司簽約,簽名不是我簽的,我完全不知情")
+    assert "無代理權人以代理人之名義所為之法律行為，非經本人承認，對於本人不生效力" in out  # §170
+    assert "無代理權人，以他人之代理人名義所為之法律行為，對於善意之相對人，負損害賠償之責" in out  # §110
+
+
+def test_a_guarantor_set_off_is_capped_at_the_share():
+    assert any("以該債務人應分擔之部分為限，得主張抵銷" in term for term in expansions(
+        "我是連帶保證人,債權人自己也欠我表哥八十萬貨款,我能不能拿來抵"
+    ))                                                                    # §277
+
+
+def test_an_unborn_child_already_counts():
+    assert "胎兒以將來非死產者為限，關於其個人利益之保護，視為既已出生" in expansions(
+        "先生過世我懷孕七個月,婆家說小孩還沒出生不算繼承人,遺產要先分一分"
+    )                                                                    # §7
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
