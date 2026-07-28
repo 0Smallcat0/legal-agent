@@ -576,6 +576,31 @@ def test_waiting_for_a_hearing_reaches_the_faster_order():
     )                                                                    # 家暴法§16
 
 
+def test_how_much_support_is_its_own_question():
+    """The set already reached WHO owes (§1115) and whether it can be reduced
+    (§1118-1); 「我爸要我每個月給五萬,我薪水六萬還要養兩個小孩」 is the third one."""
+    assert "扶養之程度，應按受扶養權利者之需要，與負扶養義務者之經濟能力及身分定之" in expansions(
+        "我爸要我每個月給他五萬,我薪水六萬還要養兩個小孩,扶養費到底怎麼算"
+    )                                                                    # §1119
+
+    # 名下沒有財產 is NOT a 脫產 trigger: it describes poverty, and it hijacked
+    # this very session once.
+    assert not any("有害及債權者" in term for term in expansions("爸爸名下沒有財產,只有勞保年金"))
+
+
+def test_money_left_for_safekeeping_reaches_the_fork():
+    """「出國前把八十萬交給朋友保管,他拿去周轉」 was REFUSED at 資料不足."""
+    out = expansions("出國前把八十萬現金交給朋友保管,他拿去周轉,這算保管還是借他")
+    assert "稱寄託者，謂當事人一方以物交付他方，他方允為保管之契約" in out          # §589
+    assert "寄託物為代替物時，如約定寄託物之所有權移轉於受寄人" in out              # §602
+
+
+def test_an_outside_wall_reaches_the_definition_that_settles_it():
+    assert "共有部分，指區分所有建築物專有部分以外之其他部分及不屬於專有部分之附屬物" in expansions(
+        "社區外牆磁磚掉下來砸到我的車,管委會說那面牆是頂樓那戶的專有部分"
+    )                                                                    # §799
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

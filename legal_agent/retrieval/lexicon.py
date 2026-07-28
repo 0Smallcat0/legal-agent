@@ -161,6 +161,34 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 專有部分或共有部分 (民法§799) ──
+    # 「外牆磁磚掉下來砸到我的車,管委會說那面牆是頂樓那戶的專有部分」 — the classic
+    # label dispute again. §799 defines both: whatever is not in anyone's 專有
+    # 部分 is 共有部分, which is what the 權狀 already shows. Nothing in the table
+    # reached §799 before, so a plain fact string never got the definition.
+    (("外牆", "磁磚掉", "掉下來砸", "專有部分還是", "說是那戶的", "公共設施",
+      "共用部分還是專有"),
+     ("共有部分，指區分所有建築物專有部分以外之其他部分及不屬於專有部分之附屬物",)),
+
+    # ── 扶養的程度 (民法§1119, §1117) ──
+    # The set already reached WHO owes (§1115) and whether it can be reduced
+    # (§1118-1), never HOW MUCH. 「我爸要我每個月給五萬,我薪水六萬還要養兩個小孩」
+    # is that third question, and §1119 answers it in one line: the recipient's
+    # need measured against the payer's means.
+    (("怎麼算", "給多少", "我能負擔", "每個月給他", "少一塊都不行",
+      "他要的金額", "算多少才合理"),
+     ("扶養之程度，應按受扶養權利者之需要，與負扶養義務者之經濟能力及身分定之",)),
+
+    # ── 寄託或借貸 (民法§589, §602) ──
+    # 「出國前把八十萬交給朋友保管,他拿去周轉」 was REFUSED at 資料不足. §589 defines
+    # 寄託 as handing a thing over for safekeeping; §602 is the fork that decides
+    # this case — money held as fungible becomes 消費寄託 and the borrower rules
+    # apply, which is exactly what 「我用一下也還得出來就好」 assumes.
+    (("交給朋友保管", "放你那邊", "先幫我保管", "拿去周轉", "保管還是借",
+      "幫我收著", "寄放"),
+     ("稱寄託者，謂當事人一方以物交付他方，他方允為保管之契約",
+      "寄託物為代替物時，如約定寄託物之所有權移轉於受寄人")),
+
     # ── 是不是委任 (民法§528, §546) ──
     # 「請朋友幫我賣二手車,賣了十八萬錢不給我,他說只是幫忙不是受我委託」 returned the
     # 買賣瑕疵 articles off the word 賣. §528 defines 委任 by the agreement to
@@ -514,8 +542,11 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # articles — he owes me — and nothing about undoing the transfer, which was
     # the question. §244 is the creditor's revocation right; §242 is the
     # subrogation that goes with it.
+    # 名下沒有財產 was a trigger for one run and hijacked a maintenance session —
+    # 「爸爸名下沒有財產」 describes poverty, not a transfer. Same mistake as
+    # 聯絡不上 / 公同共有 / 求償: the trigger must name the ACT.
     (("脫產", "過戶給", "移轉給", "名下唯一", "假買賣", "撤銷贈與", "轉到別人名下",
-      "把財產轉走", "名下沒有財產", "五鬼搬運"),
+      "把財產轉走", "五鬼搬運"),
      ("債務人所為之無償行為，有害及債權者，債權人得聲請法院撤銷之",
       "債務人怠於行使其權利時，債權人因保全債權",
       # A sham sale is 通謀虛偽 before it is anything else: 「賣給老婆的弟弟,價金
