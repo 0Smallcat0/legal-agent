@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **199/217 (92%)** | `evaluation/real_recall.py`, 98 lived problems |
+| retrieval recall, real user wording | **204/223 (91%)** | `evaluation/real_recall.py`, 101 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -177,10 +177,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   and 刑§309, the two the old table-position tie-break lost. Widening was
   measured and rejected instead: a 4th seat is identical to three and a 5th
   costs both harnesses (45/49, 18/8/0) by trimming the ranked window.
-- **A trigger must name the ACT, not the situation and not the remedy.** Three
+- **A trigger must name the ACT, not the situation and not the remedy.** Four
   separate rows over-fired on a word that is true of many stories at once:
   聯絡不上 (said whenever anyone goes quiet), 公同共有 (true of every estate before
-  it is divided) and 求償 (said in every compensation question). Each cost another
+  it is divided), 求償 (said in every compensation question) and 名下沒有財產
+  (which describes poverty, and hijacked a maintenance session into the
+  asset-transfer articles). Each cost another
   session an article, and each was caught in the run that introduced it.
 - **A trigger has to be the word the ASKER used, not the word for the problem.**
   Three times a correct row failed to fire because the trigger was how I would
