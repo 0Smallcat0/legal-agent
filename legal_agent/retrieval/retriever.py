@@ -373,6 +373,15 @@ def _promote_lexicon_phrases(
             matches.append((len(hits), rank, position, phrase, hits))
     matches.sort(key=lambda m: (m[0], m[1], m[2]))   # selective, corroborated, table
 
+    # …and reserve the FIRST seat for a topic the window does not already carry.
+    # A corroborated row is, by definition, already represented; an uncorroborated
+    # one is a whole answer the window is missing. Measured after 民法§254 and
+    # §264 each fired first and lost their seat to 定金 and 承攬 rows the ranking
+    # had confirmed.
+    first_new = next((i for i, m in enumerate(matches) if m[1] != 0), None)
+    if first_new is not None and first_new > 0:
+        matches.insert(0, matches.pop(first_new))
+
     promote: list[tuple[Statute, float]] = []
     taken: set[tuple[str, str, str]] = set()
     for _count, _rank, _position, _phrase, hits in matches:

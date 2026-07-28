@@ -448,6 +448,23 @@ def test_a_mandate_that_ended_midway_reaches_its_own_articles():
     assert "受任人因處理委任事務，所收取之金錢、物品及孳息，應交付於委任人" in running  # §541
 
 
+def test_a_seller_who_keeps_delaying_reaches_the_way_out():
+    out = expansions("合約寫兩個月交貨,拖了五個月一直說缺料,我不想等了想解約拿回訂金")
+    assert any("得定相當期限催告其履行" in term for term in out)            # §254
+
+
+def test_withholding_payment_until_delivery_is_a_right():
+    assert "因契約互負債務者，於他方當事人未為對待給付前，得拒絕自己之給付" in expansions(
+        "合約寫安裝完成後付尾款,他說要先收錢才願意來裝,我可以堅持裝好再付嗎"
+    )                                                                    # §264
+
+
+def test_a_five_household_meeting_reaches_the_threshold():
+    out = expansions("三十二戶的社區只有五戶出席就通過動用三百萬,這個決議有沒有效")
+    assert any("三分之二以上出席" in term for term in out)                 # 條例§31
+    assert "召集人得就同一議案重新召集會議" in out                          # 條例§32
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
