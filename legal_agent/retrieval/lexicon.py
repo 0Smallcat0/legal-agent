@@ -161,6 +161,24 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 暴利行為 (民法§74) ──
+    # 「我媽住院急需三十萬,對方知道我很急,借三十萬要我三個月還四十五萬」 returned the
+    # 消費借貸 chapter — the loan, as if the terms were ordinary. §74 is the one
+    # that looks at HOW the terms were obtained: a court may set the act aside or
+    # cut the payment when someone traded on another's urgency.
+    (("知道我很急", "只好簽", "急需", "走投無路", "沒辦法只好", "趁我急",
+      "當時沒得選"),
+     ("法律行為，係乘他人之急迫、輕率或無經驗，使其為財產上之給付或為給付之約定",)),
+
+    # ── 監護人處分財產的界線 (民法§1101, §1112) ──
+    # 「我是媽媽的監護人,舅舅們說賣掉房子送安養院」 returned the articles about
+    # APPOINTING a guardian. §1101 II is the answer: selling the ward's home needs
+    # the court's permission, and §1112 says the ward's own wishes come first.
+    (("賣掉房子", "堅持不賣", "送安養院", "處分不動產", "動用他的財產",
+      "賣掉媽媽的", "賣掉爸爸的"),
+     ("監護人對於受監護人之財產，非為受監護人之利益，不得使用、代為或同意處分",
+      "監護人於執行有關受監護人之生活、護養療治及財產管理之職務時，應尊重受監護人之意思")),
+
     # ── 輔助宣告 (民法§15-2) ──
     # 「輕度失智,生活可以自理也認得人,但常被推銷買一堆用不到的東西」 reached
     # §14/§15/§15-1/§75/§77 — monitorship and full incapacity. §15-2 is the
