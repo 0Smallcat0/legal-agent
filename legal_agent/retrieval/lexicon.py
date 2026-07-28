@@ -126,6 +126,29 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 脫產 / 詐害債權 (民法§244, §242) ──
+    # 「他欠我一百萬,查到上個月把名下唯一的房子過戶給兒子」 returned the 消費借貸
+    # articles — he owes me — and nothing about undoing the transfer, which was
+    # the question. §244 is the creditor's revocation right; §242 is the
+    # subrogation that goes with it.
+    (("脫產", "過戶給", "移轉給", "名下唯一", "假買賣", "撤銷贈與", "轉到別人名下",
+      "把財產轉走", "名下沒有財產", "五鬼搬運"),
+     ("債務人所為之無償行為，有害及債權者，債權人得聲請法院撤銷之",
+      "債務人怠於行使其權利時，債權人因保全債權")),
+
+    # ── 委任 / 代辦 (民法§541, §544, §549) ──
+    # 「委託代辦處理修繕補助,給了八萬,他沒送件也不退」 returned the TENANCY chapter
+    # off the word 修繕 — nobody in that story is renting anything. 委任 is its own
+    # chapter: §541 is the duty to hand over what was collected, §544 the
+    # liability for handling it badly, §549 the right to end it at any time.
+    # Bare 委任 is OUT: the dementia session says 「爸爸沒有立過任何委任或授權書」
+    # in passing and lost 民法§14 to this row's phrases.
+    (("代辦", "受任人", "代收", "代為處理", "代辦費", "幫我處理",
+      "代辦業者", "沒送件", "代書", "委託他處理", "委託代辦"),
+     ("受任人因處理委任事務，所收取之金錢、物品及孳息，應交付於委任人",
+      "受任人因處理委任事務有過失",
+      "當事人之任何一方，得隨時終止委任契約")),
+
     # ── 僱用人連帶責任 (民法§188, §185) ──
     # 「貨運公司的車送貨時撞到我,司機叫我找公司,公司說是司機的事」 got §184/§196/
     # §216 — the driver's liability and its size — and nothing about WHO to sue,
