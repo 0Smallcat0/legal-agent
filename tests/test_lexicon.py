@@ -465,6 +465,22 @@ def test_a_five_household_meeting_reaches_the_threshold():
     assert "召集人得就同一議案重新召集會議" in out                          # 條例§32
 
 
+def test_a_notice_that_cannot_be_delivered_reaches_public_service():
+    """「存證信函被退回招領逾期,我想催告他還錢但根本送不到」 returned the 消費借貸
+    chapter — the debt, not the delivery problem."""
+    assert "表意人非因自己之過失，不知相對人之姓名、居所者，得依民事訴訟法公示送達之規定" in expansions(
+        "存證信函寄到戶籍地被退回招領逾期,人搬走不知道去哪,要怎麼合法通知他"
+    )                                                                    # §97
+
+
+def test_a_partly_capable_parent_reaches_the_middle_setting():
+    # §15-2 is the setting between full capacity and monitorship; the row fires
+    # even though the 監護宣告 row still wins the first seat on table order.
+    assert "受輔助宣告之人為下列行為時，應經輔助人同意" in expansions(
+        "我爸輕度失智,生活可以自理也認得人,但常被推銷亂花錢,我不想剝奪他所有決定權"
+    )                                                                    # §15-2
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
