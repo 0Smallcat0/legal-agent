@@ -161,6 +161,23 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 輔助宣告 (民法§15-2) ──
+    # 「輕度失智,生活可以自理也認得人,但常被推銷買一堆用不到的東西」 reached
+    # §14/§15/§15-1/§75/§77 — monitorship and full incapacity. §15-2 is the
+    # middle setting the asker actually wants: specific acts need the assistant's
+    # consent, everything else stays his own.
+    (("被推銷", "一直買", "亂花錢", "還認得人", "生活可以自理", "不想剝奪",
+      "輔助宣告", "輕度失智"),
+     ("受輔助宣告之人為下列行為時，應經輔助人同意",)),
+
+    # ── 公示送達 (民法§97) ──
+    # 「存證信函被退回招領逾期,打電話不通,我想催告他還錢但根本送不到」 returned the
+    # 消費借貸 chapter — the debt, not the delivery problem. §97 is the way a
+    # declaration reaches someone whose whereabouts are unknown.
+    (("被退回", "招領逾期", "寄不到", "送不到", "查無此人", "公示送達",
+      "存證信函退回"),
+     ("表意人非因自己之過失，不知相對人之姓名、居所者，得依民事訴訟法公示送達之規定",)),
+
     # ── 死亡宣告 (民法§8, §9) ──
     # 「我爸十年前出門就沒再回來,戶政說要先有死亡宣告才能辦繼承」 returned the whole
     # 繼承編 — the step BEFORE any of that is missing. §8 is the seven-year wait
