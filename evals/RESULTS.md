@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **143/151 (95%)** | `evaluation/real_recall.py`, 65 lived problems |
+| retrieval recall, real user wording | **147/158 (93%)** | `evaluation/real_recall.py`, 68 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -139,7 +139,7 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   label the situation rather than how a person states it: 拆掉 against 「不肯拆」,
   賠償 against 「要求他賠」, 文字含糊 against 「該用誰的解釋」. Each was invisible
   until the session was run and the phrase list printed.
-- **Each lexicon row is also a new way to be wrong.** Seven times now, a row
+- **Each lexicon row is also a new way to be wrong.** Nine times now, a row
   added to fix one session hijacked another off a word said in passing (買房 →
   warranty, 前妻 → DV route, 繼承 → 繼承編, 仲介 → the rental trade, 分期 → the
   instalment articles, 管委會 → the arrears articles over a noise complaint) or
