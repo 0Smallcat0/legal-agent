@@ -161,6 +161,34 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 僱傭或承攬 (民法§482, 勞基法§2) ──
+    # 「每天打卡上班八小時,主管排班也管我請假,可是公司要我簽承攬契約」 returned the
+    # entire 承攬 chapter — because the contract is CALLED 承攬, while the question
+    # is whether it IS. §482 defines 僱傭 by serving another's labour for a wage,
+    # and 勞基§2 defines 勞工 the same way. The label is not the test.
+    (("打卡上班", "主管排班", "管我請假", "算不算員工", "簽的是承攬",
+      "說我不是員工", "沒有勞健保", "假承攬"),
+     ("稱僱傭者，謂當事人約定，一方於一定或不定之期限內為他方服勞務，他方給付報酬之契約",
+      "勞工：指受雇主僱用從事工作獲致工資者")),
+
+    # ── 繼承回復請求權 (民法§1146) ──
+    # 「哥哥用一份我沒看過的分割協議書把房子登記到自己名下」 reached the general
+    # 共有物分割 and 時效 articles. §1146 is the inheritance-specific claim AND its
+    # own clock: two years from discovery, ten from the death.
+    (("登記到自己名下", "登記到他名下", "分割協議書", "我沒有簽過",
+      "私自登記", "繼承權被侵害", "調謄本才發現"),
+     ("繼承權被侵害者，被害人或其法定代理人得請求回復之",
+      "自知悉被侵害之時起，二年間不行使而消滅")),
+
+    # ── 租賃物的返還 (民法§455) ──
+    # 「退租搬走了,房東說留下舊書櫃跟雜物要扣一萬五清運費」 pulled in the 運送 and
+    # 倉庫 chapters off 清運. §455 is the duty actually at issue — return the thing
+    # — and §431 II is the limit: a tenant takes back what he added and restores.
+    (("沒清乾淨", "沒搬乾淨", "清運費", "留下的東西", "留下一個",
+      "走過一次屋", "鑰匙已經交還"),
+     ("承租人於租賃關係終止後，應返還租賃物",
+      "承租人就租賃物所增設之工作物，得取回之")),
+
     # ── 附合與承租人的工作物 (民法§811, §431) ──
     # 「租五年自己花錢裝的鐵窗跟嵌入式冷氣,房東說裝上去就不能拆走」 returned the
     # tenancy repair and return articles. §811 is why the landlord is partly
