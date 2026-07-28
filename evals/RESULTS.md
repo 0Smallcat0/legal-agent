@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **153/164 (93%)** | `evaluation/real_recall.py`, 71 lived problems |
+| retrieval recall, real user wording | **158/170 (93%)** | `evaluation/real_recall.py`, 74 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -113,6 +113,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   boundary — 民法§148 fires and never gets a seat. Three alternatives were
   measured and all lost: no corroboration at all, a saturation cap, and ranking
   by the strength of the evidence.
+- **A crowded lexicon row is zero-sum.** The inheritance row now carries eight
+  phrases for three seats, so adding 民法§1166 beside §7 did not add it — it moved
+  the loss: §1166 and §1111 came back while §1164 and §1151 went out, and the
+  total stayed at 158/170. Reverted, because two answers in older sessions are
+  worth more than one supporting article in the new one. Rows are past the point
+  where an addition is free.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over

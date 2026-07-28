@@ -135,6 +135,16 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("妻之受胎，係在婚姻關係存續中者，推定其所生子女為婚生子女",
       "夫妻之一方或子女能證明子女非為婚生子女者，得提起否認之訴")),
 
+    # ── 無權代理 (民法§170, §110) ──
+    # 「兒子拿我的印章去跟裝潢公司簽了六十萬的工程約」 returned the whole 承攬
+    # chapter off 工程/裝潢 — but the asker is not a party to anything yet. §170
+    # says the contract does not bind him unless he ratifies it; §110 is who the
+    # decorator sues instead.
+    (("拿我的印章", "不是我簽的", "沒經過我同意就簽", "冒用我的名義",
+      "代替我簽", "我完全不知情", "偽簽", "盜蓋"),
+     ("無代理權人以代理人之名義所為之法律行為，非經本人承認，對於本人不生效力",
+      "無代理權人，以他人之代理人名義所為之法律行為，對於善意之相對人，負損害賠償之責")),
+
     # ── 僱用人受領勞務遲延 (民法§487) ──
     # 「公司說訂單少叫我先不用來,在家等通知,兩個月只給一半薪水」 returned the
     # dismissal and wage articles. §487 is the one that answers it: an employer
@@ -303,7 +313,10 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "得向他債務人請求償還各自分擔之部分",
       # 「朋友說他已經全部還清了,銀行還是來要我還」 — §274 is the answer and the
       # row reached §273/§276/§280/§281 all around it.
-      "因連帶債務人中之一人為清償、代物清償、提存、抵銷或混同而債務消滅者，他債務人亦同免其責任")),
+      "因連帶債務人中之一人為清償、代物清償、提存、抵銷或混同而債務消滅者，他債務人亦同免其責任",
+      # 「債權人自己也欠我表哥八十萬,我能不能拿來抵」 — §277, and again the row
+      # already reached every article around it.
+      "連帶債務人中之一人，對於債權人有債權者，他債務人以該債務人應分擔之部分為限，得主張抵銷")),
 
     # ── 脫產 / 詐害債權 (民法§244, §242) ──
     # 「他欠我一百萬,查到上個月把名下唯一的房子過戶給兒子」 returned the 消費借貸
@@ -569,13 +582,20 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # two questions a session actually asked. Both were outside the window while
     # 特留分/扶養/遺囑執行人 articles filled it.
     (("遺產", "繼承", "過世", "身故", "應繼分", "分遺產", "存摺印章", "遺囑",
-      "遺產沒分", "不肯分"),
+      "遺產沒分", "不肯分", "懷孕", "遺腹子", "肚子裡", "還沒出生"),
      ("遺產繼承人", "同一順序之繼承人", "按人數平均繼承",
       "配偶有相互繼承遺產之權，其應繼分",
       "在分割遺產前，各繼承人對於遺產全部為公同共有",
       # §1164 — the ESTATE-specific partition right. It belongs here, not in the
       # co-ownership row: putting it there cost oos-02-inheritance its 民法§1141.
-      "繼承人得隨時請求分割遺產")),
+      "繼承人得隨時請求分割遺產",
+      # 「婆家說小孩還沒出生不算繼承人」 — §7 is the direct answer, and §1166 (the
+      # share that must be held back) was already reaching the window without it.
+      # TRIED AND REJECTED — adding 民法§1166 here as well. The row is saturated at
+      # eight phrases and three seats, so it only MOVED the loss: §1166 and §1111
+      # came back and §1164 and §1151 went out, same 158/170. Two answers in older
+      # sessions are worth more than one supporting article in the new one.
+      "胎兒以將來非死產者為限，關於其個人利益之保護，視為既已出生")),
 
     # ── 租賃 (租賃住宅條例§7) ──
     (("押金", "保證金", "退租", "房東"),
