@@ -535,6 +535,27 @@ def test_a_parent_with_sole_custody_reaches_the_duty_behind_it():
     )                                                                    # §1084
 
 
+def test_the_label_on_the_contract_is_not_the_test():
+    """「每天打卡上班,主管排班也管我請假,可是公司要我簽承攬契約」 returned the entire
+    承攬 chapter — because the contract is CALLED 承攬, while the question is
+    whether it IS one."""
+    out = expansions("我每天打卡上班,主管排班也管我請假,但公司說我簽的是承攬,我算不算員工")
+    assert "稱僱傭者，謂當事人約定，一方於一定或不定之期限內為他方服勞務，他方給付報酬之契約" in out  # §482
+    assert "勞工：指受雇主僱用從事工作獲致工資者" in out                                        # 勞基§2
+
+
+def test_an_heir_shut_out_reaches_the_inheritance_clock():
+    out = expansions("調謄本才發現哥哥用我沒有簽過的分割協議書把房子登記到自己名下")
+    assert "繼承權被侵害者，被害人或其法定代理人得請求回復之" in out          # §1146
+    assert "自知悉被侵害之時起，二年間不行使而消滅" in out                    # §1146 II
+
+
+def test_clearing_out_reaches_the_duty_to_return_the_thing():
+    # 清運 had been pulling in the 運送 and 倉庫 chapters.
+    out = expansions("退租搬走後房東說我沒清乾淨要扣一萬五清運費")
+    assert "承租人於租賃關係終止後，應返還租賃物" in out                      # §455
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
