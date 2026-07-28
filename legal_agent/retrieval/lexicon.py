@@ -126,6 +126,38 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 違法解僱 / 確認僱傭關係 (勞基法§11, §12, §14) ──
+    # 「公司叫我今天別來了,理由是態度不佳」 returned §16/§17/§20 — how much
+    # severance — which quietly concedes the dismissal was valid. §11 is the
+    # EXHAUSTIVE list of grounds on which an employer may end a contract at all,
+    # and 「態度不佳」 is not on it; §12 is the without-notice list; §14 is the
+    # mirror for the worker.
+    (("開除", "解僱", "叫我不要來", "叫我今天就別來", "不能勝任", "態度不佳",
+      "跟主管不合", "回去上班", "恢復僱傭", "確認僱傭", "違法解僱", "被炒"),
+     ("非有左列情事之一者，雇主不得預告勞工終止勞動契約",
+      "勞工有左列情形之一者，雇主得不經預告終止契約",
+      "有下列情形之一者，勞工得不經預告終止契約")),
+
+    # ── 越界建築 / 拆屋還地 (民法§796, §796-1, §767) ──
+    # 「鄰居把圍牆蓋進我家土地五十公分,不肯拆」 reached §796 but not §767, the
+    # request that actually gets it removed — the 拆掉 trigger did not match
+    # 「不肯拆」. §796-1 is why a court may refuse to order removal anyway.
+    (("越界", "地界", "蓋到", "佔到", "占到", "蓋進", "圍牆", "拆屋", "還地",
+      "複丈", "地政測量", "不肯拆", "界線"),
+     ("土地所有人建築房屋非因故意或重大過失逾越地界者",
+      "法院得斟酌公共利益及當事人利益，免為全部或一部之移去或變更",
+      "所有人對於無權占有或侵奪其所有物者，得請求返還之")),
+
+    # ── 分期付價買賣 (民法§389, §390) ──
+    # 「刷分期三十期,上了三期想停,業者說要一次付完剩下二十七期」 was REFUSED at
+    # 資料不足. §389 caps that demand: not until a fifth of the total is overdue.
+    # Bare 分期 and 每期 are out: a prepaid-voucher session mentioning 「刷卡分期還
+    # 有六期沒繳完」 in passing lost 民法§256 to this row's phrases. The triggers
+    # have to describe the DEMAND (一次付完 / 停繳), not the payment method.
+    (("期數", "一次付完", "一次付清", "剩下的期", "刷分期", "分期付款", "停繳"),
+     ("除買受人遲付之價額已達全部價金五分之一外",
+      "其扣留之數額，不得超過標的物使用之代價")),
+
     # ── 扶養義務的減輕與免除 (民法§1118-1, §1114, §1117) ──
     # 「我爸五歲就離家沒付過扶養費,現在中風要我付安養費」 returned the
     # 未成年子女監護 chapter (§1089/§1091/§1097) — the asker is 38. §1118-1 is the
