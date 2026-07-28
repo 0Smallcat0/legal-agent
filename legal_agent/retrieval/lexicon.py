@@ -126,6 +126,28 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 管理費欠繳 / 管委會 (公寓大廈條例§21, §10) ──
+    # 「管委會說我欠三年管理費要告我,可是電梯壞半年沒修」 got §6/§22/§33 and three
+    # TENANCY articles — the asker owns the flat. §21 is the article the committee
+    # is actually suing under, and §10 is who owes the repair of the shared lift.
+    # 管委會 / 區分所有權人 / 電梯壞 are OUT: they appear in most of the noise
+    # sessions in the golden set, where this row's phrases took the seats that
+    # 社維法§72 needed — golden fell 19 -> 17 in the run that added them. The
+    # triggers have to name the MONEY.
+    (("管理費", "公共基金", "滯納金", "欠繳管理費", "積欠管理費"),
+     ("經定相當期間催告仍不給付者，管理負責人或管理委員會得訴請法院命其給付",
+      "共用部分、約定共用部分之修繕、管理、維護，由管理負責人或管理委員會為之")),
+
+    # ── 買賣價金 / 貨款 (民法§367, §229, §233) ──
+    # 「出貨三批四十幾萬,對方拖了快一年」 was REFUSED at 資料不足. §367 is the
+    # buyer's plain duty to pay, §229 is when they fall into default, §233 is the
+    # interest that runs from then.
+    (("貨款", "出貨", "簽收單", "訂購單", "月結", "尾款沒付", "不付款",
+      "拖著不付", "應收帳款", "催款"),
+     ("買受人對於出賣人，有交付約定價金及受領標的物之義務",
+      "給付有確定期限者，債務人自期限屆滿時起，負遲延責任",
+      "債權人得請求依法定利率計算之遲延利息")),
+
     # ── 違法解僱 / 確認僱傭關係 (勞基法§11, §12, §14) ──
     # 「公司叫我今天別來了,理由是態度不佳」 returned §16/§17/§20 — how much
     # severance — which quietly concedes the dismissal was valid. §11 is the
@@ -311,10 +333,14 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # §1144 answers 「媽媽分多少」 and §1151 answers 「大哥可以自己動用嗎」 — the
     # two questions a session actually asked. Both were outside the window while
     # 特留分/扶養/遺囑執行人 articles filled it.
-    (("遺產", "繼承", "過世", "身故", "應繼分", "分遺產", "存摺印章", "遺囑"),
+    (("遺產", "繼承", "過世", "身故", "應繼分", "分遺產", "存摺印章", "遺囑",
+      "遺產沒分", "不肯分"),
      ("遺產繼承人", "同一順序之繼承人", "按人數平均繼承",
       "配偶有相互繼承遺產之權，其應繼分",
-      "在分割遺產前，各繼承人對於遺產全部為公同共有")),
+      "在分割遺產前，各繼承人對於遺產全部為公同共有",
+      # §1164 — the ESTATE-specific partition right. It belongs here, not in the
+      # co-ownership row: putting it there cost oos-02-inheritance its 民法§1141.
+      "繼承人得隨時請求分割遺產")),
 
     # ── 租賃 (租賃住宅條例§7) ──
     (("押金", "保證金", "退租", "房東"),
