@@ -28,7 +28,7 @@ python app.py     # web demo — builds the corpus on first run, no API key
 |---|---|
 | seeded defects caught (whole corpus) | **10,435/10,435, 0 false positives** |
 | statute coverage, 30-case golden set | **100% pass+partial** (73% strict) |
-| retrieval recall, real user wording | **158/170** |
+| retrieval recall, real user wording | **164/176** |
 | honesty tier / wrong-premise detection | **84% / 100%** |
 
 Three things you can lift: a pure-code

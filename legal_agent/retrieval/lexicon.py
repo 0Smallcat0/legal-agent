@@ -135,6 +135,24 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("妻之受胎，係在婚姻關係存續中者，推定其所生子女為婚生子女",
       "夫妻之一方或子女能證明子女非為婚生子女者，得提起否認之訴")),
 
+    # ── 死亡宣告 (民法§8, §9) ──
+    # 「我爸十年前出門就沒再回來,戶政說要先有死亡宣告才能辦繼承」 returned the whole
+    # 繼承編 — the step BEFORE any of that is missing. §8 is the seven-year wait
+    # and who may petition; §9 fixes the moment of death the estate turns on.
+    (("失蹤", "死亡宣告", "沒再回來", "報警協尋", "音訊全無", "下落不明",
+      "找不到人很多年"),
+     ("失蹤人失蹤滿七年後，法院得因利害關係人或檢察官之聲請，為死亡之宣告",
+      "受死亡宣告者，以判決內所確定死亡之時，推定其為死亡")),
+
+    # ── 委任中途終止的報酬 (民法§548, §550) ──
+    # 「代書辦到一半過世,先付的六萬能不能拿回來」 reached §541/§544/§546/§549/§551 —
+    # everything about a mandate that is still running. §550 ends it on death and
+    # §548 II is the answer to 「做多少算多少」.
+    (("辦到一半", "做到一半", "做多少算多少", "事務所收掉", "受任人過世",
+      "代書過世", "還沒辦完", "先付的錢"),
+     ("委任關係，因當事人一方死亡、破產或喪失行為能力而消滅",
+      "委任關係，因非可歸責於受任人之事由，於事務處理未完畢前已終止者")),
+
     # ── 無權代理 (民法§170, §110) ──
     # 「兒子拿我的印章去跟裝潢公司簽了六十萬的工程約」 returned the whole 承攬
     # chapter off 工程/裝潢 — but the asker is not a party to anything yet. §170
