@@ -126,6 +126,34 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 婚生推定與否認 (民法§1063) ──
+    # 「婚姻中生的小孩鑑定不是我的,想解除父子關係」 lost its window to the 離婚
+    # chapter, because the same sentence says 「我們正在談離婚」. §1063 carries the
+    # presumption, the 否認之訴 and its two-year clock in one article.
+    (("親子鑑定", "不是我的", "不是我親生", "父子關係", "婚生", "否認",
+      "DNA", "戶政登記我是父親"),
+     ("妻之受胎，係在婚姻關係存續中者，推定其所生子女為婚生子女",
+      "夫妻之一方或子女能證明子女非為婚生子女者，得提起否認之訴")),
+
+    # ── 抵銷 (民法§334, §335) ──
+    # 「我借他三十萬他沒還,我也欠他二十萬貨款,可以互相抵掉嗎」 returned the loan and
+    # sale articles — both debts, neither answer. Triggers are the session's own
+    # words: 互相抵掉 / 分開算 / 差額.
+    (("抵銷", "互相抵掉", "抵掉", "分開算", "差額", "互相扣", "扣掉他欠我的",
+      "兩筆相抵"),
+     ("二人互負債務，而其給付種類相同，並均屆清償期者，各得以其債務，與他方之債務，互為抵銷",
+      "抵銷，應以意思表示，向他方為之")),
+
+    # ── 違反強制規定的約定無效 (民法§71, 勞基法§1) ──
+    # 「公司要我簽同意書,自願不加勞保、自願放棄加班費」 returned §24/§32/§36/§39 —
+    # how overtime is CALCULATED. The answer is that the waiver is worth nothing:
+    # §71 voids a legal act against a mandatory rule, and 勞基§1 II says agreed
+    # terms may not fall below the statutory minimum.
+    (("自願放棄", "同意書", "算不算數", "簽了有沒有效", "不加勞保", "拋棄權利",
+      "切結書", "不簽就不錄用", "都簽了"),
+     ("法律行為，違反強制或禁止之規定者，無效",
+      "雇主與勞工所訂勞動條件，不得低於本法所定之最低標準")),
+
     # ── 未辦登記不得處分 (民法§759) ──
     # 「三個繼承人都同意賣,代書說還沒辦繼承登記不能賣」 returned the estate-division
     # articles — who gets what — and not the one that answers the question. §759
