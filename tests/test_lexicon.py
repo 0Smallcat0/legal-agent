@@ -316,6 +316,22 @@ def test_a_spite_wall_reaches_abuse_of_right():
     )
 
 
+def test_inherited_property_must_be_registered_before_it_is_sold():
+    """「三個繼承人都同意賣,代書說還沒辦繼承登記不能賣」 returned the
+    estate-DIVISION articles and not the one that says why the 代書 is right."""
+    assert "於登記前已取得不動產物權者，應經登記，始得處分其物權" in expansions(
+        "我媽過世留下的房子還沒辦繼承登記,代書說不能賣,一定要先登記嗎"
+    )                                                                    # §759
+
+
+def test_a_disputed_clause_reaches_how_contracts_are_read():
+    # Triggers are the words the session used — 「該用誰的解釋」,「業務講的」 —
+    # not 「文字含糊」, which is how a label describes it, not how a person says it.
+    out = expansions("合約只寫每年保養兩次,業務講的是上下半年各一次,到底該用誰的解釋")
+    assert "解釋意思表示，應探求當事人之真意，不得拘泥於所用之辭句" in out   # §98
+    assert "當事人互相表示意思一致者，無論其為明示或默示，契約即為成立" in out  # §153
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
