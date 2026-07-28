@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **70/70 (100%)** | `evaluation/real_recall.py`, 30 lived problems |
+| retrieval recall, real user wording | **77/77 (100%)** | `evaluation/real_recall.py`, 33 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -72,10 +72,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   first — 社維法§72 is also a 罰鍰 article and is the flagship noise answer, so
   the filter cannot be 「drop 罰鍰」.
 - **100% on real-session recall means「no known defect left」, not「solved」.**
-  Every one of the 27 cases was added the round its own defect was found, so the
-  set is a record of what has already been fixed. The honest reading is that it
-  has stopped finding new failures and needs new cases from outside — the next
-  wrong answer is in a session nobody has run yet.
+  Every case was added the round its own defect was found, so the set is a record
+  of what has already been fixed. It hit 100% once from cases I invented, and the
+  very next batch — 案由 sampled from the judgments table instead — broke it
+  three times in a row (賠多少, 不當得利, 離婚). Scenarios now come from the
+  docket for exactly that reason, and the next wrong answer is still in a session
+  nobody has run yet.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
