@@ -515,6 +515,26 @@ def test_an_adult_childs_debt_is_his_own():
     assert any("由其代負履行責任之契約" in term for term in out)          # §739
 
 
+def test_fittings_reach_both_sides_of_the_question():
+    out = expansions("租五年自己花錢裝的鐵窗焊上去、冷氣嵌入式,房東說不能拆走")
+    assert "動產因附合而為不動產之重要成分者，不動產所有人，取得動產所有權" in out   # §811
+    assert "承租人就租賃物支出有益費用，因而增加該物之價值者" in out                # §431
+
+
+def test_whether_joint_liability_exists_at_all():
+    """The window gave every CONSEQUENCE of joint liability — §273/§274/§277/
+    §280/§281 — while the question was whether it exists."""
+    out = expansions("三個人都簽名但沒有寫連帶,對方要我一個人還六十萬,全部還是三分之一")
+    assert "數人負同一債務，明示對於債權人各負全部給付之責任者，為連帶債務" in out   # §272
+    assert "無前項之明示時，連帶債務之成立，以法律有規定者為限" in out              # §272 II
+
+
+def test_a_parent_with_sole_custody_reaches_the_duty_behind_it():
+    assert "父母對於未成年之子女，有保護及教養之權利義務" in expansions(
+        "親權判給我,前夫接去過夜就不還我,說他也是爸爸有權帶,我想把女兒接回來"
+    )                                                                    # §1084
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
