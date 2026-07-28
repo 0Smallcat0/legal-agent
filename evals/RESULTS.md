@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **132/140 (94%)** | `evaluation/real_recall.py`, 59 lived problems |
+| retrieval recall, real user wording | **138/146 (95%)** | `evaluation/real_recall.py`, 62 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -134,6 +134,11 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   and 刑§309, the two the old table-position tie-break lost. Widening was
   measured and rejected instead: a 4th seat is identical to three and a 5th
   costs both harnesses (45/49, 18/8/0) by trimming the ranked window.
+- **A trigger has to be the word the ASKER used, not the word for the problem.**
+  Three times a correct row failed to fire because the trigger was how I would
+  label the situation rather than how a person states it: 拆掉 against 「不肯拆」,
+  賠償 against 「要求他賠」, 文字含糊 against 「該用誰的解釋」. Each was invisible
+  until the session was run and the phrase list printed.
 - **Each lexicon row is also a new way to be wrong.** Seven times now, a row
   added to fix one session hijacked another off a word said in passing (買房 →
   warranty, 前妻 → DV route, 繼承 → 繼承編, 仲介 → the rental trade, 分期 → the

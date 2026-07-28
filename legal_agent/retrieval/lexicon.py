@@ -126,6 +126,28 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("公然侮辱人者", "指摘或傳述足以毀損他人名譽之事者",
       "散布文字、圖畫犯前項之罪者", "其名譽被侵害者，並得請求回復名譽之適當處分")),
 
+    # ── 未辦登記不得處分 (民法§759) ──
+    # 「三個繼承人都同意賣,代書說還沒辦繼承登記不能賣」 returned the estate-division
+    # articles — who gets what — and not the one that answers the question. §759
+    # is why the 代書 is right: property taken by inheritance must be registered
+    # before it can be disposed of.
+    (("繼承登記", "還沒登記", "未辦登記", "代書說", "過戶前", "先簽約",
+      "登記前", "還在名下", "沒過戶"),
+     ("於登記前已取得不動產物權者，應經登記，始得處分其物權",)),
+
+    # ── 契約的解釋 (民法§98, §153) ──
+    # 「合約寫『每年保養兩次』,他們說連著同一個月做完也算」 returned §997, 勞基§12
+    # and the 經理人 articles — nothing about how a contract is read. §98 is the
+    # rule: look for what the parties MEANT, not what the words allow.
+    # The triggers are the words the SESSION used, not the ones I first guessed:
+    # 「該用誰的解釋」,「業務講的」,「我一直以為」 — not 「文字含糊」, which is how a
+    # label describes the problem rather than how a person states it.
+    (("誰的解釋", "怎麼解釋", "解釋不同", "各說各話", "硬拗", "當初講的",
+      "當初講好", "業務講的", "業務說的", "我一直以為", "認定不同",
+      "合約只寫", "契約沒寫清楚"),
+     ("解釋意思表示，應探求當事人之真意，不得拘泥於所用之辭句",
+      "當事人互相表示意思一致者，無論其為明示或默示，契約即為成立")),
+
     # ── 人格權 / 姓名權 / 肖像 (民法§18, §19, §195) ──
     # 「有人用我的照片跟名字開假帳號到處借錢」 returned the 消費借貸 chapter — the
     # word 借錢 belongs to the impostor, not to the asker. §18 is the right to
