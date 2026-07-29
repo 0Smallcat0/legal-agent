@@ -253,6 +253,22 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   to the subject words — §1145 is dropped again while §15-2 survives, and the
   brother-hid-the-will session (where the father HAS died, so the filter never
   runs) still carries §1145 at rank 1.
+  Auditing the other two filters the same way found the same bug once more, and
+  cleared the third. The TENANCY filter runs on 7 of the stored sessions and in
+  every one of them was deleting 公寓大廈條例§3 (definitions) and §27 (區分所有權人
+  voting) — not tenancy rules, and exactly what an owner in a building may need —
+  because those articles mention 承租人 below their first line. Fixed the same
+  way, with 「租賃」 added to the subject words so the real tenancy articles still
+  go (§421 「稱租賃者」, §450 「租賃定有期限者」, §462 「耕作地之租賃」 name no
+  承租人 in their opening line either). Recall did not move: no case expects those
+  two articles, so the measurement here is the deletion itself — 7 sessions × 2
+  articles that should never have left the pool. The INDUSTRY filter was checked
+  and left alone: the five articles it drops on a whole-text match are all
+  租賃住宅條例 trade-administration provisions, which is precisely what it targets.
+  The general lesson is worth more than the two fixes: **a filter that reads the
+  whole article cannot tell what an article is ABOUT.** Silent deletions are the
+  hardest defect class in this system — nothing downstream can recover from them,
+  and they are invisible until a case happens to need the article.
 - **The window can hold every consequence of a rule and never state the rule.**
   A session asking whether joint liability existed at all got §273/§274/§277/§280
   and §281 — how joint debtors are pursued, released and reimbursed — with §272,
