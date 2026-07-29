@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **252/269 (94%)** | `evaluation/real_recall.py`, 127 lived problems |
+| retrieval recall, real user wording | **257/274 (94%)** | `evaluation/real_recall.py`, 130 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -75,8 +75,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   lexicon rows fires on any golden case) scored 19 pass / 7 partial and
   21 pass / 5 partial. pass+partial is 100% in both, and 27/32 tier and 32/32
   premise did not move — the seam is the model choosing to name an article
-  versus paraphrasing it. A third run landed 20/6. The table keeps 73% strict
-  rather than publishing the luckier sample; treat that figure as ±2 cases.
+  versus paraphrasing it. Five runs now: 19/7, 21/5, 20/6, 20/6, 22/4 — a spread
+  of three cases. The last of those followed a change to the noise row, which
+  golden's noise cases do use, so unlike the earlier samples a real effect cannot
+  be ruled out there; one sample cannot separate it from a spread this wide
+  either. The table keeps 73% strict rather than publish the luckiest run, and
+  tier (27/32) and premise (32/32) have not moved in any of the five.
 - **marginal vs normal is not separable by BM25.** The score ranges overlap
   (marginal 85–268, normal 126–331). That needs a better relevance signal, not a
   better constant — dense cosine was measured as a candidate and interleaves the
@@ -248,6 +252,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   now part of the routine: before a trigger ships, grep it across every stored
   session and reject anything that lands in a case from another domain or inside
   a denial.
+  A third one turned up the round after, and it was the oldest trigger in the
+  table: bare 「吵」 on the flagship noise row. 「對方一直來我家吵」 (a debt dispute)
+  put 社會秩序維護法§72 into that window, and 「昨天吵架他推我」 fired it inside a
+  beating. 吵架 is a quarrel; only the compounds (很吵/吵到/吵死/吵得/吵鬧/吵雜)
+  are complaints about sound. The golden 深夜喧嘩爭吵 cases keep firing on
+  深夜/喧嘩, and the noise sessions on 跑跳/拖椅子/半夜. Worth naming the pattern:
+  the trigger that has been in the table longest is not the safest — it is the
+  one written before the rule existed.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over

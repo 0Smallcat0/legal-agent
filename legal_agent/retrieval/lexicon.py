@@ -55,7 +55,12 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # Nobody reporting their upstairs neighbour writes 「噪音」. They describe the
     # BEHAVIOUR — 跑跳、拖椅子、哭鬧 — and measured, that wording missed 社維§72
     # entirely (outside the top 60) because not one token overlapped.
-    (("吵", "噪音", "很大聲", "喧嘩", "擾人", "聲",
+    # Bare 「吵」 was a trigger until 「對方一直來我家吵」 (a debt dispute) and
+    # 「昨天吵架他推我」 (a beating) both fired it — 社維法§72 took a seat in the
+    # debt window. 吵架 is a quarrel, not a noise complaint. Third instance of the
+    # over-wide trigger after 過戶給 and 欠銀行; the compounds keep every noise
+    # session, and the golden 深夜喧嘩爭吵 cases still fire on 深夜/喧嘩.
+    (("很吵", "吵到", "吵死", "吵得", "吵鬧", "吵雜", "噪音", "很大聲", "喧嘩", "擾人", "聲",
       "跑跳", "跑來跑去", "拖椅子", "拖桌", "蹦", "砰", "哭鬧", "尖叫",
       "打球", "跳繩", "甩門", "摔門"),
      ("製造噪音或深夜喧嘩", "妨害公眾安寧", "不聽禁止")),
@@ -763,6 +768,28 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # opposite side of the seam: 侵權 asks who did it, 債務不履行 asks who owed it.
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
+
+    # ── 幫別人付了錢想要回來 (民法§180, §179) ──
+    # 「我為了息事寧人先幫我哥付了二十萬,後來才知道那筆早就還過了,對方說我是自願
+    # 付的不能反悔」 returned §225/§226/§259/§267 (給付不能) and §172/§176 (無因管理).
+    # 無因管理 is a fair reading of paying another's debt, but the sentence being
+    # used AGAINST him is 「自願付的」, and that is §180 III — no recovery only if
+    # he KNEW there was no obligation. He did not, which is why §179 gets him the
+    # money back. The article the other side relies on has to be in the window.
+    (("幫他付", "替他付", "代他還", "幫忙付了", "自願付的", "息事寧人"),
+     ("因清償債務而為給付，於給付時明知無給付之義務者",
+      "給付係履行道德上之義務者",
+      "無法律上之原因而受利益，致他人受損害者，應返還其利益")),
+
+    # ── 公司倒了能不能告負責人 (民法§28) ──
+    # 「補習班負責人親自跟我簽約收錢,上兩堂課就關門,他說那是公司的事跟他個人無關」
+    # returned §225/§226/§232/§255/§256 (給付不能與解約) and §35 (法人破產聲請) —
+    # every article about the company's failure to perform, and none about whether
+    # the man who took the money can be sued at all. §28 is the answer: a legal
+    # person answers for its 董事或其他有代表權之人 **連帶**, which is what makes
+    # the representative personally reachable rather than hidden behind the entity.
+    (("負責人親自", "告負責人", "負責人本人", "跟他個人無關", "老闆本人"),
+     ("法人對於其董事或其他有代表權之人因執行職務所加於他人之損害，與該行為人連帶負賠償之責任",)),
 
     # ── 債權被賣掉之後的抗辯 (民法§299, §297) ──
     # 「資產管理公司說債權已經買過去了,要我一次還清十八萬;我當初有還過六萬,銀行
