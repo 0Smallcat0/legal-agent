@@ -171,7 +171,7 @@ def _drop_tenancy_when_owner_occupied(query: str, candidates: list[Statute]) -> 
 # 「我爸失智,弟弟拿他的存摺把錢領走」 returned a window that was 8/8 繼承編. The
 # father is ALIVE; answering his family with the rules for dividing his estate is
 # the wrong-premise failure this project exists to avoid.
-_INHERITANCE_SUBJECTS = ("被繼承人", "遺產", "應繼分", "繼承人", "遺囑")
+_INHERITANCE_SUBJECTS = ("被繼承人", "遺產", "應繼分", "繼承人", "繼承權", "遺囑")
 # Words that only make sense about someone still living…
 _STILL_ALIVE = ("失智", "認不得", "神智不清", "意識不清", "住院", "還在世",
                 "植物人", "臥床", "安養院", "療養院")
@@ -187,9 +187,19 @@ def _drop_inheritance_while_alive(query: str, candidates: list[Statute]) -> list
         return candidates
     if any(word in query for word in _DEATH_IN_QUESTION):
         return candidates
+    # Match on the article's FIRST line only — the sentence that sets its subject.
+    # Measured: 民法§15-2 lists the acts a 受輔助宣告之人 needs consent for, and one
+    # of them is 「為遺產分割、遺贈、拋棄繼承權」, so a whole-text match threw it out
+    # of the CANDIDATE POOL for 「我爸輕度失智…想保護他的錢」 — the one session it
+    # was written for. The article was not merely outranked; no amount of lexicon
+    # work could reach it, because it never entered the pool. A real succession
+    # article names its subject in the opening line (§1138 「遺產繼承人，除配偶外」);
+    # an article that merely mentions inheritance in a list does not.
     return [
         c for c in candidates
-        if not any(word in (c.content or "") for word in _INHERITANCE_SUBJECTS)
+        if not any(
+            word in (c.content or "").split("\n", 1)[0] for word in _INHERITANCE_SUBJECTS
+        )
     ]
 
 

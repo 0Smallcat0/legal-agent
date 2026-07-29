@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **290/303 (96%)** | `evaluation/real_recall.py`, 146 lived problems |
+| retrieval recall, real user wording | **291/303 (96%)** | `evaluation/real_recall.py`, 146 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -236,6 +236,23 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   Reshuffle, both sides: repaired-four-times went from missing §354+§359 to missing
   §227 — two recovered, one evicted, and both 瑕疵擔保 and 不完全給付 are real
   routes for a unit repaired four times.
+- **A context filter cannot tell an article ABOUT a topic from one that mentions
+  it in a list.** Diagnosing the remaining misses by cause produced three buckets
+  — unreachable (1), reachable but outranked (7), reachable but the row does not
+  fire on that session (5) — and one case refused to fit any of them. 民法§15-2
+  sat at expansion position ZERO, the top reserved seat, and still never reached
+  the window, because it was never in the CANDIDATE POOL: `_drop_inheritance_
+  while_alive` matched 繼承 words against the whole article, and §15-2's list of
+  acts a 受輔助宣告之人 needs consent for includes 「為遺產分割、遺贈、拋棄繼承
+  權」. The filter written to protect a living parent's session was deleting the
+  one article that session needed. Matching the article's FIRST line — the
+  sentence that sets its subject — fixes it: §1138 opens 「遺產繼承人，除配偶外」
+  and still goes; §15-2 opens 「受輔助宣告之人為下列行為時」 and stays.
+  Both sides: the looser rule let 民法§1145 (喪失繼承權) into a living-father
+  window, which is exactly what the filter exists to prevent, so 繼承權 was added
+  to the subject words — §1145 is dropped again while §15-2 survives, and the
+  brother-hid-the-will session (where the father HAS died, so the filter never
+  runs) still carries §1145 at rank 1.
 - **The window can hold every consequence of a rule and never state the rule.**
   A session asking whether joint liability existed at all got §273/§274/§277/§280
   and §281 — how joint debtors are pursued, released and reimbursed — with §272,

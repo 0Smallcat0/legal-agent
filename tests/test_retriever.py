@@ -465,5 +465,31 @@ def test_promotion_never_evicts_an_already_matched_window():
     assert kept.count("第9條") == 1, f"more than the one new-topic seat: {kept}"
 
 
+def test_a_passing_mention_of_inheritance_does_not_drop_a_capacity_article():
+    """民法§15-2 lists what a 受輔助宣告之人 needs consent for, and one item is
+    「為遺產分割、遺贈、拋棄繼承權」. Matching the whole text threw it out of the
+    CANDIDATE POOL for the one session it was written for — a living father with
+    mild dementia — so no lexicon work could ever reach it. The subject of an
+    article is set in its opening line."""
+    from legal_agent.data.models import Statute
+    from legal_agent.retrieval import retriever as r
+
+    def art(no, content):
+        return Statute("民法", no, content, "2021-01-20", None, "法律", "http://x")
+
+    capacity = art(
+        "第15-2條",
+        "受輔助宣告之人為下列行為時，應經輔助人同意：\n"
+        "七、為遺產分割、遺贈、拋棄繼承權或其他相關權利之拋棄。",
+    )
+    succession = art(
+        "第1138條", "遺產繼承人，除配偶外，依左列順序定之：\n一、直系血親卑親屬。",
+    )
+    kept = r._drop_inheritance_while_alive(
+        "我爸輕度失智,平常生活可以自理,想保護他的錢", [capacity, succession],
+    )
+    assert [s.article_no for s in kept] == ["第15-2條"]
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
