@@ -971,6 +971,41 @@ def test_dating_a_fact_is_not_asking_about_the_clock():
     )
 
 
+def test_an_unpaid_favour_can_still_come_with_a_bill():
+    """「請隔壁鄰居幫我顧店,沒談到錢,出院後他要六萬工錢」 returned §793/§774/§776/
+    §778 — the 相鄰關係 chapter, because the helper happens to be a neighbour."""
+    out = expansions("我住院請隔壁鄰居幫我顧店,當初只說麻煩你一下沒談到錢,他現在要工錢")
+    assert "報酬縱未約定，如依習慣或依委任事務之性質，應給與報酬者，受任人得請求報酬" in out  # §547
+    assert "受任人因處理委任事務，支出之必要費用，委任人應償還之" in out                    # §546
+
+
+def test_family_without_kinship_is_still_family():
+    """The session says twice that there was no adoption and the window answered
+    with §1076-1/§1077/§1079 — the denied-premise failure mode."""
+    out = expansions("我從小被姑姑帶大,戶口沒有遷過去也沒有辦收養,一直住在她家到我結婚")
+    assert "雖非親屬，而以永久共同生活為目的同居一家者，視為家屬" in out   # §1123 III
+    assert "家長家屬相互間" in out                                       # §1114 IV
+
+
+def test_being_out_of_contact_is_not_a_prepaid_trader_going_bust():
+    """聯絡不上 put 消保§17 (預付型交易履約擔保) into a leak between two flats."""
+    assert "預付型交易之履約擔保" not in expansions(
+        "樓上漏水滲到我家,我先自己找師傅修好,樓上住戶一直聯絡不上"
+    )
+    assert "預付型交易之履約擔保" in expansions("買了三萬元療程套票,店突然關門")
+
+
+def test_plain_speech_is_not_a_registration_signal():
+    """我完全不知道 (six characters) and 跑來說 outrank real signals while saying
+    nothing about land registration."""
+    assert "不動產物權經登記者，推定登記權利人適法有此權利" not in expansions(
+        "我被法院選為爸爸的監護人,那些帳戶的事我完全不知道要怎麼處理"
+    )
+    assert "不動產物權經登記者，推定登記權利人適法有此權利" in expansions(
+        "原屋主的兒子說當初過戶是被騙的、登記是錯的,我的房子會不會被拿回去"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

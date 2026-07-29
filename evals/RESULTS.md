@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **263/280 (94%)** | `evaluation/real_recall.py`, 134 lived problems |
+| retrieval recall, real user wording | **267/284 (94%)** | `evaluation/real_recall.py`, 136 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -301,6 +301,17 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   too. That case is partly held up by an expansion from the neighbouring chapter,
   the same way debtor-moved-assets was, except here removing it does not reveal a
   better fix. It stays a miss with the reason recorded.
+  The fourth pass — triggers of four characters or more that are plain everyday
+  speech — found three: **「聯絡不上」** on the prepaid-trader row (it describes a
+  hit-and-run driver and an upstairs neighbour just as well as a shop that shut,
+  and it put 消保§17 into a window about a leak between two flats),
+  **「我完全不知道」** and **「跑來說」** on the 登記推定力 row (six and three
+  characters of pure conversation, putting 民法§759-1 into a guardianship-duties
+  window and a sublet dispute). Every motivating session keeps firing on its
+  domain-specific triggers. The lesson across four passes is one sentence: a
+  trigger earns its place by naming something only this domain's sessions say,
+  and length is no evidence of that — the longest offenders were 我完全不知道,
+  算不算數 and 怎麼算.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
