@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **274/291 (94%)** | `evaluation/real_recall.py`, 140 lived problems |
+| retrieval recall, real user wording | **278/295 (94%)** | `evaluation/real_recall.py`, 142 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -193,6 +193,20 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   a cohabitant a family member outright, was absent. Her friend's claim (「沒結婚
   不算家暴」) is refuted by §3 and only awkwardly by §63-1. A neighbouring rule
   that reaches the same result is not the same as the rule that applies.
+- **Which chapter applies decides everything, and nothing in the window asks.**
+  Five instances now, and it is the most productive shape in the list. A contract
+  labelled 承攬 returned the 承攬 chapter. A customer whose movers broke his table
+  got the tort chapter, because 侵權 is what you reach for when a stranger damages
+  something. A carer hired privately by a family got 勞基§11/§16/§17/§20 — every
+  article assuming 勞動基準法 applies, when 民法§488 II governs and says either side
+  may walk. A brother living rent-free in his late mother's flat got the whole
+  繼承編 — who owns it, the question BEFORE 「can we make him leave」 — when free
+  occupation is 使用借貸 and §470 II answers it. Money sent to a boyfriend got
+  §474/§478 and the interest articles, all presupposing 消費借貸, when the entire
+  dispute is whether it was 贈與 (§406) instead. The pattern: the window answers
+  the question the FACTS look like, and the classification that decides the case
+  is never in it. Definition articles are the cheapest fix — §464, §482, §406 are
+  one row each.
 - **The window can hold every consequence of a rule and never state the rule.**
   A session asking whether joint liability existed at all got §273/§274/§277/§280
   and §281 — how joint debtors are pursued, released and reimbursed — with §272,

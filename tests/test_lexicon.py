@@ -1050,6 +1050,22 @@ def test_knowing_the_other_side_could_not_sign_is_the_expensive_part():
     assert "無效法律行為之當事人，於行為當時知其無效，或可得而知者，應負回復原狀或損害賠償之責任" in out  # §113
 
 
+def test_living_there_for_free_is_not_a_tenancy():
+    """The window was the whole 繼承編 — who owns the flat, the question BEFORE
+    this one. Free occupation is 使用借貸 and §470 II is the answer."""
+    out = expansions("我媽答應讓我弟免費住她那間房子,沒有租約也沒收過一毛錢,住了五年多")
+    assert "借貸未定期限，亦不能依借貸之目的而定其期限者，貸與人得隨時請求返還借用物" in out  # §470 II
+    assert "稱使用借貸者，謂當事人一方以物交付他方，而約定他方於無償使用後返還其物之契約" in out  # §464
+
+
+def test_the_classification_is_the_whole_fight():
+    """「他說那是我自願給他的,是贈與不是借款」 — the window presupposed 消費借貸
+    and never carried the article the other side is standing on."""
+    out = expansions("我陸續轉了六十萬給他,分手後他說那是我自願給他的,是贈與不是借款")
+    assert "稱贈與者，謂當事人約定，一方以自己之財產無償給與他方，他方允受之契約" in out  # §406
+    assert "贈與物之權利未移轉前，贈與人得撤銷其贈與" in out                          # §408
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

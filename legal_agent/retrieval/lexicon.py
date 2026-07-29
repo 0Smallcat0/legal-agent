@@ -804,6 +804,29 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
 
+    # ── 免費借住不是租 (民法§470, §464) ──
+    # 「媽媽口頭答應讓弟弟免費住,沒有租約也沒收過一毛錢,住了五年,我們想賣掉」
+    # returned §1138/§1141/§1144/§1151/§1164/§1166/§1176 — the whole 繼承編, i.e.
+    # who owns the flat, which is the question BEFORE this one. Free occupation is
+    # 使用借貸, not tenancy and not inheritance: §464 is what it is, and §470 II is
+    # the answer — where no period was agreed and none can be inferred from the
+    # purpose, the lender may demand it back at any time.
+    (("免費住", "借住", "無償使用", "沒收過房租", "借給他住"),
+     ("借貸未定期限，亦不能依借貸之目的而定其期限者，貸與人得隨時請求返還借用物",
+      "稱使用借貸者，謂當事人一方以物交付他方，而約定他方於無償使用後返還其物之契約")),
+
+    # ── 到底是借的還是送的 (民法§406, §408) ──
+    # 「交往時陸續轉了六十萬,LINE 上他說等我賺錢就還你,分手後他說那是贈與不是借款」
+    # got §233/§203/§473/§474/§475-1/§478 — the loan chapter and its interest, all
+    # of which presuppose the classification the fight is about. §406 is the
+    # article the OTHER SIDE is standing on, and §408 is why it matters so much:
+    # once the money has moved, a gift can no longer be revoked. 說是贈與 is
+    # deliberately not a trigger — it also appears in debtor-moved-assets, where
+    # 民法§244 sits at rank 1.
+    (("是贈與不是", "當作贈與", "自願給他的", "不是借的"),
+     ("稱贈與者，謂當事人約定，一方以自己之財產無償給與他方，他方允受之契約",
+      "贈與物之權利未移轉前，贈與人得撤銷其贈與")),
+
     # ── 家屬直接請的人力,不在勞基法裡 (民法§488, §482) ──
     # 「我在一戶人家當看護,是家屬直接請我的,沒有透過公司也沒簽合約,昨天他們叫我
     # 今天做完就不用來」 returned 勞基§11/§16/§17/§18/§20/§28 — notice periods and
