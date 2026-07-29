@@ -943,6 +943,34 @@ def test_does_this_count_is_not_a_waiver_question():
     )
 
 
+def test_the_keeper_cannot_hand_it_back_whenever_he_likes():
+    """「家具寄放在朋友倉庫,說好放到年底,兩個月他就叫我馬上搬走」 returned the
+    warehouse-operator chapter (§613–§624) and §589/§602."""
+    out = expansions("我把一整套家具寄放在朋友的倉庫,說好放到年底,兩個月他就叫我這禮拜搬走")
+    assert "定有返還期限者，受寄人非有不得已之事由，不得於期限屆滿前返還寄託物" in out  # §598 II
+    assert "寄託物返還之期限，雖經約定，寄託人仍得隨時請求返還" in out                # §597
+
+
+def test_a_clause_that_sells_a_daughter_is_void_on_its_face():
+    """The window was the loan and the interest — §308/§335/§474/§476/§478/§203 and
+    刑§344. The question was whether the CLAUSE stands."""
+    assert "法律行為，有背於公共秩序或善良風俗者，無效" in expansions(
+        "借據上寫如果沒有按時還,要他女兒去酒店上班抵債"
+    )                                                                    # §72
+
+
+def test_dating_a_fact_is_not_asking_about_the_clock():
+    """三年前/五年前 fired the limitation row in seven sessions and only one was
+    about the clock; a house-purchase session was spending four of eight seats on
+    §125/§129/§144/§197."""
+    assert "請求權，因十五年間不行使而消滅" not in expansions(
+        "我三年前買的房子,最近原屋主的兒子跑來說當初過戶是被騙的"
+    )
+    assert "請求權，因十五年間不行使而消滅" in expansions(
+        "三年前有人騎車撞到我,現在還能跟他求償嗎,來不來得及"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

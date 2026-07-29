@@ -795,6 +795,28 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
 
+    # ── 寄放在別人那裡 (民法§598, §597) ──
+    # 「把家具寄放在朋友倉庫,說好放到年底,兩個月他就叫我這禮拜馬上搬走」 returned
+    # §613–§624, the WAREHOUSE-OPERATOR articles, plus §589/§602 — who a 受寄人 is
+    # and what 消費寄託 means. None of them answers 「他可不可以說收回就收回」.
+    # §598 II does: where a return date was agreed, the keeper may NOT hand it back
+    # early without 不得已之事由. §597 is the mirror, and it is worth having both in
+    # the window because they are deliberately asymmetric — the depositor may
+    # demand it back at any time, the keeper may not push it back at any time.
+    (("寄放", "寄放在", "幫我保管", "先放在他"),
+     ("定有返還期限者，受寄人非有不得已之事由，不得於期限屆滿前返還寄託物",
+      "寄託物返還之期限，雖經約定，寄託人仍得隨時請求返還")),
+
+    # ── 借據上的不堪條件 (民法§72) ──
+    # 「借據上寫沒按時還就要他女兒去酒店上班抵債」 returned §308/§335/§474/§476/
+    # §478/§203 and 刑§344 — the loan, the interest and the criminal usury offence.
+    # The question was whether that CLAUSE stands, and the answer is §72: a
+    # juridical act contrary to public order or good morals is void, full stop.
+    # 押身分證 is not a trigger although the session says it: it also appears in
+    # signed-in-desperation, where §74 (暴利行為) already sits at rank 1.
+    (("抵債", "酒店上班", "陪酒", "賣身", "以人抵債"),
+     ("法律行為，有背於公共秩序或善良風俗者，無效",)),
+
     # ── 期限最後一天遇到放假 (民法§122, §120) ──
     # 「最後付款日是六月七號,剛好是端午節連假銀行沒開,我十號一上班就匯了,對方說
     # 我遲延」 returned §248/§249/§252/§254 and 消保§11-1/§12 — deposits, penalties
@@ -1063,8 +1085,16 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # entire question. §197 is the two-year/ten-year clock for tort, §125 the
     # fifteen-year default, §129 what interrupts it, §144 what 「已過時效」 actually
     # does (the debtor may refuse; the claim is not erased).
+    # 三年前/五年前 are out. Swept across the stored sessions they fire in seven,
+    # and only time-barred is asking about the clock — the rest merely date a fact
+    # (「三年前買的房子」、「三年前幫朋友做保證人」). Measured cost in seats:
+    # seller-says-registration-wrong 4 of 8, co-debtor-already-paid 3,
+    # guarantor-after-main-debtor-released 2. Dropping them moves recall by
+    # nothing (260/277 either way, no case gained or lost) — it is a precision
+    # change, and precision has no harness; the seat counts are the measurement.
+    # time-barred keeps firing on 還能/來不來得及.
     (("還能", "來不來得及", "來得及", "過期", "時效", "多久以前", "幾年前",
-      "三年前", "五年前", "很久以前", "拖了很久", "早就", "還可以告"),
+      "很久以前", "拖了很久", "早就", "還可以告"),
      ("因侵權行為所生之損害賠償請求權，自請求權人知有損害及賠償義務人時起，二年間不行使而消滅",
       "請求權，因十五年間不行使而消滅",
       "消滅時效，因左列事由而中斷",

@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **260/277 (94%)** | `evaluation/real_recall.py`, 132 lived problems |
+| retrieval recall, real user wording | **263/280 (94%)** | `evaluation/real_recall.py`, 134 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -287,6 +287,20 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   transfer, a settlement and a loan-shark contract. Dropping it put §244 back at
   rank 1 and left the 過戶 fix in place. A passing number can rest on a defect;
   the only way to find out is to remove the defect and watch what falls.
+  The three-character pass found one more: **「三年前」/「五年前」** on the
+  limitation row. They fire in seven sessions and only one is asking about the
+  clock — the rest merely date a fact (「三年前買的房子」、「三年前幫朋友做保證
+  人」). Seats paid: seller-says-registration-wrong 4 of 8, co-debtor-already-paid
+  3, guarantor-after-main-debtor-released 2. Dropping them moved recall by exactly
+  nothing (260/277 before and after, no case gained, none lost), so the seat
+  counts ARE the measurement — this is the precision blind spot in its purest
+  form, and the change ships on the standing sweep rule rather than on a number.
+  Measured and NOT shipped in the same pass: earnest-money's long-standing
+  民法§248 miss looked like 屋主/買房 on the 買賣瑕疵 row crowding the 定金 row out.
+  Dropping either changed nothing; dropping both made it **worse** — §249 fell out
+  too. That case is partly held up by an expansion from the neighbouring chapter,
+  the same way debtor-moved-assets was, except here removing it does not reveal a
+  better fix. It stays a miss with the reason recorded.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
