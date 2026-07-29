@@ -161,6 +161,32 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 買賣何時成立 (民法§345) ──
+    # 「LINE 上談好十二萬,他回『好,就這個價』,隔天說沒簽約不算」 returned the
+    # 買賣瑕疵 chapter — what happens when goods are defective, not whether a sale
+    # exists. §345 II: agreement on the thing and the price IS the contract.
+    (("談好價錢", "說沒簽約", "就這個價", "反悔說", "算不算成交",
+      "口頭談好", "還沒簽約就"),
+     ("當事人就標的物及其價金互相同意時，買賣契約即為成立",)),
+
+    # ── 損益相抵 (民法§216-1) ──
+    # 「我的車體險先賠了十二萬,對方說他只要賠六萬」 returned §184/§188/§193/§213 —
+    # liability and restitution. §216-1 is the article the OTHER side is invoking,
+    # and it cannot be examined while it is missing from the window.
+    (("領了保險金", "保險先賠", "要扣掉", "已經領過", "扣除所受",
+      "保險公司賠過", "只要賠"),
+     ("基於同一原因事實受有損害並受有利益者，其請求之賠償金額，應扣除所受之利益",)),
+
+    # ── 協議簽了但未登記 (民法§830, §758) ──
+    # 「三個繼承人簽了分割協議,還沒辦登記,大哥反悔說不算數」 reached the partition
+    # articles. §758 is why the house has not moved yet — a real-right change by
+    # act of the parties takes registration — and §830 is when the joint holding
+    # ends. The agreement binds them; the register decides who owns it today.
+    (("協議書簽了", "還沒辦登記", "協議不算數", "還是大家的", "現在算誰的",
+      "簽了但沒過戶", "地政那邊還登記"),
+     ("不動產物權，依法律行為而取得、設定、喪失及變更者，非經登記，不生效力",
+      "公同共有之關係，自公同關係終止，或因公同共有物之讓與而消滅")),
+
     # ── 登記的推定力與善意信賴 (民法§759-1) ──
     # 「原屋主的兒子說當初過戶是被騙的、登記是錯的,要我把房子還回去」 returned
     # §244/§242/§87/§88 — every way a transaction gets UNDONE, which is the

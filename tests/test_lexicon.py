@@ -723,6 +723,29 @@ def test_where_to_sue_is_its_own_question():
     )                                                                    # 消保法§47
 
 
+def test_agreement_on_thing_and_price_is_the_contract():
+    """「LINE 上談好十二萬,他回『好,就這個價』,隔天說沒簽約不算」 returned the
+    買賣瑕疵 chapter — what happens when goods are defective, not whether a sale
+    exists."""
+    assert "當事人就標的物及其價金互相同意時，買賣契約即為成立" in expansions(
+        "在LINE上談好二手鋼琴十二萬,他回好就這個價,隔天說沒簽約所以不算"
+    )                                                                    # §345
+
+
+def test_the_article_the_other_side_relies_on_is_in_the_window():
+    """The opponent's whole argument rested on 損益相抵; the window carried
+    §184/§188/§193/§213 and never the article being used against the asker."""
+    assert "基於同一原因事實受有損害並受有利益者，其請求之賠償金額，應扣除所受之利益" in expansions(
+        "我的車體險先賠了十二萬,對方說他只要賠六萬因為我已經領過保險金"
+    )                                                                    # §216-1
+
+
+def test_a_signed_agreement_without_registration():
+    out = expansions("三個繼承人簽了分割協議書還沒辦登記,大哥說協議不算數,現在算誰的")
+    assert "不動產物權，依法律行為而取得、設定、喪失及變更者，非經登記，不生效力" in out  # §758
+    assert "公同共有之關係，自公同關係終止，或因公同共有物之讓與而消滅" in out            # §830
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
