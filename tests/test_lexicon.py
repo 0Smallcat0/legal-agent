@@ -856,6 +856,34 @@ def test_releasing_one_debtor_does_not_release_the_guarantor():
     assert "債權人向連帶債務人中之一人免除債務，而無消滅全部債務之意思表示者" in out  # §276
 
 
+def test_the_sentence_used_against_the_man_who_paid():
+    """「對方說我是自願付的不能反悔」 is §180 III, and it turns on 明知 — the window
+    had §225/§226/§259/§267 and 無因管理, never the article being quoted at him."""
+    out = expansions("我為了息事寧人先幫他付了二十萬,對方說我是自願付的不能反悔")
+    assert "因清償債務而為給付，於給付時明知無給付之義務者" in out          # §180 III
+    assert "無法律上之原因而受利益，致他人受損害者，應返還其利益" in out  # §179
+
+
+def test_whether_the_owner_can_be_sued_at_all():
+    """「負責人說那是公司的事跟他個人無關」 got §225/§226/§232/§255/§256 and §35 —
+    every article about the company failing to perform, none about reaching him."""
+    assert (
+        "法人對於其董事或其他有代表權之人因執行職務所加於他人之損害，與該行為人連帶負賠償之責任"
+        in expansions("負責人親自跟我簽約收錢,補習班關門後他說那是公司的事跟他個人無關")
+    )                                                                    # §28
+
+
+def test_a_quarrel_is_not_a_noise_complaint():
+    """Bare 「吵」 put 社維法§72 in a debt window (「對方一直來我家吵」) and fired on
+    a beating (「昨天吵架他推我」). The compounds keep the noise sessions."""
+    debt = expansions("我哥欠人家錢跑掉,對方一直來我家吵,我先幫他付了二十萬")
+    assert "製造噪音或深夜喧嘩" not in debt
+    beating = expansions("我跟男友同居三年,昨天吵架他推我撞到櫃子,手臂瘀青")
+    assert "製造噪音或深夜喧嘩" not in beating
+    still_noise = expansions("樓上小孩每天晚上跑跳,半夜還很吵,我已經失眠去看醫生")
+    assert "製造噪音或深夜喧嘩" in still_noise
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
