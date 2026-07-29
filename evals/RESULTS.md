@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **212/227 (93%)** | `evaluation/real_recall.py`, 104 lived problems |
+| retrieval recall, real user wording | **216/231 (94%)** | `evaluation/real_recall.py`, 106 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -108,6 +108,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   worse (107/113, 18/8/0). The expectations were written before each run and
   relabelling them afterwards would be grading my own work, so the number carries
   the misses.
+- **A reserved seat could evict a right answer, and did.** An injury-dismissal
+  session already held 勞基§13 at rank 8 and §59 at rank 7 when three promotions —
+  one of them 公寓大廈§16 — pushed both out: with k fixed, every promotion forces
+  an eviction, and once every window item is phrase-matched the trim takes the
+  tail regardless. Promotions are now capped at the number of UNPROTECTED places,
+  with a floor of one when that seat opens a topic the window lacks. Measured
+  +3 (213/231 → 216/231) with golden unchanged; the floor itself costs nothing
+  and keeps the reserved-first-seat property from two rounds ago.
 - **One seat is now reserved for a topic the window LACKS.** Corroboration was
   handing all three to topics the ranking had already confirmed, so 民法§254 and
   §264 fired first and still lost. A corroborated row is by definition already

@@ -644,6 +644,27 @@ def test_paying_another_persons_debt_reaches_subrogation():
     )                                                                    # §312
 
 
+def test_treatment_period_reaches_the_prohibition_not_the_procedure():
+    """「被機器壓傷手還在復健,公司寄資遣通知」 returned §11/§12/§14/§16/§18 — how a
+    contract is ended — plus §59 for the money. §13 says he may not end it."""
+    assert "勞工在第五十條規定之停止工作期間或第五十九條規定之醫療期間，雇主不得終止契約" in expansions(
+        "我被機器壓傷手還在復健也還沒回去上班,公司昨天寄資遣通知"
+    )                                                                    # 勞基§13
+
+
+def test_goods_broken_in_transit_reach_who_bears_the_risk():
+    assert "買賣標的物之利益及危險，自交付時起，均由買受人承受負擔" in expansions(
+        "店家安排的貨運路上翻車桌面裂了,我還沒簽收,這個損失該誰承擔"
+    )                                                                    # §373
+
+
+def test_negotiorum_gestio_now_carries_its_own_rule():
+    # §176 shipped without §172 two rounds ago — the consequence without the rule.
+    assert "未受委任，並無義務，而為他人管理事務者" in expansions(
+        "樓上出國水管爆了漏到我家,我只好自己找水電修好"
+    )                                                                    # §172
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

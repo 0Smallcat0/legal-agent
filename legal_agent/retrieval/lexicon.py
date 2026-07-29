@@ -161,6 +161,23 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 醫療期間不得終止契約 (勞基法§13) ──
+    # 「被機器壓傷手還在復健,公司寄資遣通知」 returned §11/§12/§14/§16/§18 — how a
+    # contract is ended — plus §59 for the injury money. §13 is the one that says
+    # he may not end it at all while the treatment lasts. Procedure given, the
+    # prohibition withheld.
+    (("還在治療", "還在復健", "醫療期間", "治療期間", "還沒回去上班",
+      "職災還在", "復健中"),
+     ("勞工在第五十條規定之停止工作期間或第五十九條規定之醫療期間，雇主不得終止契約",)),
+
+    # ── 買賣的危險移轉 (民法§373) ──
+    # 「店家安排的貨運路上翻車,桌面裂了,店家說已經交給貨運不關他的事」 returned the
+    # 運送 chapter — the CARRIER's liability — while the question was who between
+    # buyer and seller bears the loss. §373 answers it: risk passes on delivery.
+    (("還沒簽收", "還沒送到", "運送途中", "路上壞", "交給貨運", "誰承擔",
+      "送來的時候就壞"),
+     ("買賣標的物之利益及危險，自交付時起，均由買受人承受負擔",)),
+
     # ── 意思表示錯誤 (民法§88) ──
     # 「下單時看錯電壓,收到才發現用不了」 returned 消保法§19 and the 通訊交易 articles
     # — for a purchase the asker had explicitly said was made in a shop, not
@@ -446,7 +463,10 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("只好自己", "自己找水電", "先幫他", "代墊修繕", "我先處理", "幫他修",
       "無因管理", "先付了錢幫"),
      ("管理事務，利於本人，並不違反本人明示或可得推知之意思者",
-      "得請求本人償還其費用及自支出時起之利息")),
+      "得請求本人償還其費用及自支出時起之利息",
+      # §176 shipped without §172 two rounds ago — the consequence without the
+      # rule, the very shape recorded as a failure mode. This is the rule.
+      "未受委任，並無義務，而為他人管理事務者")),
 
     # ── 公同共有的權利行使 (民法§828, §820) ──
     # 「房子登記三兄妹公同共有,兩個人同意能不能出租」 got §818/§821/§824 — the rules
