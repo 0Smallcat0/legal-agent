@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **248/265 (94%)** | `evaluation/real_recall.py`, 124 lived problems |
+| retrieval recall, real user wording | **252/269 (94%)** | `evaluation/real_recall.py`, 127 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -95,7 +95,15 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   「民法第466條 未出現在本次檢索結果中」 warning 8 times under it. De-duplicating
   identical flags in `run.py` is three lines and clearly right — and it moves no
   published number (recall / golden / tier / mutation all unchanged), so by this
-  project's own rule it is recorded here rather than shipped.
+  project's own rule it is recorded here rather than shipped. It also reaches for
+  the FIRST limb of a numbered article: handed 民法§1145 for a brother who hid a
+  will, it explained 款一 (故意致被繼承人於死) when the case is 款四 (隱匿遺囑).
+  Retrieval put the right article in front of it; picking the right
+  sub-paragraph is the model's job and the weakest link in the chain. In the same
+  batch it was handed 民法§276 at rank 1 for 「公司被免除了我還要不要還」 and wrote
+  about §273 and §281 instead — the neighbours, answering 「誰可以被追」. Rank 1 is
+  not a hint the model reliably takes, which is why the window is printed in full
+  under every answer: the reader can see the article the model skipped.
 - **Administrative-fine articles are the next precision leak, unshipped.**
   「令其限期改正…屆期不改正者,處新臺幣三萬元以上三十萬元以下罰鍰」 articles
   (條例§38-1, 消保法§56-1, and the whole of 道路交通管理處罰條例) are long, full
@@ -232,6 +240,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   Narrowed to the words only a creditor uses (名下唯一、脫產、假買賣); the session
   that motivated the row keeps firing on 名下唯一, and a buyer defending his own
   registration stops being handed 詐害債權 noise.
+  It happened again the next round with 「欠銀行」 on the 拋棄繼承 row: a card-debt
+  session (「我的卡債本來是欠銀行的,資產管理公司說債權買過去了」) came back with
+  §1159/§1162-1/§1174/§1175 — four articles about a dead person's family — for a
+  living debtor. Two instances now, both from words that describe a situation two
+  different people are standing in. The scan that catches them is cheap and is
+  now part of the routine: before a trigger ships, grep it across every stored
+  session and reject anything that lands in a case from another domain or inside
+  a denial.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over

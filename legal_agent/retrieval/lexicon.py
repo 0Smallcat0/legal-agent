@@ -764,6 +764,31 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
 
+    # ── 債權被賣掉之後的抗辯 (民法§299, §297) ──
+    # 「資產管理公司說債權已經買過去了,要我一次還清十八萬;我當初有還過六萬,銀行
+    # 也還欠我一筆存款」 returned §204/§205/§233/§126 and four 繼承 articles — the
+    # size of the interest and (wrongly) the inheritance chapter, nothing about
+    # what the buyer inherits along with the claim. §299 is the whole defence:
+    # everything the debtor could have raised against the bank he can raise
+    # against the buyer, INCLUDING setting off what the bank still owes him.
+    # 債權讓與 is shared with debt-sold-without-notice, which is already correct
+    # at §297+§295 — measured after this row went in, it stayed 2/2.
+    (("債權讓與", "買過去", "債權已經買", "賣給資產管理", "轉給資產管理"),
+     ("債務人於受通知時，所得對抗讓與人之事由，皆得以之對抗受讓人",
+      "債務人得對於受讓人主張抵銷",
+      "債權之讓與，非經讓與人或受讓人通知債務人，對於債務人不生效力")),
+
+    # ── 免除主債務人之後保證人還剩什麼 (民法§276) ──
+    # 「銀行跟公司談好只還一百五十萬就結案,轉頭來找我這個連帶保證人付剩下的」
+    # returned §273/§274/§277/§280/§281 — how joint debtors are pursued and
+    # reimbursed — plus the 和解 articles, and never §276, which is the only one
+    # that says what a release does to everyone else: the released debtor's OWN
+    # share drops out and the rest stays. Without it the window answers 「誰可以
+    # 被追」 when the question was 「他被放掉了,我少還多少」.
+    (("被免除", "免除債務", "免掉", "談好只還", "打折結清"),
+     ("債權人向連帶債務人中之一人免除債務，而無消滅全部債務之意思表示者",
+      "除該債務人應分擔之部分外，他債務人仍不免其責任")),
+
     # ── 頂讓 / 概括承受 (民法§305, 勞基法§20) ──
     # 「早餐店頂讓給別人,新老闆接手後繼續開,舊老闆積欠我三個月薪水就跑了」 returned
     # §440/§478/§474/§203 and 勞基§17/§22/§28 — the wage debt itself, well covered,
@@ -865,6 +890,17 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因判決離婚而陷於生活困難者",
       "對於未成年子女權利義務之行使或負擔")),
 
+    # ── 喪失繼承權 (民法§1145) ──
+    # 「我哥一直說沒有遺囑,後來我看到爸爸寫的遺囑被他藏起來不拿出來」 returned
+    # §1138/§1141/§1164/§1165/§1173/§1176 and §1146 — how the estate is split and
+    # how to sue for a share already taken. None of them answers whether the
+    # brother still gets one. §1145 IV is the article: 偽造、變造、隱匿或湮滅
+    # 被繼承人關於繼承之遺囑者,喪失其繼承權 — with the 宥恕 escape in the same
+    # article, so the window carries both sides rather than only the accusation.
+    (("藏起來", "偽造", "隱匿", "湮滅"),
+     ("有左列各款情事之一者，喪失其繼承權",
+      "偽造、變造、隱匿或湮滅被繼承人關於繼承之遺囑者")),
+
     # ── 代筆遺囑 (民法§1194, §1189) ──
     # 「爸爸中風不能寫字,找三個鄰居當見證人,口述由其中一人代筆,弟弟說不是親手寫
     # 的所以無效」 returned §1144/§1138/§1141/§1165/§1176/§1202 — how an estate is
@@ -884,7 +920,12 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 「爸爸過世銀行說有三百多萬貸款」 got the 遺產分配 articles but not the one the
     # asker actually needed: three months, in writing, to the court. §1148 is why
     # 拋棄 is often unnecessary — liability is already capped at the estate.
-    (("拋棄繼承", "限定繼承", "留下債務", "欠銀行", "背債", "債務會不會",
+    # 欠銀行 was a trigger until a card-debt session (「我的卡債本來是欠銀行的,
+    # 資產管理公司說債權買過去了」) came back half 繼承編 — §1159/§1162-1/§1174/
+    # §1175 for a living debtor. Same shape as 過戶給: the words name a situation
+    # both an heir and an ordinary debtor are in, and a substring cannot tell
+    # which. The motivating session keeps firing on 拋棄繼承 and 貸款要我們還.
+    (("拋棄繼承", "限定繼承", "留下債務", "背債", "債務會不會",
       "跑到我小孩", "繼承債務", "貸款要我們還"),
      ("應於知悉其得繼承之時起三個月內，以書面向法院為之",
       "繼承之拋棄，溯及於繼承開始時發生效力",

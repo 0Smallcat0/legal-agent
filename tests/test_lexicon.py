@@ -825,6 +825,37 @@ def test_a_business_that_changed_hands_carries_its_debts():
     assert "事業單位改組或轉讓時" in out                          # 勞基§20
 
 
+def test_what_the_debt_buyer_bought_includes_the_defences():
+    """「資產管理公司說債權買過去了,要我還十八萬;我還過六萬,銀行也還欠我存款」
+    got §204/§205/§233/§126 and four 繼承 articles."""
+    out = expansions("資產管理公司說債權已經買過去了,我當初有還過六萬,銀行也還欠我一筆存款")
+    assert "債務人於受通知時，所得對抗讓與人之事由，皆得以之對抗受讓人" in out   # §299 I
+    assert "債務人得對於受讓人主張抵銷" in out                                 # §299 II
+
+
+def test_a_living_debtor_is_not_an_heir():
+    """欠銀行 was a trigger on the 拋棄繼承 row until a card-debt session came back
+    half 繼承編. Same shape as 過戶給 — the words fit both people."""
+    out = expansions("我的卡債本來是欠銀行的,現在資產管理公司要我一次還清十八萬")
+    assert "應於知悉其得繼承之時起三個月內，以書面向法院為之" not in out
+    assert "繼承人對於被繼承人之債務，以因繼承所得遺產為限，負清償責任" not in out
+
+
+def test_the_heir_who_hid_the_will():
+    """「我哥一直說沒有遺囑,後來看到爸爸的遺囑被他藏起來」 got §1138/§1141/§1164/
+    §1165/§1173/§1176 — how to split an estate, not who still gets a share."""
+    assert "偽造、變造、隱匿或湮滅被繼承人關於繼承之遺囑者" in expansions(
+        "我爸過世後我哥一直說沒有遺囑,後來我看到爸爸親筆寫的遺囑被他藏起來不拿出來"
+    )                                                                    # §1145 I 4
+
+
+def test_releasing_one_debtor_does_not_release_the_guarantor():
+    """The window answered 「誰可以被追」 with §273/§274/§277/§280/§281 when the
+    question was 「他被放掉了,我少還多少」."""
+    out = expansions("銀行跟公司談好只還一百五十萬就結案,公司都被免除了我還要不要還")
+    assert "債權人向連帶債務人中之一人免除債務，而無消滅全部債務之意思表示者" in out  # §276
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
