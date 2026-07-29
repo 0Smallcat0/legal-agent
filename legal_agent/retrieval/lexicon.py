@@ -804,6 +804,32 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
 
+    # ── 家屬直接請的人力,不在勞基法裡 (民法§488, §482) ──
+    # 「我在一戶人家當看護,是家屬直接請我的,沒有透過公司也沒簽合約,昨天他們叫我
+    # 今天做完就不用來」 returned 勞基§11/§16/§17/§18/§20/§28 — notice periods and
+    # severance, every one of which assumes 勞動基準法 applies. A carer hired
+    # privately by a family is outside it, and the governing rule is 民法§488 II:
+    # an employment with no fixed term that cannot be inferred from the nature of
+    # the work may be ended by EITHER side at any time. That is bad news for the
+    # asker, which is exactly why the window must carry it; §482 is the definition
+    # the classification turns on. Same seam as 承攬 vs 僱傭 — which statute applies
+    # decides everything, and nothing else in the window asks the question.
+    (("當看護", "家屬直接請", "沒有透過公司"),
+     ("僱傭未定期限，亦不能依勞務之性質或目的定其期限者，各當事人得隨時終止契約",
+      "稱僱傭者，謂當事人約定，一方於一定或不定之期限內為他方服勞務，他方給付報酬之契約")),
+
+    # ── 明知對方不能簽約還是簽了 (民法§113, §79) ──
+    # 「跟高中生買重機,我知道他未成年,他說爸媽同意,現在他媽說沒有同意過」 returned
+    # §191-2/§196/§213/§216/§217 — the tort chapter and the measure of damages —
+    # and nothing about whether the sale stands. §79 is the rule: a contract by a
+    # person of limited capacity needs the legal representative's ratification.
+    # §113 is the half that costs the asker money: a party who KNEW the act was
+    # void bears the restitution or the damages, so 「我知道他未成年」 is the most
+    # expensive sentence in his own account.
+    (("我知道他未成年", "跟未成年", "他未成年", "沒有同意過"),
+     ("限制行為能力人未得法定代理人之允許，所訂立之契約，須經法定代理人之承認，始生效力",
+      "無效法律行為之當事人，於行為當時知其無效，或可得而知者，應負回復原狀或損害賠償之責任")),
+
     # ── 押了房子的債過了時效 (民法§145) ──
     # 「十六年前借兩百萬,拿房子設定抵押,他都沒來要過,現在他兒子要拍賣我的房子」
     # returned §125/§129/§144/§197 and §880 — every article that helps the asker,

@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **270/287 (94%)** | `evaluation/real_recall.py`, 138 lived problems |
+| retrieval recall, real user wording | **274/291 (94%)** | `evaluation/real_recall.py`, 140 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -325,7 +325,11 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   case lost anything. Ranking rows by irrelevant-firings is now the cheapest
   sweep available; the metric is noisy for broad rows like 侵權 (§184 is relevant
   everywhere and expected almost nowhere), so only the zero-relevant rows are
-  acted on.
+  acted on. Run again the next round it came back empty at both thresholds — no
+  row firing twice or more had zero relevant cases — which is the honest end of a
+  sweep: five passes found twelve bad triggers, and the sixth found none. Recorded
+  rather than padded out, because a scan that reports nothing is the only evidence
+  that the previous ones were worth running.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
