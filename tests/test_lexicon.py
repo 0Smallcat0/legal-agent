@@ -665,6 +665,21 @@ def test_negotiorum_gestio_now_carries_its_own_rule():
     )                                                                    # §172
 
 
+def test_a_new_guardian_reaches_the_next_step_not_the_appointment():
+    """「法院上個月裁定我當監護人,接下來要辦什麼」 returned §14/§15/§1111 — how a
+    guardian is APPOINTED, which had already happened."""
+    out = expansions("法院裁定我當媽媽的監護人,接下來要辦什麼,社工說有東西要在期限內送法院")
+    assert "監護開始時，監護人對於受監護人之財產，應依規定會同" in out          # §1099
+    assert "監護人應以善良管理人之注意，執行監護職務" in out                   # §1100
+
+
+def test_a_wedding_day_delivery_reaches_rescission_without_demand():
+    """「約定婚禮當天早上八點送到,對方到中午都沒來」 was REFUSED at 資料不足."""
+    out = expansions("花藝約定婚禮當天早上八點送到,對方都沒來,第三天才說要補送,我可以直接不要了嗎")
+    assert "依契約之性質或當事人之意思表示，非於一定時期為給付不能達其契約之目的" in out  # §255
+    assert "遲延後之給付，於債權人無利益者，債權人得拒絕其給付" in out                  # §232
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
