@@ -1082,6 +1082,22 @@ def test_putting_money_into_a_friends_shop_may_make_you_a_partner():
     assert "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任" in out        # §681
 
 
+def test_a_broker_earns_only_what_he_brought_about():
+    """The window was 買賣瑕疵 plus §389/§588 and even §514-7 (旅遊) — nothing
+    about when a broker is owed anything."""
+    out = expansions("簽的是一般委託,後來我自己找到買方成交,仲介說買方是他之前帶看過的")
+    assert "居間人，以契約因其報告或媒介而成立者為限，得請求報酬" in out    # §568
+    assert "稱居間者，謂當事人約定，一方為他方報告訂約之機會或為訂約之媒介，他方給付報酬之契約" in out  # §565
+
+
+def test_made_to_order_is_a_contract_for_work_not_a_sale():
+    """「訂做的不能退不能換」 borrows the language of a sale to escape 承攬
+    liability. §490 is the classification and §493 is the first rung."""
+    out = expansions("我在工作室訂做一組實木餐桌椅,尺寸木種都是我指定的,桌面有裂痕")
+    assert "稱承攬者，謂當事人約定，一方為他方完成一定之工作，他方俟工作完成，給付報酬之契約" in out  # §490
+    assert "定作人得定相當期限，請求承攬人修補之" in out                                          # §493
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
