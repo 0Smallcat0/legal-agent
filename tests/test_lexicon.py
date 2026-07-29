@@ -884,6 +884,65 @@ def test_a_quarrel_is_not_a_noise_complaint():
     assert "製造噪音或深夜喧嘩" in still_noise
 
 
+def test_a_deadline_that_lands_on_a_holiday():
+    """The window was §248/§249/§252/§254 and 消保§11-1/§12 — every article
+    assuming he was late. §122 is what decides whether he was."""
+    out = expansions("最後付款日那天剛好是端午節連假銀行沒開,我十號一上班就匯了,遇假日怎麼算")
+    assert "其期日或其期間之末日，為星期日、紀念日或其他休息日時，以其休息日之次日代之" in out  # §122
+
+
+def test_a_form_the_parties_agreed_on_is_a_condition():
+    """§166 is the mirror of §345/§153: where the parties agreed a form, the
+    contract is PRESUMED not to exist until the form is complete."""
+    assert "契約當事人約定其契約須用一定方式者，在該方式未完成前，推定其契約不成立" in expansions(
+        "雙方說好要簽正式書面契約才算數,還沒簽他就說口頭就已經成立了"
+    )                                                                    # §166
+
+
+def test_court_applications_are_not_noise_complaints():
+    """Bare 「聲」 is inside 聲請. All five of its firings across the stored
+    sessions are court applications, and two of those windows paid seats for it."""
+    for q in ["我聲請到通常保護令了,可是前男友還是每天來我家樓下按門鈴",
+              "我想聲請監護宣告,爸爸失智兩年了",
+              "銀行寄信說要聲請拍賣我的房子"]:
+        assert "製造噪音或深夜喧嘩" not in expansions(q)
+    assert "製造噪音或深夜喧嘩" in expansions("樓上小孩跑跳,半夜還很吵,我失眠去看醫生")
+
+
+def test_a_registration_transfer_is_not_a_defect_claim():
+    """過戶 fired the 買賣瑕疵 row in nine sessions and only two were purchases;
+    the other seven — 脫產, 假買賣, 遺腹子, 受任人過世, 贈與, 藏遺囑 — got §360."""
+    assert "缺少出賣人所保證之品質者" not in expansions(
+        "我爸過世後我哥把遺囑藏起來,還去把印鑑證明辦一辦要去過戶"
+    )
+    assert "缺少出賣人所保證之品質者" in expansions(
+        "中古屋交屋後才發現漏水,賣方跟仲介都說不知道"
+    )
+
+
+def test_asking_how_a_number_is_worked_out_is_not_a_maintenance_case():
+    """怎麼算 outranked the specific rows — three characters beats two — and put
+    民法§1119 in reserved seat #1 of a payment-deadline window."""
+    assert "扶養之程度，應按受扶養權利者之需要，與負扶養義務者之經濟能力及身分定之" not in expansions(
+        "契約上沒有寫遇假日怎麼算,對方說我遲延要沒收訂金"
+    )
+    assert "扶養之程度，應按受扶養權利者之需要，與負扶養義務者之經濟能力及身分定之" in expansions(
+        "我想知道扶養費到底怎麼算,是照他的需要還是照我的收入"
+    )
+
+
+def test_does_this_count_is_not_a_waiver_question():
+    """「這樣過戶算不算數」 took reserved seat #0 in a 脫產 window ahead of 名下唯一
+    and 民法§244 fell out of the eight. The waiver row's own session keeps firing
+    on 同意書/都簽了/自願放棄."""
+    assert "法律行為，違反強制或禁止之規定者，無效" not in expansions(
+        "他把名下唯一的房子過戶給兒子,我想知道這樣過戶算不算數"
+    )
+    assert "法律行為，違反強制或禁止之規定者，無效" in expansions(
+        "公司要我簽一張同意書自願放棄加班費,同事說大家都簽了"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **257/274 (94%)** | `evaluation/real_recall.py`, 130 lived problems |
+| retrieval recall, real user wording | **260/277 (94%)** | `evaluation/real_recall.py`, 132 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -260,6 +260,33 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   深夜/喧嘩, and the noise sessions on 跑跳/拖椅子/半夜. Worth naming the pattern:
   the trigger that has been in the table longest is not the safest — it is the
   one written before the rule existed.
+  So the next round stopped guessing and swept all 347 triggers of one or two
+  characters against the stored sessions, asking of each firing whether the case
+  belongs to the row's domain. Four more fell out, all measured, none of them
+  costing a single legitimate firing:
+  **「聲」** is inside 聲請 — every one of its five firings is a court application
+  (聲請保護令/監護宣告/拍賣), and two windows paid for it: a protective-order
+  session lost two of eight seats to 公寓大廈§16 and 民法§793, an emergency-order
+  session one to 社維法§72.
+  **「過戶」** on the 買賣瑕疵 row fired in nine sessions of which two were
+  purchases; 脫產, 假買賣, 遺腹子繼承, 受任人過世 and 藏遺囑 were all being handed
+  民法§360.
+  **「樓下」** appears once in the whole set — 「前男友每天來我家樓下按門鈴」.
+  **「怎麼算」** on the 扶養 row was the most expensive, because specificity
+  ordering sorts by trigger LENGTH: at three characters it outranked every
+  two-character trigger, so 「遇假日怎麼算」 put 民法§1119 in reserved seat #1 of a
+  payment-deadline window and pushed §122 out entirely. A long generic trigger is
+  worse than a short one — it wins the seats as well as taking them.
+  Removing 過戶 then cost 民法§244 in debtor-moved-assets, which is the useful part
+  of the story: that case had been passing **because of** an expansion from the
+  wrong chapter — the 買賣瑕疵 phrases were adding enough lexical mass to the
+  expanded query to keep §244 inside the eight. Restoring the trigger would have
+  hidden the real culprit, another long generic trigger: 「算不算數」 on the
+  waiver row, four characters, taking reserved seat #0 ahead of 名下唯一. It fires
+  in four sessions and only one is about a signed waiver — the others ask it of a
+  transfer, a settlement and a loan-shark contract. Dropping it put §244 back at
+  rank 1 and left the 過戶 fix in place. A passing number can rest on a defect;
+  the only way to find out is to remove the defect and watch what falls.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
