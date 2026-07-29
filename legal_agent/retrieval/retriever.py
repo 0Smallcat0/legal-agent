@@ -383,6 +383,7 @@ def _promote_lexicon_phrases(
         matches.insert(0, matches.pop(first_new))
 
     promote: list[tuple[Statute, float]] = []
+    promoted_rows: list[int | None] = []      # which row won each seat, in order
     taken: set[tuple[str, str, str]] = set()
     for _count, _rank, _position, _phrase, hits in matches:
         if len(promote) >= LEXICON_RESERVED_SEATS:
@@ -391,6 +392,7 @@ def _promote_lexicon_phrases(
             key = key_of(c)
             if key not in window and key not in taken:
                 promote.append((c, 0.0))
+                promoted_rows.append(row_of.get(_phrase))
                 taken.add(key)
                 break                            # one article per phrase
     if not promote:
@@ -401,12 +403,26 @@ def _promote_lexicon_phrases(
     # was therefore 「already in the window」 and not promoted — and then the three
     # promotions cut the window to five and dropped it. Trim the unprotected tail
     # first; only cut a phrase-matched article if there is nothing else to give.
-    room = max(k - len(promote), 0)
     window_items = ranked[:k]
     protected = [
         i for i, (statute, _score) in enumerate(window_items)
         if any(phrase in (statute.content or "") for phrase in phrases)
     ]
+    # A reserved seat exists to bring in what the window LACKS. When the window is
+    # already phrase-matched all the way down there is nothing to improve by
+    # swapping, and the old trim took the tail anyway: an injury-dismissal session
+    # already held 勞基§13 at rank 8 and §59 at rank 7, and three promotions —
+    # one of them 公寓大廈§16 — pushed both out. Promote at most as many as there
+    # are unprotected places.
+    # …but never below one, when that first promotion opens a topic the window
+    # does not carry: a fully matched window is exactly where a missing answer is
+    # most valuable, and capping to zero there would undo the reserved first seat.
+    unprotected = max(len(window_items) - len(protected), 0)
+    floor = 1 if promoted_rows and promoted_rows[0] not in corroborated else 0
+    promote = promote[: max(unprotected, floor)]
+    if not promote:
+        return window_items[:k]
+    room = max(k - len(promote), 0)
     keep_idx = list(range(len(window_items)))
     for i in reversed(range(len(window_items))):
         if len(keep_idx) <= room:

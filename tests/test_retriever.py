@@ -299,13 +299,16 @@ def test_a_seat_finishes_the_topic_the_window_already_confirms():
     try:
         lexicon.LEXICON = [(("t0",), ("甲語", "乙語")), (("t1",), ("丙語",))]
         lexicon.expansions = lambda _q: ["丙語", "甲語", "乙語"]   # 丙語 FIRST in order
-        # TWO seats: the first is reserved for the topic the window lacks, and the
-        # second is the property this test exists for — finishing the confirmed
-        # topic beats table order.
+        # TWO seats and an UNPROTECTED place in the window, so the corroborated
+        # row can finish its topic without evicting anything phrase-matched.
+        # (With no unprotected place only the new-topic seat survives — see
+        # test_promotion_never_evicts_an_already_matched_window.)
         r.LEXICON_RESERVED_SEATS = 2
         r.config.QUERY_EXPANSION = "on"
+        fillers = [statute("第8條", "無關內容"), statute("第7條", "也無關")]
         out = r._promote_lexicon_phrases(
-            "q", [in_window, same_row, other_row], [(in_window, 9.0)], k=3,
+            "q", [in_window, same_row, other_row],
+            [(in_window, 9.0), (fillers[0], 2.0), (fillers[1], 1.0)], k=5,
         )
     finally:
         (lexicon.LEXICON, lexicon.expansions, r.LEXICON_RESERVED_SEATS,
@@ -419,6 +422,47 @@ def test_one_seat_is_reserved_for_a_topic_the_window_lacks():
 
     promoted = [s.article_no for s, score in out if score == 0.0]
     assert promoted == ["第3條"], f"the seat completed a topic already present: {promoted}"
+
+
+def test_promotion_never_evicts_an_already_matched_window():
+    """Measured on an injury-dismissal session: the window already held 勞基§13 at
+    rank 8 and §59 at rank 7, and three promotions — one of them 公寓大廈§16 —
+    pushed both out. A reserved seat is for what the window LACKS."""
+    from legal_agent.data.models import Statute
+    from legal_agent.retrieval import lexicon
+    from legal_agent.retrieval import retriever as r
+
+    def statute(no: str, content: str) -> Statute:
+        return Statute(
+            statute_id="測試法", article_no=no, content=content,
+            effective_from="2010-01-01", effective_to=None,
+            hierarchy_level="法律", source_url=f"http://x/{no}",
+        )
+
+    # Every item in the window is matched by a fired phrase; the candidate the
+    # promoter would add is not in it.
+    in_window = [statute("第1條", "甲語 之規定"), statute("第2條", "乙語 之規定")]
+    outsider = statute("第9條", "丙語 之規定")
+
+    saved = (lexicon.LEXICON, lexicon.expansions, r.LEXICON_RESERVED_SEATS,
+             r.config.QUERY_EXPANSION)
+    try:
+        lexicon.LEXICON = [(("t0",), ("甲語", "乙語")), (("t1",), ("丙語",))]
+        lexicon.expansions = lambda _q: ["甲語", "乙語", "丙語"]
+        r.LEXICON_RESERVED_SEATS = 3
+        r.config.QUERY_EXPANSION = "on"
+        out = r._promote_lexicon_phrases(
+            "q", [*in_window, outsider], [(s, 9.0) for s in in_window], k=2,
+        )
+    finally:
+        (lexicon.LEXICON, lexicon.expansions, r.LEXICON_RESERVED_SEATS,
+         r.config.QUERY_EXPANSION) = saved
+
+    kept = [s.article_no for s, _ in out]
+    # One seat still opens the missing topic — that is the reserved first seat —
+    # but only one, where the old code took three and dropped two right answers.
+    assert "第1條" in kept, f"the top of a matched window was evicted: {kept}"
+    assert kept.count("第9條") == 1, f"more than the one new-topic seat: {kept}"
 
 
 if __name__ == "__main__":
