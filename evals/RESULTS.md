@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **282/299 (94%)** | `evaluation/real_recall.py`, 144 lived problems |
+| retrieval recall, real user wording | **287/303 (95%)** | `evaluation/real_recall.py`, 146 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -215,6 +215,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   partnership cannot pay. Seven instances, and the shape keeps paying: the window
   is built from the surface facts (a building, a shop, a transfer) while the case
   turns on a category nobody in the transcript names.
+  Nine instances now, and the ninth paid a dividend the others had not: adding the
+  承攬 DEFINITION (§490) for 「訂做的東西」 also recovered 民法§505 in
+  pay-only-after-delivery, a miss that had survived every round since it was
+  written. The standing misses are not all independent problems — some are the
+  same missing classification seen from a different session, which is an argument
+  for fixing seams rather than chasing individual misses.
 - **The window can hold every consequence of a rule and never state the rule.**
   A session asking whether joint liability existed at all got §273/§274/§277/§280
   and §281 — how joint debtors are pursued, released and reimbursed — with §272,

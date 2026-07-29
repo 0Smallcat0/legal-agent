@@ -804,6 +804,29 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
 
+    # ── 仲介只是報告機會,還是替你辦事 (民法§568, §565) ──
+    # 「一般委託,他帶看幾次都沒成,我自己在網路上認識買方成交,他說買方是他之前帶看
+    # 過的,要收百分之四」 returned §354/§359/§360/§364 (買賣瑕疵)、§389、§588 and
+    # even §514-7 (旅遊). Not one article about when a broker earns anything. §565
+    # is what 居間 is — reporting an opportunity or acting as intermediary — and
+    # §568 is the answer: he may claim a fee ONLY where the contract came about
+    # through his report or mediation. 帶看/服務費 are not triggers: they appear in
+    # a mould-in-the-flat session and in a 委任 session about an agent who died.
+    (("一般委託", "自己找到買方", "帶看過的"),
+     ("居間人，以契約因其報告或媒介而成立者為限，得請求報酬",
+      "稱居間者，謂當事人約定，一方為他方報告訂約之機會或為訂約之媒介，他方給付報酬之契約")),
+
+    # ── 訂做的東西做壞了,不是買賣是承攬 (民法§490, §493) ──
+    # 「訂做一組實木餐桌椅,尺寸木種都是我指定的,桌面有裂痕,他說訂做的不能退不能換」
+    # returned §247/§247-1/§248/§249/§502 and 消保§11-1/§12 — the deposit and the
+    # penalty, i.e. what happens if the deal falls apart, not what he can demand
+    # for a defect. Goods made to the customer's specification are 承攬, not 買賣:
+    # §490 is the definition (and says the maker's own materials are presumed part
+    # of the price), and §493 is the first rung — 定作人得定相當期限請求修補.
+    (("訂做", "訂製", "客製", "我指定的"),
+     ("稱承攬者，謂當事人約定，一方為他方完成一定之工作，他方俟工作完成，給付報酬之契約",
+      "定作人得定相當期限，請求承攬人修補之")),
+
     # ── 月租停車場是租位子還是保管車 (民法§590, §589) ──
     # 「月租停車場,車門被刮花,管理員說合約寫本場所僅出租車位、車輛毀損概不負責」
     # returned 公寓大廈條例§4/§7/§10/§23/§26/§33 and 道交條例§56-1 — a car park in
