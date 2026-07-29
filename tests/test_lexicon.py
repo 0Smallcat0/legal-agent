@@ -746,6 +746,52 @@ def test_a_signed_agreement_without_registration():
     assert "公同共有之關係，自公同關係終止，或因公同共有物之讓與而消滅" in out            # §830
 
 
+def test_the_settlement_paper_the_whole_question_is_about():
+    """「對方拿一張和解書給我簽,一個月後醫生說頸椎要開刀」 returned §563/§473/
+    §611/§144/§197/§125 — nothing about the paper she signed."""
+    out = expansions("車禍當天對方拿一張和解書給我簽,寫賠我三萬塊兩清,我當場簽了")
+    assert "和解有使當事人所拋棄之權利消滅" in out           # §737 — what he is holding
+    assert "和解不得以錯誤為理由撤銷之" in out               # §738 — the only way back
+
+
+def test_refusing_to_settle_is_not_having_settled():
+    """「我不想和解了」 contains 和解了 and means the opposite — the denied-premise
+    failure mode, so every trigger requires the settlement to have happened."""
+    out = expansions("他一直找我談,我不想和解了,直接告他可以嗎")
+    assert "和解有使當事人所拋棄之權利消滅" not in out
+
+
+def test_a_demand_letter_alone_does_not_stop_the_clock():
+    """The asker's belief 「寄了存證信函時效就中斷了」 is the defect: §130 says the
+    interruption is undone unless a suit follows within six months."""
+    assert "時效因請求而中斷者，若於請求後六個月內不起訴，視為不中斷" in expansions(
+        "兩年前有寄存證信函催他還錢,我想說這樣時效就中斷了就先放著"
+    )                                                                    # §130
+
+
+def test_a_demand_letter_as_proof_of_notice_is_not_a_clock_event():
+    """Bare 「寄存證信函」 was rejected as a trigger: three sessions send one as
+    evidence that notice was given, and §130 has no business in their windows."""
+    out = expansions("管委會寄存證信函說我欠了三年管理費要告我,可是電梯壞了半年他們都不修")
+    assert "時效因請求而中斷者，若於請求後六個月內不起訴，視為不中斷" not in out
+
+
+def test_undoing_your_own_gift_is_not_the_creditor_undoing_a_debtors():
+    """The act is identical from both sides — only the role differs. 「贈與過戶給
+    兒子,過戶完他就搬走」 got the CREDITOR's §244/§242/§87 and nothing she could use."""
+    out = expansions("我三年前把名下的房子贈與過戶給兒子,講好他要照顧我到老,結果過戶完他就搬走")
+    assert "對於贈與人有扶養義務而不履行者" in out                        # §416 II
+    assert "贈與撤銷後，贈與人得依關於不當得利之規定，請求返還贈與物" in out  # §419
+    assert "債務人所為之無償行為，有害及債權者，債權人得聲請法院撤銷之" not in out  # §244
+
+
+def test_the_creditor_chasing_a_transfer_still_reaches_244():
+    """Narrowing 脫產 must not cost the session that motivated it."""
+    assert "債務人所為之無償行為，有害及債權者，債權人得聲請法院撤銷之" in expansions(
+        "他欠我一百萬,查到他上個月把名下唯一的房子過戶給他兒子,說是贈與"
+    )                                                                    # §244
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
