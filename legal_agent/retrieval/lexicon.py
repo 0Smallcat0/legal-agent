@@ -161,6 +161,26 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 監護人就任後要做的事 (民法§1099, §1100) ──
+    # 「法院上個月裁定我當監護人,接下來要辦什麼」 returned §14/§15/§1111/§1111-1 —
+    # how a guardian is APPOINTED, which already happened. §1099 is the next step
+    # and it has a deadline: an inventory of the ward's property within two
+    # months. §1100 is the standard the job is held to.
+    (("剛當上監護人", "接下來要辦", "要送法院", "財產清冊", "監護人要做什麼",
+      "裁定我當", "有沒有期限要辦"),
+     ("監護開始時，監護人對於受監護人之財產，應依規定會同",
+      "監護人應以善良管理人之注意，執行監護職務")),
+
+    # ── 定期行為的遲延 (民法§255, §232) ──
+    # 「約定婚禮當天早上八點送到,對方到中午都沒來,第三天才說要補送」 was REFUSED at
+    # 資料不足. §255 is the point: when the time IS the contract, no further demand
+    # is needed before rescinding. §232 lets the creditor refuse a late tender that
+    # is now useless to them.
+    (("當天沒送到", "都沒來", "才說要補送", "直接不要了", "過了時間才",
+      "約定當天", "婚禮當天", "來不及用了"),
+     ("依契約之性質或當事人之意思表示，非於一定時期為給付不能達其契約之目的",
+      "遲延後之給付，於債權人無利益者，債權人得拒絕其給付")),
+
     # ── 醫療期間不得終止契約 (勞基法§13) ──
     # 「被機器壓傷手還在復健,公司寄資遣通知」 returned §11/§12/§14/§16/§18 — how a
     # contract is ended — plus §59 for the injury money. §13 is the one that says
