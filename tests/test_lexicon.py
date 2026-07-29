@@ -792,6 +792,39 @@ def test_the_creditor_chasing_a_transfer_still_reaches_244():
     )                                                                    # §244
 
 
+def test_a_will_written_by_someone_else_is_still_a_will():
+    """「弟弟說遺囑不是爸爸親手寫的所以無效」 got §1144/§1138/§1141/§1165/§1176 —
+    how an estate is divided, which is the question AFTER this one."""
+    out = expansions("找了三個鄰居當見證人,爸爸口述由其中一個人代筆寫遺囑,大家都簽名蓋章")
+    assert "遺囑應依左列方式之一為之" in out                      # §1189 — 自書 is one of five
+    assert "代筆遺囑，由遺囑人指定三人以上之見證人" in out          # §1194 — the checklist
+
+
+def test_a_session_that_says_there_was_no_will_is_not_a_will_case():
+    """遺囑 sits in seven sessions, one of them a denial, and 見證人 in two about
+    signed agreements — neither is a trigger, so neither drags the 遺囑方式 in."""
+    denial = expansions("爸爸沒有留遺囑,三個兄弟姊妹要怎麼分")
+    assert "代筆遺囑，由遺囑人指定三人以上之見證人" not in denial
+    agreement = expansions("協議書三個人都簽名蓋章,也有見證人,但還沒去地政辦登記")
+    assert "遺囑應依左列方式之一為之" not in agreement
+
+
+def test_the_people_a_company_sent_are_the_companys_problem():
+    """「公司說是工人自己不小心,叫我去找工人賠,工人是臨時找的」 got the whole tort
+    chapter — the answer for a stranger's accident, not for a paid contract.
+    「臨時找的」 is the sentence that denies §188's 受僱人 link; §224 does not need it."""
+    assert (
+        "債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任"
+        in expansions("搬家公司來的工人把餐桌摔壞,公司叫我去找工人賠,說工人是臨時找的")
+    )                                                                    # §224
+
+
+def test_a_business_that_changed_hands_carries_its_debts():
+    out = expansions("老闆把店頂讓給別人,新老闆接手後繼續開,舊老闆積欠我三個月薪水")
+    assert "就他人之財產或營業，概括承受其資產及負債者" in out      # §305
+    assert "事業單位改組或轉讓時" in out                          # 勞基§20
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

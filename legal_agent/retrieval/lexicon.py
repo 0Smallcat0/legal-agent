@@ -753,6 +753,27 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("受僱人因執行職務，不法侵害他人之權利者，由僱用人與行為人連帶負損害賠償責任",
       "數人共同不法侵害他人之權利者，連帶負損害賠償責任")),
 
+    # ── 履行輔助人 (民法§224) ──
+    # 「搬家公司的工人把餐桌從樓梯摔下去,公司說是工人自己不小心,叫我去找工人賠,
+    # 工人是臨時找的」 returned §184/§188/§189/§192/§193 — the TORT chapter, which
+    # is the answer to a stranger's accident, not to a contract the asker paid
+    # for. §188 needs a 受僱人 relationship, and 「臨時找的」 is precisely the
+    # sentence that denies one; §224 does not care, because it makes the debtor
+    # answer for anyone he used to perform. Same shape as 僱用人連帶 above and the
+    # opposite side of the seam: 侵權 asks who did it, 債務不履行 asks who owed it.
+    (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
+     ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
+
+    # ── 頂讓 / 概括承受 (民法§305, 勞基法§20) ──
+    # 「早餐店頂讓給別人,新老闆接手後繼續開,舊老闆積欠我三個月薪水就跑了」 returned
+    # §440/§478/§474/§203 and 勞基§17/§22/§28 — the wage debt itself, well covered,
+    # and not one article about whether the debt followed the shop. §305 is the
+    # rule: take over a business's assets AND liabilities, tell the creditors or
+    # publish it, and the debts come with it. 勞基§20 is the labour-side half.
+    (("頂讓", "頂下", "接手後繼續", "概括承受", "改組"),
+     ("就他人之財產或營業，概括承受其資產及負債者",
+      "事業單位改組或轉讓時")),
+
     # ── 違約金過高 (民法§252) ──
     # 「才上三個月想解約,合約要我付剩餘期數再加三萬違約金」 reached 消保法§12 and
     # 民法§247-1 — whether the clause is void — but not §252, which is what a
@@ -843,6 +864,21 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因判決離婚而受有損害者，得向有過失之他方，請求賠償",
       "因判決離婚而陷於生活困難者",
       "對於未成年子女權利義務之行使或負擔")),
+
+    # ── 代筆遺囑 (民法§1194, §1189) ──
+    # 「爸爸中風不能寫字,找三個鄰居當見證人,口述由其中一人代筆,弟弟說不是親手寫
+    # 的所以無效」 returned §1144/§1138/§1141/§1165/§1176/§1202 — how an estate is
+    # divided, i.e. what happens AFTER you know whether the will stands. §1189
+    # says a will may take five forms and 自書 is only one of them; §1194 lists
+    # what 代筆 actually requires, which is the checklist the brother's claim has
+    # to be tested against.
+    # 遺囑 and 見證人 are deliberately NOT triggers: 遺囑 sits in seven sessions,
+    # one of them 「爸爸沒有留遺囑」 (a denial), and 見證人 appears in two sessions
+    # about signed agreements that have nothing to do with wills.
+    (("代筆", "口述"),
+     ("代筆遺囑，由遺囑人指定三人以上之見證人",
+      "遺囑應依左列方式之一為之",
+      "由見證人全體及遺囑人同行簽名")),
 
     # ── 拋棄繼承 / 限定責任 (民法§1174, §1175, §1148) ──
     # 「爸爸過世銀行說有三百多萬貸款」 got the 遺產分配 articles but not the one the

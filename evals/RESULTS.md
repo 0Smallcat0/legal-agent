@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **243/260 (93%)** | `evaluation/real_recall.py`, 121 lived problems |
+| retrieval recall, real user wording | **248/265 (94%)** | `evaluation/real_recall.py`, 124 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -75,8 +75,8 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   lexicon rows fires on any golden case) scored 19 pass / 7 partial and
   21 pass / 5 partial. pass+partial is 100% in both, and 27/32 tier and 32/32
   premise did not move — the seam is the model choosing to name an article
-  versus paraphrasing it. The table keeps 73% strict rather than publishing the
-  luckier sample; treat that figure as ±2 cases.
+  versus paraphrasing it. A third run landed 20/6. The table keeps 73% strict
+  rather than publishing the luckier sample; treat that figure as ±2 cases.
 - **marginal vs normal is not separable by BM25.** The score ranges overlap
   (marginal 85–268, normal 126–331). That needs a better relevance signal, not a
   better constant — dense cosine was measured as a candidate and interleaves the
@@ -205,6 +205,23 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   answer that does not depend on how it was bought (民法§88, mistake) was absent
   entirely. Distinct from the noise cases: this is not an irrelevant article
   taking a seat, it is the window agreeing with a fact the user corrected.
+- **The citation can be real, verbatim, in-window — and still be the wrong
+  article for a conclusion that happens to be right.** Asked whether a new owner
+  owed the wages the old one skipped, the model reached for 民法§425 (買賣不破
+  租賃) and wrote 「新老闆繼承了舊老闆的所有權利和義務,包括支付欠薪的責任」. The
+  citation passes every gate — it exists, it is quoted correctly, it was in the
+  window — and the outcome is roughly what §305 would give. Nothing in the
+  pipeline can catch this: the verifier checks that a citation is real, not that
+  it is *apt*. It is the strongest argument for fixing retrieval rather than
+  prompting harder — 民法§305 and 勞基§20 were simply not there to be used.
+- **Whether there is a CONTRACT decides the chapter, and the window does not
+  ask.** 「搬家公司來的工人把餐桌摔壞,公司說工人是臨時找的,叫我去找工人賠」
+  returned §184/§188/§189/§192/§193 — the tort chapter, which is the answer for a
+  stranger hit in the street, not for a customer who paid. Worse, 「臨時找的」 is
+  exactly the sentence that breaks §188's 受僱人 link, so the window's best
+  article was the one the opponent had already defended against. 民法§224 makes
+  the debtor answer for whoever he used to perform, and the CLI refused the whole
+  question at 資料涵蓋不足 rather than surface it.
 - **A trigger can name the act and still get the role wrong.** 「我三年前把名下
   的房子贈與過戶給兒子,講好他要照顧我到老,過戶完他就搬走」 returned 民法§244,
   §242 and §87 — the creditor's routes for undoing a DEBTOR's transfer — because
