@@ -804,6 +804,28 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
 
+    # ── 月租停車場是租位子還是保管車 (民法§590, §589) ──
+    # 「月租停車場,車門被刮花,管理員說合約寫本場所僅出租車位、車輛毀損概不負責」
+    # returned 公寓大廈條例§4/§7/§10/§23/§26/§33 and 道交條例§56-1 — a car park in
+    # a building drags in the whole 公寓大廈 chapter. Whether the operator merely
+    # let a space or took custody of the car is the entire case: §589 is what
+    # 寄託 is, and §590 is the duty that follows a PAID one — 善良管理人之注意,
+    # which an exemption clause cannot quietly undo.
+    (("月租停車場", "停在停車場", "停車場", "牽車", "概不負責"),
+     ("受寄人保管寄託物，應與處理自己事務為同一之注意，其受有報酬者，應以善良管理人之注意為之",
+      "稱寄託者，謂當事人一方以物交付他方，他方允為保管之契約")),
+
+    # ── 出錢給朋友做生意,是股東還是債主 (民法§667, §681) ──
+    # 「拿一百五十萬給他當本錢,說好不用顧店,每月分我兩成營業額,現在才知道他欠廠商
+    # 八十萬」 returned §562/§707/§822/§881-3/§991 and 消保§21 — nothing that names
+    # the relationship. §667 is the definition the whole question turns on, and
+    # §681 is why he needs it BEFORE deciding what he is: where partnership assets
+    # fall short, every partner is jointly liable for the shortfall. 合夥 itself is
+    # not a trigger — it appears in mutual-debts, which is about set-off.
+    (("當本錢", "分我兩成", "算股東", "入股", "分紅"),
+     ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
+      "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
+
     # ── 免費借住不是租 (民法§470, §464) ──
     # 「媽媽口頭答應讓弟弟免費住,沒有租約也沒收過一毛錢,住了五年,我們想賣掉」
     # returned §1138/§1141/§1144/§1151/§1164/§1166/§1176 — the whole 繼承編, i.e.

@@ -1066,6 +1066,22 @@ def test_the_classification_is_the_whole_fight():
     assert "贈與物之權利未移轉前，贈與人得撤銷其贈與" in out                          # §408
 
 
+def test_a_paid_car_park_may_be_holding_the_car_not_the_space():
+    """A car park inside a building dragged in 公寓大廈條例§4/§7/§10/§23/§26/§33.
+    Whether it is 場地租賃 or 寄託 is the entire case."""
+    out = expansions("我在月租停車場停車,去牽車發現車門被刮花,合約寫本場所僅出租車位、車輛毀損概不負責")
+    assert "受寄人保管寄託物，應與處理自己事務為同一之注意，其受有報酬者，應以善良管理人之注意為之" in out  # §590
+    assert "稱寄託者，謂當事人一方以物交付他方，他方允為保管之契約" in out                                # §589
+
+
+def test_putting_money_into_a_friends_shop_may_make_you_a_partner():
+    """「我算股東還是債主」 is the question, and §681 is why he needs the answer
+    before the creditors do — partners are jointly liable for the shortfall."""
+    out = expansions("我拿一百五十萬給他當本錢,說好不用顧店,每個月分我兩成營業額")
+    assert "稱合夥者，謂二人以上互約出資以經營共同事業之契約" in out                        # §667
+    assert "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任" in out        # §681
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
