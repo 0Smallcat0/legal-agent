@@ -212,8 +212,11 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # §244/§242/§87/§88 — every way a transaction gets UNDONE, which is the
     # opposite of what this buyer needs. §759-1 is his side: registration is
     # presumed correct, and a good-faith third party who relied on it is protected.
-    (("要我還回去", "登記是錯的", "說當初過戶", "我完全不知道", "原屋主",
-      "跑來說", "會不會被拿回去"),
+    # 我完全不知道 and 跑來說 are out: six and three characters of pure everyday
+    # speech, so they outrank real signals while saying nothing about land
+    # registration. 我完全不知道 put §759-1 into a guardianship-duties window,
+    # 跑來說 into a sublet dispute. The motivating session keeps four triggers.
+    (("要我還回去", "登記是錯的", "說當初過戶", "原屋主", "會不會被拿回去"),
      ("不動產物權經登記者，推定登記權利人適法有此權利",
       "因信賴不動產登記之善意第三人")),
 
@@ -795,6 +798,30 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
 
+    # ── 幫忙做了事情事後要錢 (民法§547, §546) ──
+    # 「住院三週請隔壁鄰居幫我顧店,當初只說麻煩你一下沒談到錢,出院後他要六萬工錢」
+    # returned §793/§776/§778/§774 and 公寓大廈§16 — the 相鄰關係 chapter, because
+    # the helper happens to be a 鄰居. Nothing in the window says whether an unpaid
+    # favour can turn into a bill. §547 does: where no fee was agreed, one is still
+    # owed if 習慣 or the nature of the business calls for it — which is the whole
+    # question, and it cuts against the asker. §546 is the separate, safer claim:
+    # out-of-pocket costs come back regardless.
+    (("幫我顧店", "沒談到錢", "沒講好價錢", "要工錢", "麻煩你一下"),
+     ("報酬縱未約定，如依習慣或依委任事務之性質，應給與報酬者，受任人得請求報酬",
+      "受任人因處理委任事務，支出之必要費用，委任人應償還之")),
+
+    # ── 沒有血緣但一起生活 (民法§1123, §1114) ──
+    # 「從小被姑姑帶大,戶口沒遷也沒辦收養,現在她中風安養院要我付錢」 returned
+    # §1076-1/§1077/§1079 — the ADOPTION articles — although the session says twice
+    # that there was no adoption. That is the denied-premise failure mode, and the
+    # answer sits one chapter away: §1123 III makes someone who lives as family
+    # 視為家屬 even without kinship, and §1114 IV puts 家長家屬相互間 under a
+    # maintenance duty. The honest answer may be that she DOES owe support; the
+    # point is that the window must contain the rule either way.
+    (("從小被", "帶大", "養大", "同居一家"),
+     ("雖非親屬，而以永久共同生活為目的同居一家者，視為家屬",
+      "家長家屬相互間")),
+
     # ── 寄放在別人那裡 (民法§598, §597) ──
     # 「把家具寄放在朋友倉庫,說好放到年底,兩個月他就叫我這禮拜馬上搬走」 returned
     # §613–§624, the WAREHOUSE-OPERATOR articles, plus §589/§602 — who a 受寄人 is
@@ -1267,8 +1294,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 「買了三萬元療程套票,店突然關門」 scored under the insufficiency floor and
     # was refused — but the corpus does cover it: 預付型交易之履約擔保 is a named
     # item in 消保法§17, and 給付不能 -> 解除契約 is 民法§226/§256.
+    # 聯絡不上 is out. It describes a situation anyone can be in — a hit-and-run
+    # driver who stopped answering the phone, an upstairs neighbour who will not
+    # come to the door — and it put 消保§17 (預付型交易履約擔保) into a window about
+    # a leak between two flats. Two of its three firings were wrong; the row's own
+    # session keeps firing on 套票/關門.
     (("套票", "預付", "儲值", "課程包", "點數", "倒閉", "關門", "跑路",
-      "停業", "聯絡不上"),
+      "停業"),
      ("預付型交易之履約擔保", "致給付不能者，債權人得請求賠償損害",
       "債權人於有第二百二十六條之情形時，得解除其契約")),
 
