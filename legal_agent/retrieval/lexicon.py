@@ -161,6 +161,32 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 意思表示錯誤 (民法§88) ──
+    # 「下單時看錯電壓,收到才發現用不了」 returned 消保法§19 and the 通訊交易 articles
+    # — for a purchase the asker had explicitly said was made in a shop, not
+    # online. The window was built on a premise he had denied. §88 is the route
+    # that does not depend on how it was bought.
+    (("看錯", "買錯", "訂錯", "規格不對", "用不了", "以為是別的",
+      "還沒拆封", "電壓"),
+     ("意思表示之內容有錯誤，或表意人若知其事情即不為意思表示者，表意人得將其意思表示撤銷之",)),
+
+    # ── 保證債務的範圍 (民法§740) ──
+    # 「保證書只寫保證借款五十萬,銀行說連利息違約金一百二十萬都要我負責」 reached
+    # §203/§233/§252/§753 — interest and penalties in the abstract. §740 answers
+    # him directly, and against him: unless the contract says otherwise, the
+    # guarantee already covers interest, penalties and damages.
+    (("作保", "保證書", "保證借款", "都要我負責", "負責到哪裡", "幫同事作保",
+      "幫朋友作保"),
+     ("保證債務，除契約另有訂定外，包含主債務之利息、違約金、損害賠償及其他從屬於主債務之負擔",)),
+
+    # ── 第三人清償後的承受 (民法§312) ──
+    # 「車登記在我名下,銀行要拖車,我只好先幫他把八萬繳掉」 returned the joint-debt
+    # chapter. §312 is the basis he needs: a third party with an interest who pays
+    # steps into the creditor's shoes to that extent.
+    (("先幫他繳", "幫他還了", "幫朋友還", "代他清償", "只好先幫",
+      "我先付掉", "跟他要回來"),
+     ("就債之履行有利害關係之第三人為清償者，於其清償之限度內承受債權人之權利",)),
+
     # ── 誰擔任監護人 (民法§1111, §1113) ──
     # Filed as a 「floor artefact」 for several rounds because the CLI reaches these
     # through the focused dense query. The sharper test says otherwise: NO phrase

@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **208/223 (93%)** | `evaluation/real_recall.py`, 101 lived problems |
+| retrieval recall, real user wording | **212/227 (93%)** | `evaluation/real_recall.py`, 104 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -159,6 +159,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   the article that says it only arises when expressly agreed, nowhere in sight.
   The same shape hit 民法§274, §277 and §1115 in earlier rounds: the answer's
   neighbours arrive and the answer does not.
+- **A window can be built on a premise the asker already denied.** 「我在實體店面
+  訂了一台縫紉機…是實體店面下訂不是網購」 returned 消保法§19, §19-2, §18 and §20 —
+  the distance-selling right to cancel — because 訂/退 look like online shopping.
+  Nothing in the pipeline notices that the sentence rules that chapter out. The
+  answer that does not depend on how it was bought (民法§88, mistake) was absent
+  entirely. Distinct from the noise cases: this is not an irrelevant article
+  taking a seat, it is the window agreeing with a fact the user corrected.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over

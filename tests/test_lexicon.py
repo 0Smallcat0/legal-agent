@@ -624,6 +624,26 @@ def test_a_divisible_debt_without_a_joint_clause_is_split():
     assert "應各平均分擔或分受之" in out                                      # §271
 
 
+def test_a_mistake_reaches_the_route_that_does_not_depend_on_how_it_was_bought():
+    """「實體店面下訂,看錯電壓」 returned 消保法§19 and the 通訊交易 articles — for a
+    purchase the asker had explicitly said was NOT online."""
+    assert "意思表示之內容有錯誤，或表意人若知其事情即不為意思表示者，表意人得將其意思表示撤銷之" in expansions(
+        "在實體店面訂了縫紉機,下單時看錯電壓,收到才發現用不了"
+    )                                                                    # §88
+
+
+def test_a_guarantee_reaches_the_article_that_goes_against_the_asker():
+    assert "保證債務，除契約另有訂定外，包含主債務之利息、違約金、損害賠償及其他從屬於主債務之負擔" in expansions(
+        "我幫同事作保,保證書只寫保證借款五十萬,銀行說連利息違約金都要我負責"
+    )                                                                    # §740
+
+
+def test_paying_another_persons_debt_reaches_subrogation():
+    assert "就債之履行有利害關係之第三人為清償者，於其清償之限度內承受債權人之權利" in expansions(
+        "車登記在我名下,銀行要拖車,我只好先幫他把八萬繳掉,想跟他要回來"
+    )                                                                    # §312
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
