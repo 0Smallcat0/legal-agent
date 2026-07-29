@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **267/284 (94%)** | `evaluation/real_recall.py`, 136 lived problems |
+| retrieval recall, real user wording | **270/287 (94%)** | `evaluation/real_recall.py`, 138 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -312,6 +312,20 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   trigger earns its place by naming something only this domain's sessions say,
   and length is no evidence of that — the longest offenders were 我完全不知道,
   算不算數 and 怎麼算.
+  The fifth pass inverted the search: instead of judging triggers by shape, score
+  every ROW by how often it fires in a session whose expected articles it could
+  never supply. One row came back at 6 firings and 0 relevant — 冷氣/機器 on the
+  公寓大廈§16 row — and it was the worst contaminator measured anywhere: one seat
+  in FIVE unrelated windows (a factory hand crushed by a 機器, a tenant's two
+  分離式冷氣, a 機器 bought to the wrong spec, a dismissal during medical
+  treatment, a branches-over-the-yard case). Those two words name OBJECTS; the
+  noise signal is the disturbance word beside them (低頻/震動/很吵), which is what
+  the golden 冷氣機半夜低頻震動 case fires on. Every freed seat went to an
+  on-domain article — 勞基§26, 民法§425, 消保§19-2, 勞基§13, 民法§835 — and no
+  case lost anything. Ranking rows by irrelevant-firings is now the cheapest
+  sweep available; the metric is noisy for broad rows like 侵權 (§184 is relevant
+  everywhere and expected almost nowhere), so only the zero-relevant rows are
+  acted on.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over

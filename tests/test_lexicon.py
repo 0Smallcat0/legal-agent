@@ -1006,6 +1006,33 @@ def test_plain_speech_is_not_a_registration_signal():
     )
 
 
+def test_the_mortgage_outlives_the_time_bar():
+    """The window carried §880 — the article that kills the mortgage — and not
+    §145, the one that lets the creditor take the house anyway."""
+    assert (
+        "以抵押權、質權或留置權擔保之請求權，雖經時效消滅，債權人仍得就其抵押物、質物或留置物取償"
+        in expansions("十六年前拿我名下的房子設定抵押,現在他兒子拿他項權利證明書要拍賣我的房子")
+    )                                                                    # §145
+
+
+def test_the_funeral_bill_comes_off_the_estate_first():
+    assert "關於遺產管理、分割及執行遺囑之費用，由遺產中支付之" in expansions(
+        "喪葬費三十八萬我一個人先刷卡付的,他們說是我自願出的不能從遺產裡扣"
+    )                                                                    # §1150
+
+
+def test_an_object_is_not_a_disturbance():
+    """冷氣/機器 on the 公寓大廈§16 row was the worst contaminator measured: one
+    seat in five unrelated windows — a factory hand crushed by a 機器, a tenant's
+    two 分離式冷氣, a 機器 bought to the wrong spec, a dismissal during treatment,
+    and a branches-over-the-yard case."""
+    for q in ["我在工廠操作機器時手指被夾斷",
+              "我自己裝的兩台分離式冷氣,退租要拆走房東說不行",
+              "訂的機器規格不對,還沒拆封想退"]:
+        assert "發生喧囂、振動及其他與此相類之行為" not in expansions(q)
+    assert "發生喧囂、振動及其他與此相類之行為" in expansions("冷氣機半夜低頻震動很吵,能要求改善嗎")
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
