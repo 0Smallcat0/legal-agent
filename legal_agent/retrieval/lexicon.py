@@ -716,7 +716,12 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 名下沒有財產 was a trigger for one run and hijacked a maintenance session —
     # 「爸爸名下沒有財產」 describes poverty, not a transfer. Same mistake as
     # 聯絡不上 / 公同共有 / 求償: the trigger must name the ACT.
-    (("脫產", "過戶給", "移轉給", "名下唯一", "假買賣", "撤銷贈與", "轉到別人名下",
+    # 過戶給 was a trigger until a mother asking how to undo her OWN gift
+    # (「把名下的房子贈與過戶給兒子」) got §244/§242/§87 and nothing else: the act
+    # is identical from both sides, only the ROLE differs, so an act-shaped
+    # trigger is not enough here. The motivating session keeps firing on
+    # 名下唯一; seller-says-registration-wrong stops being given 詐害債權 noise.
+    (("脫產", "移轉給", "名下唯一", "假買賣", "撤銷贈與", "轉到別人名下",
       "把財產轉走", "五鬼搬運"),
      ("債務人所為之無償行為，有害及債權者，債權人得聲請法院撤銷之",
       "債務人怠於行使其權利時，債權人因保全債權",
@@ -871,6 +876,21 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("其各期給付請求權，因五年間不行使而消滅",
       "約定利率，超過週年百分之十六者，超過部分之約定，無效")),
 
+    # ── 和解書 (民法§737, §738, §736) ──
+    # 「車禍當天對方拿一張和解書給我簽,寫賠三萬兩清,一個月後醫生說頸椎要開刀」
+    # returned §563/§473/§611/§144/§197/§125 — 時效 and unrelated chapters, with
+    # nothing about the piece of paper the whole question is about. It is also
+    # the article the OTHER SIDE is holding: §737 says the rights given up in a
+    # settlement are extinguished, which is precisely what he is telling her.
+    # §738 is the only way back — and it says mistake alone is NOT enough,
+    # so the honest answer needs both articles in the window, not one.
+    # 「和解了」 is deliberately NOT a trigger: 「我不想和解了」 contains it and means
+    # the opposite. Every trigger here requires the settlement to have HAPPENED.
+    (("和解書", "和解契約", "簽和解", "簽了和解", "已經和解"),
+     ("和解有使當事人所拋棄之權利消滅",
+      "和解不得以錯誤為理由撤銷之",
+      "稱和解者，謂當事人約定，互相讓步")),
+
     # ── 不當得利 (民法§179, §181, §182) ──
     # 返還不當得利 is the 12th most common 案由 in the harvested judgments and the
     # session set had never covered it: 「轉帳打錯,三萬匯給不認識的人,他說花掉了
@@ -894,6 +914,37 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "請求權，因十五年間不行使而消滅",
       "消滅時效，因左列事由而中斷",
       "時效完成後，債務人得拒絕給付")),
+
+    # ── 時效中斷後又放著 (民法§130, §137) ──
+    # 「兩年前有寄存證信函催他還錢,我想說時效就中斷了就先放著」 got §144/§197/§125
+    # /§229/§233/§367 — every article about the debt and the clock, and not one
+    # about what the letter actually did. §130 is the whole answer: a demand
+    # interrupts, but if no suit follows within six months the interruption is
+    # treated as never having happened. §137 is what a surviving interruption
+    # buys — the clock restarts, it does not pause.
+    # Bare 「寄存證信函」 was measured and REJECTED as a trigger: it appears in
+    # three sessions where the letter is proof of notice, not a clock event
+    # (unpaid-hoa-fee, co-debtor-already-paid, cannot-serve-notice), and
+    # time-barred says 「沒有寄過存證信函」 — a DENIAL, the premise failure mode.
+    (("存證信函催", "信函催討", "催告後沒有起訴", "時效就中斷", "時效已經中斷",
+      "以為時效中斷"),
+     ("時效因請求而中斷者，若於請求後六個月內不起訴，視為不中斷",
+      "時效中斷者，自中斷之事由終止時，重行起算")),
+
+    # ── 撤銷贈與 (民法§416, §419) ──
+    # 「三年前把名下的房子贈與過戶給兒子,講好他要照顧我到老,過戶完他就搬走」 got
+    # §144/§365/§473/§244/§87 — the 脫產 row fired on 「過戶給」 and dragged the
+    # CREDITOR's revocation articles into a session where the asker is the one
+    # who made the transfer. Nothing in the window let her undo her own gift.
+    # §416 II is the article written for exactly this: 受贈人對於贈與人有扶養義務
+    # 而不履行者,贈與人得撤銷其贈與. §419 is how the house comes back.
+    # 「撤銷贈與」 is deliberately NOT a trigger here — it already belongs to the
+    # 脫產 row, where it means the CREDITOR's §244 revocation, and this session
+    # never says it. 「送給兒子」 is out for the same reason: not the asker's words.
+    (("贈與過戶", "贈與給"),
+     ("受贈人對於贈與人，有左列情事之一者，贈與人得撤銷其贈與",
+      "對於贈與人有扶養義務而不履行者",
+      "贈與撤銷後，贈與人得依關於不當得利之規定，請求返還贈與物")),
 
     # ── 定金 / 斡旋金 (民法§248, §249) ──
     # 「付了十萬斡旋金,屋主後來不賣了」 returned 定型化契約 and 買賣瑕疵 articles

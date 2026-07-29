@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **237/254 (93%)** | `evaluation/real_recall.py`, 118 lived problems |
+| retrieval recall, real user wording | **243/260 (93%)** | `evaluation/real_recall.py`, 121 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -69,6 +69,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   threshold separates them: `oos-09-promissory-note` and `oos-10-debt-relief`
   are in the golden set failing, and the number moved from 27/30 to 27/32 to
   say so.
+- **The golden set's strict/partial split moves with model sampling, and the
+  published number does not chase it.** Two runs over the SAME 32 cases, the
+  same corpus and identical retrieval (verified: not one of the round's new
+  lexicon rows fires on any golden case) scored 19 pass / 7 partial and
+  21 pass / 5 partial. pass+partial is 100% in both, and 27/32 tier and 32/32
+  premise did not move — the seam is the model choosing to name an article
+  versus paraphrasing it. The table keeps 73% strict rather than publishing the
+  luckier sample; treat that figure as ±2 cases.
 - **marginal vs normal is not separable by BM25.** The score ranges overlap
   (marginal 85–268, normal 126–331). That needs a better relevance signal, not a
   better constant — dense cosine was measured as a candidate and interleaves the
@@ -81,7 +89,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   "Which version applied in 2024?" is answerable in mechanism, not yet in data.
 - **The 8B model is the weakest component** and is treated that way: it repeats
   itself on long article lists and uses only part of what it is given. What must
-  be right — citations, judgments, the tier — is not left to it.
+  be right — citations, judgments, the tier — is not left to it. Measured this
+  round in a full CLI session (贈與/扶養): the model emitted the SAME 民法§473
+  sentence 32 times, and the citation verifier faithfully printed the same
+  「民法第466條 未出現在本次檢索結果中」 warning 8 times under it. De-duplicating
+  identical flags in `run.py` is three lines and clearly right — and it moves no
+  published number (recall / golden / tier / mutation all unchanged), so by this
+  project's own rule it is recorded here rather than shipped.
 - **Administrative-fine articles are the next precision leak, unshipped.**
   「令其限期改正…屆期不改正者,處新臺幣三萬元以上三十萬元以下罰鍰」 articles
   (條例§38-1, 消保法§56-1, and the whole of 道路交通管理處罰條例) are long, full
@@ -191,6 +205,16 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   answer that does not depend on how it was bought (民法§88, mistake) was absent
   entirely. Distinct from the noise cases: this is not an irrelevant article
   taking a seat, it is the window agreeing with a fact the user corrected.
+- **A trigger can name the act and still get the role wrong.** 「我三年前把名下
+  的房子贈與過戶給兒子,講好他要照顧我到老,過戶完他就搬走」 returned 民法§244,
+  §242 and §87 — the creditor's routes for undoing a DEBTOR's transfer — because
+  「過戶給」 was a 脫產 trigger. The act is identical whichever side you stand on;
+  only the role differs, and a substring cannot see a role. The rule 「a trigger
+  must name the ACT, not the situation and not the remedy」 was written after six
+  hijacks and is still not enough: 過戶給 is an act, and it was still wrong.
+  Narrowed to the words only a creditor uses (名下唯一、脫產、假買賣); the session
+  that motivated the row keeps firing on 名下唯一, and a buyer defending his own
+  registration stops being handed 詐害債權 noise.
 - **Precision has no harness.** 租賃住宅市場發展及管理條例 also regulates the
   leasing trade, and its 營業保證金 / 罰鍰 articles are the longest in it, so BM25
   gave them 2-3 of 8 seats in EVERY landlord-tenant session (10/176 seats over
