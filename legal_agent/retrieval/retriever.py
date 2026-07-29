@@ -141,7 +141,7 @@ def _drop_industry_regulation(query: str, candidates: list[Statute]) -> list[Sta
 # OWNER-OCCUPIED flat flooded from upstairs was handed 民法§430/§437/§423 — a
 # LANDLORD's repair duty. Measured: 4 of 8 seats there and 3 of 8 in a
 # house-purchase session, neither of which mentions a landlord at all.
-_TENANCY_SUBJECTS = ("承租人", "出租人", "租賃物", "租賃契約", "租賃住宅")
+_TENANCY_SUBJECTS = ("承租人", "出租人", "租賃物", "租賃契約", "租賃住宅", "租賃")
 # Said only when the asker owns the place…
 _OWNER_OCCUPIED = ("自有住宅", "自己的房子", "我買的", "我的房子", "我是屋主",
                    "屋主是我", "已經過戶", "交屋",
@@ -162,9 +162,19 @@ def _drop_tenancy_when_owner_occupied(query: str, candidates: list[Statute]) -> 
         return candidates
     if any(word in query for word in _TENANCY_IN_QUESTION):
         return candidates
+    # First line only, for the reason found in _drop_inheritance_while_alive:
+    # matching the whole text deletes articles that merely MENTION a tenancy.
+    # Measured — this filter runs on 7 of the stored sessions, and in every one it
+    # was removing 公寓大廈條例§3 (definitions) and §27 (區分所有權人 voting), which
+    # are not tenancy rules and are exactly what an owner in a building may need.
+    # 「租賃」 was added to the subject words at the same time so the genuine
+    # tenancy articles still go: §421 opens 「稱租賃者」, §450 「租賃定有期限者」,
+    # §462 「耕作地之租賃」 — none of which contains 承租人/出租人 in its first line.
     return [
         c for c in candidates
-        if not any(word in (c.content or "") for word in _TENANCY_SUBJECTS)
+        if not any(
+            word in (c.content or "").split("\n", 1)[0] for word in _TENANCY_SUBJECTS
+        )
     ]
 
 

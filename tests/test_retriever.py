@@ -491,5 +491,28 @@ def test_a_passing_mention_of_inheritance_does_not_drop_a_capacity_article():
     assert [s.article_no for s in kept] == ["第15-2條"]
 
 
+def test_owner_occupied_keeps_the_building_articles_that_mention_a_tenant():
+    """Same shape as the §15-2 defect. Measured: the tenancy filter runs on seven
+    stored sessions and in every one it was deleting 公寓大廈條例§3 and §27 —
+    definitions and 區分所有權人 voting — because those articles mention 承租人
+    somewhere below the first line. 「租賃」 keeps the real tenancy articles going."""
+    from legal_agent.data.models import Statute
+    from legal_agent.retrieval import retriever as r
+
+    def art(sid, no, content):
+        return Statute(sid, no, content, "2021-01-20", None, "法律", "http://x")
+
+    voting = art(
+        "公寓大廈管理條例", "第27條",
+        "各專有部分之區分所有權人有一表決權。\n"
+        "住戶為區分所有權人之承租人或其他經區分所有權人同意之人時，得受委託行使。",
+    )
+    tenancy = art("民法", "第421條", "稱租賃者，謂當事人約定，一方以物租與他方使用收益。")
+    kept = r._drop_tenancy_when_owner_occupied(
+        "我買的房子交屋後才發現漏水,樓上一直滲下來", [voting, tenancy],
+    )
+    assert [s.article_no for s in kept] == ["第27條"]
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
