@@ -161,6 +161,31 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 登記的推定力與善意信賴 (民法§759-1) ──
+    # 「原屋主的兒子說當初過戶是被騙的、登記是錯的,要我把房子還回去」 returned
+    # §244/§242/§87/§88 — every way a transaction gets UNDONE, which is the
+    # opposite of what this buyer needs. §759-1 is his side: registration is
+    # presumed correct, and a good-faith third party who relied on it is protected.
+    (("要我還回去", "登記是錯的", "說當初過戶", "我完全不知道", "原屋主",
+      "跑來說", "會不會被拿回去"),
+     ("不動產物權經登記者，推定登記權利人適法有此權利",
+      "因信賴不動產登記之善意第三人")),
+
+    # ── 土地所有權及於上下 (民法§773) ──
+    # 「他們家的冷氣排水管架在我家院子上方」 — §797 covers the branches, nothing
+    # covered the airspace. §773 is why a pipe overhead is still an intrusion.
+    (("架在我家", "跨到我家上空", "我家院子上方", "越過圍牆", "從我家上面過",
+      "管線經過我家"),
+     ("土地所有權，除法令有限制外，於其行使有利益之範圍內，及於土地之上下",)),
+
+    # ── 消費訴訟的管轄 (消保法§47) ──
+    # 「業者在高雄我住台北,他們說要告就去高雄告」 returned the whole 買賣瑕疵 chapter
+    # — the merits, not the question. §47 lets the consumer sue where the
+    # consumption happened, which is the answer to 「我可不可以在台北告」.
+    (("哪個法院", "管轄法院", "要跑那麼遠", "在台北告", "去哪裡告",
+      "契約寫以", "要去外縣市"),
+     ("消費訴訟，得由消費關係發生地之法院管轄",)),
+
     # ── 房屋瑕疵危及健康 (民法§424) ──
     # 「整面牆都是黑黴,住進去半年開始咳嗽,房東說當初帶看你自己也看過了」 returned
     # §430/§440/§441 — repair and late rent. §424 answers the landlord's sentence
