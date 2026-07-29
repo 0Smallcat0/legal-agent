@@ -60,7 +60,14 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # debt window. 吵架 is a quarrel, not a noise complaint. Third instance of the
     # over-wide trigger after 過戶給 and 欠銀行; the compounds keep every noise
     # session, and the golden 深夜喧嘩爭吵 cases still fire on 深夜/喧嘩.
-    (("很吵", "吵到", "吵死", "吵得", "吵鬧", "吵雜", "噪音", "很大聲", "喧嘩", "擾人", "聲",
+    # Bare 「聲」 went the same way, and worse: it is inside 聲請. Measured across
+    # the stored sessions, every one of its five firings is a court application —
+    # 聲請保護令、聲請監護宣告、聲請拍賣 — and two of those windows paid for it:
+    # protective-order-ignored lost two of eight seats to 公寓大廈§16 and 民法§793,
+    # need-order-faster one to 社維法§72. Not one noise session needs it (they say
+    # 跑跳/拖椅子/半夜/很吵), so the compounds carry the whole signal.
+    (("很吵", "吵到", "吵死", "吵得", "吵鬧", "吵雜", "噪音", "很大聲", "喧嘩", "擾人",
+      "腳步聲", "說話聲", "講話聲", "歌聲", "電視聲", "音樂聲", "撞擊聲",
       "跑跳", "跑來跑去", "拖椅子", "拖桌", "蹦", "砰", "哭鬧", "尖叫",
       "打球", "跳繩", "甩門", "摔門"),
      ("製造噪音或深夜喧嘩", "妨害公眾安寧", "不聽禁止")),
@@ -70,7 +77,10 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # session had 噪音管制法§6 promoted into its window off the word 警察.
     (("報警處理噪音", "警察來測音量"),
      ("妨害他人生活安寧之聲音", "由警察機關依有關法規處理")),
-    (("管委會", "管理委員會", "住戶", "樓上", "樓下", "鄰居", "公寓"),
+    # 樓下 narrowed for the same reason as 聲: its only appearance in the stored
+    # sessions is 「前男友每天來我家樓下按門鈴」, where it cost that window two of
+    # eight seats to 公寓大廈§16 and 民法§793. 我家樓下 is a place, not a neighbour.
+    (("管委會", "管理委員會", "住戶", "樓上", "樓下鄰居", "住樓下", "樓下的", "鄰居", "公寓"),
      ("住戶不得", "發生喧囂、振動")),
     # 相鄰關係 (民法§793): the everyday complaint is 「傳到我家」; the statute
     # says 「侵入」 and lists 喧囂、振動 among the intrusions it lets you stop.
@@ -107,7 +117,12 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # articles, while 「漏水」 drags in the TENANCY row: 「交屋後才發現主臥滲水,
     # 賣方沒講」 came back with 民法§430 (a landlord's duty to repair), 租賃住宅
     # 條例§8 and §437 — the entire window was about renting.
-    (("交屋", "過戶", "中古屋", "預售屋", "賣方", "屋主", "仲介", "現況說明書",
+    # 過戶 is out: it names the registration act, not a defect. Measured, it fired
+    # in nine stored sessions and only two of them (house-defect,
+    # seller-says-registration-wrong) are about a purchase at all — and both keep
+    # firing on 交屋/仲介/屋主/中古屋. The other seven — 脫產, 假買賣, 遺腹子繼承,
+    # 受任人過世, 朋友賣掉我的車, 贈與過戶, 藏遺囑 — were being handed 民法§360.
+    (("交屋", "中古屋", "預售屋", "賣方", "屋主", "仲介", "現況說明書",
       "履約保證", "買房", "買屋"),
      ("缺少出賣人所保證之品質者", "出賣人故意不告知物之瑕疵者亦同",
       "無滅失或減少其價值之瑕疵", "買受人得解除其契約或請求減少其價金")),
@@ -348,7 +363,12 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # (§1118-1), never HOW MUCH. 「我爸要我每個月給五萬,我薪水六萬還要養兩個小孩」
     # is that third question, and §1119 answers it in one line: the recipient's
     # need measured against the payer's means.
-    (("怎麼算", "給多少", "我能負擔", "每個月給他", "少一塊都不行",
+    # 怎麼算 is out — every money question asks it. Being three characters long it
+    # also OUTRANKED the specific rows: 「遇假日怎麼算」 in a payment-deadline case
+    # put 民法§1119 (扶養之程度) in reserved seat #1 and pushed §122 out of the
+    # window entirely, and a late-wedding-flowers case caught it too. The row's own
+    # session says 「扶養費到底怎麼算」, so the money word carries it.
+    (("扶養費", "安養費", "贍養費", "給多少", "我能負擔", "每個月給他", "少一塊都不行",
       "他要的金額", "算多少才合理"),
      ("扶養之程度，應按受扶養權利者之需要，與負扶養義務者之經濟能力及身分定之",)),
 
@@ -604,7 +624,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # how overtime is CALCULATED. The answer is that the waiver is worth nothing:
     # §71 voids a legal act against a mandatory rule, and 勞基§1 II says agreed
     # terms may not fall below the statutory minimum.
-    (("自願放棄", "同意書", "算不算數", "簽了有沒有效", "不加勞保", "拋棄權利",
+    # 算不算數 is out for the same reason as 怎麼算, and it was caught the same
+    # way: at four characters it took reserved seat #0 in a 脫產 window (「這樣過戶
+    # 算不算數」) ahead of 名下唯一, and 民法§244 fell out of the eight. It fires in
+    # four sessions and only one is about a signed waiver — the others ask it of a
+    # transfer, a settlement and a loan-shark contract. The motivating case keeps
+    # firing on 同意書/都簽了/自願放棄.
+    (("自願放棄", "同意書", "簽了有沒有效", "不加勞保", "拋棄權利",
       "切結書", "不簽就不錄用", "都簽了"),
      ("法律行為，違反強制或禁止之規定者，無效",
       "雇主與勞工所訂勞動條件，不得低於本法所定之最低標準")),
@@ -768,6 +794,31 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # opposite side of the seam: 侵權 asks who did it, 債務不履行 asks who owed it.
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
+
+    # ── 期限最後一天遇到放假 (民法§122, §120) ──
+    # 「最後付款日是六月七號,剛好是端午節連假銀行沒開,我十號一上班就匯了,對方說
+    # 我遲延」 returned §248/§249/§252/§254 and 消保§11-1/§12 — deposits, penalties
+    # and unfair terms, every one of which assumes he was late. §122 is the article
+    # that decides whether he was late at all: a deadline falling on a Sunday,
+    # holiday or other rest day moves to the next working day. §120 is the
+    # companion rule nobody remembers — the first day does not count.
+    # 「連假」 alone is two characters and lost every reserved seat to 違約金/訂金
+    # (three and two characters, sorted by specificity first). 遇假日/碰到假日 are
+    # the words the session actually uses when it asks the question.
+    (("連假", "國定假日", "遇假日", "遇到假日", "碰到假日", "剛好放假",
+      "期限最後一天", "最後一天是"),
+     ("其期日或其期間之末日，為星期日、紀念日或其他休息日時，以其休息日之次日代之",
+      "以日、星期、月或年定期間者，其始日不算入")),
+
+    # ── 說好要簽書面才算 (民法§166) ──
+    # 「雙方說好要簽正式書面契約才算數,還沒簽他就說口頭已經成立」 returned §245-1
+    # (締約過失)、§229/§233 (遲延)、§367 (價金) — all of which presuppose a contract
+    # exists. §166 is the presumption that answers the question asked: where the
+    # parties agreed a form, the contract is PRESUMED not to exist until the form
+    # is complete. It is also the mirror of §345/§153, already in the window for
+    # the opposite case, so both readings can now be put side by side.
+    (("要簽書面", "簽正式契約", "簽正式書面", "還沒簽約", "口頭就成立", "口頭就算"),
+     ("契約當事人約定其契約須用一定方式者，在該方式未完成前，推定其契約不成立",)),
 
     # ── 幫別人付了錢想要回來 (民法§180, §179) ──
     # 「我為了息事寧人先幫我哥付了二十萬,後來才知道那筆早就還過了,對方說我是自願
