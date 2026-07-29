@@ -86,7 +86,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # says 「侵入」 and lists 喧囂、振動 among the intrusions it lets you stop.
     (("樓上", "樓下", "隔壁", "鄰居", "傳到", "侵入", "跑跳", "腳步", "裝修", "施工"),
      ("喧囂、振動及其他與此相類者侵入", "土地所有人", "得禁止之")),
-    (("震動", "振動", "低頻", "冷氣", "機器"),
+    # 冷氣 and 機器 are out. They name OBJECTS, not a disturbance, and this row was
+    # the single worst contaminator in the set: 公寓大廈§16 took one seat in FIVE
+    # unrelated windows — a factory hand crushed by a 機器, two 分離式冷氣 installed
+    # by a tenant, a 機器 bought to the wrong spec, and a dismissal during medical
+    # treatment. The noise signal is the disturbance word next to the object
+    # (低頻/震動/很吵), which is what the golden 冷氣機半夜低頻震動 case fires on.
+    (("震動", "振動", "低頻"),
      ("發生喧囂、振動及其他與此相類之行為",)),
 
     # ── 勞資 (勞基法§22, §24, §84-1) ──
@@ -797,6 +803,25 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # opposite side of the seam: 侵權 asks who did it, 債務不履行 asks who owed it.
     (("派來的", "來的工人", "來的師傅", "外包給", "臨時找的", "找工人賠"),
      ("債務人之代理人或使用人，關於債之履行有故意或過失時，債務人應與自己之故意或過失負同一責任",)),
+
+    # ── 押了房子的債過了時效 (民法§145) ──
+    # 「十六年前借兩百萬,拿房子設定抵押,他都沒來要過,現在他兒子要拍賣我的房子」
+    # returned §125/§129/§144/§197 and §880 — every article that helps the asker,
+    # including the one that kills the mortgage five years after the clock runs
+    # out. §145 is the half that does not help him: a claim secured by a mortgage
+    # can still be satisfied OUT OF THE PROPERTY even after the claim itself is
+    # time-barred. A window that carries only §880 answers 「不用還了」 when the
+    # question was 「房子會不會被拍掉」.
+    (("設定抵押", "拿房子抵押", "他項權利", "要拍賣我的房子"),
+     ("以抵押權、質權或留置權擔保之請求權，雖經時效消滅，債權人仍得就其抵押物、質物或留置物取償",)),
+
+    # ── 喪葬費誰出 (民法§1150) ──
+    # 「喪葬費三十八萬我一個人先刷卡付的,現在他們說是我自願出的不能從遺產裡扣」
+    # returned §1138/§1141/§1144/§1151/§1164/§1176 — how the estate is divided,
+    # which is the question after this one. §1150 puts 遺產管理、分割及執行遺囑之
+    # 費用 on the estate itself, before the shares are worked out.
+    (("喪葬費", "安葬費", "殯葬費", "從遺產裡扣"),
+     ("關於遺產管理、分割及執行遺囑之費用，由遺產中支付之",)),
 
     # ── 幫忙做了事情事後要錢 (民法§547, §546) ──
     # 「住院三週請隔壁鄰居幫我顧店,當初只說麻煩你一下沒談到錢,出院後他要六萬工錢」
