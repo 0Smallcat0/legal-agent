@@ -1033,6 +1033,23 @@ def test_an_object_is_not_a_disturbance():
     assert "發生喧囂、振動及其他與此相類之行為" in expansions("冷氣機半夜低頻震動很吵,能要求改善嗎")
 
 
+def test_a_privately_hired_carer_is_outside_the_labour_act():
+    """The window was 勞基§11/§16/§17/§18/§20/§28 — notice and severance, all of
+    which assume 勞動基準法 applies. §488 II is the rule that actually governs, and
+    it lets EITHER side end it at any time."""
+    out = expansions("我在一戶人家當看護,是家屬直接請我的,沒有透過公司也沒有簽任何合約")
+    assert "僱傭未定期限，亦不能依勞務之性質或目的定其期限者，各當事人得隨時終止契約" in out  # §488 II
+    assert "稱僱傭者，謂當事人約定，一方於一定或不定之期限內為他方服勞務，他方給付報酬之契約" in out  # §482
+
+
+def test_knowing_the_other_side_could_not_sign_is_the_expensive_part():
+    """「我知道他未成年」 is the most expensive sentence in his own account: §113
+    puts restitution on the party who knew. The window had only the tort chapter."""
+    out = expansions("我跟一個高中生買了他的重型機車,我知道他未成年,他媽媽說沒有同意過")
+    assert "限制行為能力人未得法定代理人之允許，所訂立之契約，須經法定代理人之承認，始生效力" in out  # §79
+    assert "無效法律行為之當事人，於行為當時知其無效，或可得而知者，應負回復原狀或損害賠償之責任" in out  # §113
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
