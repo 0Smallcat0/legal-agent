@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **278/295 (94%)** | `evaluation/real_recall.py`, 142 lived problems |
+| retrieval recall, real user wording | **282/299 (94%)** | `evaluation/real_recall.py`, 144 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -206,7 +206,15 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   dispute is whether it was 贈與 (§406) instead. The pattern: the window answers
   the question the FACTS look like, and the classification that decides the case
   is never in it. Definition articles are the cheapest fix — §464, §482, §406 are
-  one row each.
+  one row each. Two more the next round: a car park inside a building pulled in
+  公寓大廈條例§4/§7/§10/§23/§26/§33 when the fight is whether a monthly space is
+  場地租賃 or 寄託 (§589, and §590's 善良管理人之注意 for a PAID bailee — the duty
+  「概不負責」 is trying to escape); and 「我拿一百五十萬給他當本錢,每月分我兩成」
+  got §562/§707/§822/§881-3/§991 with nothing that names the relationship, when
+  §667 is the definition and §681 makes partners jointly liable for what the
+  partnership cannot pay. Seven instances, and the shape keeps paying: the window
+  is built from the surface facts (a building, a shop, a transfer) while the case
+  turns on a category nobody in the transcript names.
 - **The window can hold every consequence of a rule and never state the rule.**
   A session asking whether joint liability existed at all got §273/§274/§277/§280
   and §281 — how joint debtors are pursued, released and reimbursed — with §272,
