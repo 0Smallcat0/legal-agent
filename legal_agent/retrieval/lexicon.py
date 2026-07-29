@@ -161,6 +161,34 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 誰擔任監護人 (民法§1111, §1113) ──
+    # Filed as a 「floor artefact」 for several rounds because the CLI reaches these
+    # through the focused dense query. The sharper test says otherwise: NO phrase
+    # in this table matches either article, so a flat fact string never gets them.
+    # §1111 is how the court picks the guardian, §1113 is what makes the minors'
+    # rules apply to an adult.
+    (("誰當監護人", "也要當監護人", "法院會怎麼決定", "聲請監護宣告",
+      "我能不能爭取", "誰比較適合"),
+     ("法院為監護之宣告時，應依職權就配偶、四親等內之親屬",
+      "成年人之監護，除本節有規定者外，準用關於未成年人監護之規定")),
+
+    # ── 租金何時該付 (民法§439) ──
+    # Same story: unreachable by any phrase, so 「房東要我一次先付一年租金」 could
+    # only ever get the termination articles. §439 is the default — rent falls due
+    # at the END of each period unless otherwise agreed.
+    (("一次先付一年", "先付一年租金", "月付", "預付租金", "一次付清租金",
+      "要我先付"),
+     ("承租人應依約定日期，支付租金",)),
+
+    # ── 可分之債的平均分擔 (民法§271) ──
+    # The other half of 「沒有寫連帶」: §272 says joint liability needs an express
+    # term, and §271 says what happens without one — divisible debts are split
+    # equally. Neither was reachable before; §272 shipped last round, this is its
+    # pair, in its own row because that row is already at two phrases.
+    (("三分之一", "平均分擔", "各自負擔多少", "一人一份", "按人頭分"),
+     ("數人負同一債務或有同一債權，而其給付可分者",
+      "應各平均分擔或分受之")),
+
     # ── 專有部分或共有部分 (民法§799) ──
     # 「外牆磁磚掉下來砸到我的車,管委會說那面牆是頂樓那戶的專有部分」 — the classic
     # label dispute again. §799 defines both: whatever is not in anyone's 專有

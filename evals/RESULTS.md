@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **204/223 (91%)** | `evaluation/real_recall.py`, 101 lived problems |
+| retrieval recall, real user wording | **208/223 (93%)** | `evaluation/real_recall.py`, 101 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -46,11 +46,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   makes it a FLOOR, not the product: Stage 3 also hands the dense channel a
   focused problem+goal query, and the harness deliberately does not. Measured on
   the same session — 民法§1111 is rank 5 of the window the CLI actually produced
-  and absent from the window the harness produces for the same story. Three of
-  the standing misses (§1111, §439, §450) are of exactly this kind. Making the
+  and absent from the window the harness produces for the same story. Making the
   harness match production would raise the published number by changing the
-  measurement, which is the same self-serving move as relabelling an
-  expectation, so it stays as it is.
+  measurement, so it stays as it is.
+  **The label was over-used, though.** §1111, §439, §450 and §271 sat under it
+  for several rounds until a sharper test — does ANY lexicon phrase match the
+  article at all — showed none did. They were reachable gaps, not measurement
+  noise: four rows later they hit, and recall went 204/223 to 208/223. 「The
+  harness is a floor」 is true and was also a place to put things.
 - **Judgments** are counted, never scored: there is no ground truth for "the
   right judgment," and inventing one would poison the layer.
 

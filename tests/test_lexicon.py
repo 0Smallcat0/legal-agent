@@ -601,6 +601,29 @@ def test_an_outside_wall_reaches_the_definition_that_settles_it():
     )                                                                    # §799
 
 
+def test_the_guardianship_articles_are_reachable_from_plain_words():
+    """Filed as a 「floor artefact」 for several rounds because the CLI reaches these
+    through its focused dense query. No phrase in the table matched either
+    article, so a flat fact string never got them."""
+    out = expansions("我想聲請監護宣告,可是弟弟也要當監護人,法院會怎麼決定誰當監護人")
+    assert "法院為監護之宣告時，應依職權就配偶、四親等內之親屬" in out            # §1111
+    assert "成年人之監護，除本節有規定者外，準用關於未成年人監護之規定" in out     # §1113
+
+
+def test_when_rent_falls_due_is_reachable():
+    assert "承租人應依約定日期，支付租金" in expansions(
+        "房東要我一次先付一年租金三十萬,原本是月付一萬五"
+    )                                                                    # §439
+
+
+def test_a_divisible_debt_without_a_joint_clause_is_split():
+    # §272 (shipped last round) says joint liability needs an express term;
+    # §271 says what happens without one.
+    out = expansions("借據沒寫連帶,三個人簽名,我要還全部還是三分之一")
+    assert "數人負同一債務或有同一債權，而其給付可分者" in out                   # §271
+    assert "應各平均分擔或分受之" in out                                      # §271
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
