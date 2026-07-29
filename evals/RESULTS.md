@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **232/248 (94%)** | `evaluation/real_recall.py`, 115 lived problems |
+| retrieval recall, real user wording | **237/254 (93%)** | `evaluation/real_recall.py`, 118 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -173,6 +173,11 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   the article that says it only arises when expressly agreed, nowhere in sight.
   The same shape hit 民法§274, §277 and §1115 in earlier rounds: the answer's
   neighbours arrive and the answer does not.
+- **The article the OTHER SIDE relies on has to be in the window too.** A driver
+  told 「你已經領過保險金了,我只賠六萬」 got §184/§188/§193/§213 — his own claim,
+  well covered — and never 民法§216-1, which is the entire basis of the sentence
+  said to him. An answer cannot test an opponent's argument while the statute it
+  rests on is absent, and the asker is left with 「他說的對不對?」 unanswered.
 - **A window can face the wrong way.** A buyer defending the house he paid for
   got 民法§244, §242, §87 and §88 — every route by which a transfer is undone —
   while §759-1, the presumption that protects a good-faith registered owner, was
