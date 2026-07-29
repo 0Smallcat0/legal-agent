@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **222/237 (94%)** | `evaluation/real_recall.py`, 109 lived problems |
+| retrieval recall, real user wording | **228/243 (94%)** | `evaluation/real_recall.py`, 112 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -161,6 +161,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   (消費寄託), §799 (區分所有). The 僱傭 one was the sharpest: a session about a
   contract LABELLED 承攬 returned the entire 承攬 chapter, because nothing in the
   window tests whether the label is true.
+- **The 準用 article can arrive instead of the article itself.** A woman living
+  with her partner for three years got 家暴法§63-1 — the provision that extends
+  the Act BY ANALOGY to partners who do not live together — while §3, which makes
+  a cohabitant a family member outright, was absent. Her friend's claim (「沒結婚
+  不算家暴」) is refuted by §3 and only awkwardly by §63-1. A neighbouring rule
+  that reaches the same result is not the same as the rule that applies.
 - **The window can hold every consequence of a rule and never state the rule.**
   A session asking whether joint liability existed at all got §273/§274/§277/§280
   and §281 — how joint debtors are pursued, released and reimbursed — with §272,

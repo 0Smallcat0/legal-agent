@@ -161,6 +161,32 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("區分所有權人會議之決議，除規約另有規定外，應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
       "召集人得就同一議案重新召集會議")),
 
+    # ── 房屋瑕疵危及健康 (民法§424) ──
+    # 「整面牆都是黑黴,住進去半年開始咳嗽,房東說當初帶看你自己也看過了」 returned
+    # §430/§440/§441 — repair and late rent. §424 answers the landlord's sentence
+    # directly: where the defect endangers health the tenant may terminate EVEN
+    # having known of it, and even having waived the right.
+    (("壁癌", "黑黴", "發霉", "一直咳嗽", "當初也看過", "帶看時看過",
+      "住進去才發現", "危及健康"),
+     ("如有瑕疵，危及承租人或其同居人之安全或健康時",)),
+
+    # ── 管理委員會的職務 (公寓大廈條例§36) ──
+    # 「管委會收管理費但什麼都不做,大廳燈壞三個月沒換」 reached §10/§21/§22 — who
+    # pays and how arrears are chased. §36 is the list the asker wanted: what the
+    # committee is required to do.
+    (("管委會不做事", "該做哪些事", "都不處理", "什麼都不做", "管委會的職務",
+      "收管理費卻", "沒公布過"),
+     ("管理委員會之職務如下",)),
+
+    # ── 家庭成員的範圍 (家暴法§3) ──
+    # 「同居三年沒有結婚,朋友說不算家暴不能聲請保護令」 reached §63-1 — which covers
+    # partners who do NOT live together — while this asker does. §3 is the direct
+    # refutation: 現有或曾有同居關係者 are family members under the Act.
+    (("沒有結婚", "沒登記", "同居三年", "算不算家暴", "男女朋友同居",
+      "住在一起", "沒有結婚不算"),
+     ("本法所定家庭成員，包括下列各員及其未成年子女",
+      "現有或曾有同居關係、家長家屬或家屬間關係者")),
+
     # ── 監護人就任後要做的事 (民法§1099, §1100) ──
     # 「法院上個月裁定我當監護人,接下來要辦什麼」 returned §14/§15/§1111/§1111-1 —
     # how a guardian is APPOINTED, which already happened. §1099 is the next step

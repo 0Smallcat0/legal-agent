@@ -680,6 +680,28 @@ def test_a_wedding_day_delivery_reaches_rescission_without_demand():
     assert "遲延後之給付，於債權人無利益者，債權人得拒絕其給付" in out                  # §232
 
 
+def test_mould_that_makes_a_tenant_ill_reaches_the_right_to_leave():
+    """「房東說當初帶看你自己也看過了」 — §424 answers that sentence directly: where
+    the defect endangers health the tenant may terminate even having known."""
+    assert "如有瑕疵，危及承租人或其同居人之安全或健康時" in expansions(
+        "租的套房整面牆都是黑黴壁癌,住進去半年一直咳嗽,房東說當初也看過"
+    )                                                                    # §424
+
+
+def test_a_committee_that_does_nothing_reaches_its_own_job_list():
+    assert "管理委員會之職務如下" in expansions(
+        "管委會收管理費卻什麼都不做,大廳燈壞三個月沒換,依法該做哪些事"
+    )                                                                    # 條例§36
+
+
+def test_a_cohabiting_partner_is_a_family_member_not_an_analogy():
+    """The window gave 家暴法§63-1 — which covers partners who do NOT live
+    together — to someone who does. §3 is the article itself."""
+    out = expansions("我跟男友同居三年,沒有結婚也沒登記,朋友說不算家暴")
+    assert "本法所定家庭成員，包括下列各員及其未成年子女" in out              # §3
+    assert "現有或曾有同居關係、家長家屬或家屬間關係者" in out                # §3 第2款
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
