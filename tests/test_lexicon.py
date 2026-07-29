@@ -1098,6 +1098,26 @@ def test_made_to_order_is_a_contract_for_work_not_a_sale():
     assert "定作人得定相當期限，請求承攬人修補之" in out                                          # §493
 
 
+def test_a_falling_tile_is_the_owners_problem_not_a_fault_question():
+    """民法§191 was reachable all along and still never reached the window: every
+    trigger on its row was two characters, and specificity sorts by LENGTH, so
+    「管委會」 took the seats. §184 makes the asker prove the fault §191 presumes."""
+    assert "由工作物之所有人負賠償責任" in expansions(
+        "社區外牆的磁磚掉下來把我停在旁邊的車砸凹了,管委會說不關他們的事"
+    )                                                                    # §191
+    assert "由工作物之所有人負賠償責任" in expansions(
+        "樓上鄰居出國,他家水管爆了一直漏到我家,我自己找水電修好花了兩萬八"
+    )                                                                    # §191
+
+
+def test_a_unit_repaired_four_times_reaches_the_warranty_articles():
+    """Same shape, same fix: 瑕疵/故障/維修/退錢 are all two characters and lost the
+    seats to 「換新的」."""
+    out = expansions("去年裝的冷氣從第一個月就會漏水,叫廠商來修了四次還是一樣")
+    assert "無滅失或減少其價值之瑕疵" in out                              # §354
+    assert "買受人得解除其契約或請求減少其價金" in out                    # §359
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

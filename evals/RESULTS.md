@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **287/303 (95%)** | `evaluation/real_recall.py`, 146 lived problems |
+| retrieval recall, real user wording | **290/303 (96%)** | `evaluation/real_recall.py`, 146 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -221,6 +221,21 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   written. The standing misses are not all independent problems — some are the
   same missing classification seen from a different session, which is an argument
   for fixing seams rather than chasing individual misses.
+- **A standing miss can be an article that was reachable all along and simply
+  outranked.** Three of the long-lived misses turned out to share one cause, and
+  it was not coverage. 民法§191 (工作物所有人負賠償責任) had a row, and that row
+  FIRED in both the falling-tile and the burst-pipe sessions — but every trigger on
+  it was two characters (外牆, 漏到), and `expansions()` sorts by trigger LENGTH
+  first, so 「管委會」 (three) took the reserved seats and §191 never reached the
+  window. Those windows carried 民法§184 instead, which makes the asker prove the
+  fault §191 presumes. Same story for §354/§359 on the sale-defect row: 瑕疵, 故障,
+  維修, 退錢, 二手 are all two characters, and an air-conditioner session lost them
+  to 「換新的」. The fix was not a new row or a new article — it was words long
+  enough to win (掉下來, 砸凹, 水管爆, 漏到我家, 來修了, 修不好, 泡水車). A row
+  built entirely from short triggers is volunteering to lose every tie it enters.
+  Reshuffle, both sides: repaired-four-times went from missing §354+§359 to missing
+  §227 — two recovered, one evicted, and both 瑕疵擔保 and 不完全給付 are real
+  routes for a unit repaired four times.
 - **The window can hold every consequence of a rule and never state the rule.**
   A session asking whether joint liability existed at all got §273/§274/§277/§280
   and §281 — how joint debtors are pursued, released and reimbursed — with §272,

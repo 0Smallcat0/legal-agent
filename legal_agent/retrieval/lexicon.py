@@ -113,8 +113,16 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 買賣瑕疵擔保 (民法§354, §359). 消保法§19 only reaches a 企業經營者's
     # 通訊交易; a C2C 二手 sale lives in 民法. Measured: 「收到三天就當機」
     # surfaced §19 and nothing else — §359 ranked 43, §354 outside the top 60.
+    # 來修了/修不好/泡水車 added for the same reason as the §191 row below: every
+    # trigger here was two characters (瑕疵, 故障, 維修, 退錢, 二手) and specificity
+    # sorts by LENGTH, so an air-conditioner session lost §354/§359 to 「換新的」
+    # (three) and a written-off-car session to 「他們是故意的」 (six). Measured trade,
+    # both sides: repaired-four-times goes from missing §354+§359 to missing §227 —
+    # two recovered, one evicted, and 不完全給付 and 瑕疵擔保 are both real routes
+    # for a unit repaired four times.
     (("瑕疵", "故障", "壞掉", "壞了", "不能用", "當機", "開不了機",
-      "二手", "貨不對版", "跟說的不一樣", "維修", "換貨", "退錢"),
+      "二手", "貨不對版", "跟說的不一樣", "維修", "來修了", "修不好", "泡水車",
+      "換貨", "退錢"),
      ("無滅失或減少其價值之瑕疵", "減少其通常效用或契約預定效用之瑕疵",
       "買受人得解除其契約或請求減少其價金")),
 
@@ -1455,7 +1463,16 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # general tort clause, and an answer that cites the presumption without the
     # basis is half an answer. It also puts the phrase in a row the ranking
     # corroborates — its own row is not, and that is why it kept losing seats.
-    (("漏到", "破裂", "爆管", "淹到", "泡壞", "滲到", "掉落", "外牆"),
+    # 掉下來/砸凹/砸到/水管爆/漏到我家 were added after two standing misses were
+    # traced here. The row already FIRED in both — 民法§191 was reachable all along
+    # — but every one of its triggers is two characters (外牆, 漏到) and specificity
+    # sorts by trigger LENGTH, so 「管委會」 (three) took the reserved seats and §191
+    # never reached the window. The fix is not a new row, it is words long enough
+    # to win: the asker who says 「磁磚掉下來把我的車砸凹」 is describing the very
+    # thing §191 is about, and 一般侵權§184 (which the window did carry) makes him
+    # prove fault that §191 presumes.
+    (("漏到", "漏到我家", "破裂", "爆管", "水管爆", "淹到", "泡壞", "滲到",
+      "掉落", "掉下來", "砸到", "砸凹", "外牆"),
      ("土地上之建築物或其他工作物所致他人權利之損害", "由工作物之所有人負賠償責任",
       "因故意或過失，不法侵害他人之權利者")),
 
