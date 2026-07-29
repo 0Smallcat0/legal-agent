@@ -702,6 +702,27 @@ def test_a_cohabiting_partner_is_a_family_member_not_an_analogy():
     assert "現有或曾有同居關係、家長家屬或家屬間關係者" in out                # §3 第2款
 
 
+def test_a_buyer_defending_his_title_reaches_his_own_side():
+    """「原屋主的兒子說登記是錯的,要我把房子還回去」 returned §244/§242/§87/§88 —
+    every way a transaction gets UNDONE, which is the opposite of what he needs."""
+    out = expansions("原屋主的兒子跑來說當初過戶是被騙的、登記是錯的,要我還回去,我完全不知道")
+    assert "不動產物權經登記者，推定登記權利人適法有此權利" in out            # §759-1
+    assert "因信賴不動產登記之善意第三人" in out                            # §759-1 II
+
+
+def test_a_pipe_overhead_is_still_an_intrusion():
+    # §797 covers the branches; nothing covered the airspace.
+    assert "土地所有權，除法令有限制外，於其行使有利益之範圍內，及於土地之上下" in expansions(
+        "隔壁的冷氣排水管架在我家院子上方,樹枝也越過圍牆"
+    )                                                                    # §773
+
+
+def test_where_to_sue_is_its_own_question():
+    assert "消費訴訟，得由消費關係發生地之法院管轄" in expansions(
+        "業者在高雄我住台北,他們說要告就去高雄告,我可不可以在台北告"
+    )                                                                    # 消保法§47
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
