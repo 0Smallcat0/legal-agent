@@ -1154,6 +1154,23 @@ def test_one_row_cannot_answer_three_questions_with_three_seats():
     assert money.index("報酬應於工作交付時給付之") < 3                 # §505
 
 
+def test_three_sessions_whose_row_never_fired():
+    """Cause (c): the article was reachable and the row simply never fired, because
+    every trigger it had described a different kind of asker."""
+    # Refuses money, wants the wall rebuilt — none of 賠償/求償/損失 applies.
+    assert "因故意或過失，不法侵害他人之權利者" in expansions(
+        "隔壁施工把我家牆壁震出好幾道裂縫,我要的是修回原狀不是拿五萬,工地主任承認是他們造成的"
+    )                                                                    # §184
+    # Never says 定型化 or 審閱 — the clause itself is the unfair term.
+    assert "定型化契約中之條款違反誠信原則，對消費者顯失公平者，無效" in expansions(
+        "業者堅持契約寫以高雄地院為管轄法院,我住台北"
+    )                                                                    # 消保§12
+    # §153 joins §345: one row, both phrases inside the deliverable three.
+    assert "當事人互相表示意思一致者，無論其為明示或默示，契約即為成立" in expansions(
+        "在LINE上談好二手鋼琴十二萬,他回好就這個價,隔天說我們沒簽約所以不算"
+    )                                                                    # §153
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
