@@ -290,6 +290,21 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   broad 侵權 row takes seats 1-3 off the single word 「損失」 (「這個損失該誰承擔」) —
   the same seat-theft shape as 做到一半 last round, one layer up. Dead triggers were
   removed rather than left in to look busy; the cause is written down instead.
+- **The seat-theft scan only works with the miss filter on.** Written to hunt the
+  shape caught twice by hand (委任's 做到一半, 侵權's 損失), the raw version flags
+  12 rows that take a top-3 seat in a session whose expected articles they cannot
+  supply — and most are false alarms, because a row can be genuinely on topic
+  without being the answer (侵權§184 is relevant nearly everywhere and expected
+  almost nowhere). Filtered to sessions that ACTUALLY lost something, it returns
+  two, and both thieves are the same row: 侵權 taking seats 1 and 2.
+  The new one is 「住院」. It fires in five stored sessions and in FOUR the person in
+  hospital is not the claimant — a father with a stroke (maintenance), 「我媽住院急
+  需三十萬」 (why he took the loan), 「我生病住院他也不聞不問」 (a donor revoking a
+  gift), 「我住院那三個禮拜請鄰居顧店」 (a mandate). That also corrects the record
+  on signed-in-desperation: its §205 miss had been written down as purely 「the rate
+  is implied by arithmetic」, and the tort row holding two of its three seats is a
+  second, independent cause. Measured: 3 tort seats across those four windows, 3 ->
+  0, recall unchanged either way (298/303) — injury-claim keeps firing on 骨折/醫藥費.
 - **A context filter cannot tell an article ABOUT a topic from one that mentions
   it in a list.** Diagnosing the remaining misses by cause produced three buckets
   — unreachable (1), reachable but outranked (7), reachable but the row does not

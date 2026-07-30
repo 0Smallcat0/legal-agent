@@ -44,7 +44,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("賠償", "求償", "賠錢", "他賠", "要賠", "賠我", "誰賠", "告他", "提告", "損失", "損害",
       "震出", "是他們造成的",
       "失眠", "就醫", "生病", "受傷", "健康", "身心", "耗弱",
-      "骨折", "住院", "請假", "沒收入", "醫藥費", "醫療費"),
+      # 住院 is out. Found by the seat-theft scan: it fires in five stored sessions
+      # and in FOUR the person in hospital is not the claimant — a father with a
+      # stroke (maintenance), 「我媽住院急需三十萬」 (why he took the loan), 「我生病
+      # 住院他也不聞不問」 (a donor revoking a gift), 「我住院那三個禮拜請鄰居顧店」
+      # (a mandate). Measured: 3 tort seats across those four windows, recall
+      # unchanged either way — injury-claim keeps firing on 骨折/醫藥費.
+      "骨折", "請假", "沒收入", "醫藥費", "醫療費"),
      # Sharpened after the seat-ordering change: 「不法侵害他人之權利」 matches
      # §184/§185/§187/§188/§189 and 「負損害賠償責任」 matches 18 articles, so
      # neither points anywhere. The full clause is unique to §184.
