@@ -1171,6 +1171,19 @@ def test_three_sessions_whose_row_never_fired():
     )                                                                    # §153
 
 
+def test_someone_elses_hospital_stay_is_not_an_injury_claim():
+    """住院 fired the tort row in five sessions and in four the person in hospital
+    was not the claimant. Measured cost: 3 tort seats across those four windows."""
+    for q in ["我媽住院急需三十萬,對方借我三十萬要我三個月還四十五萬",
+              "我爸中風住院,社工打電話來要我付安養費",
+              "我住院那三個禮拜請隔壁鄰居幫我顧店,當初沒談到錢"]:
+        assert "因故意或過失，不法侵害他人之權利者" not in expansions(q)
+    # A real injury claim still fires, on the words that name the injury.
+    assert "因故意或過失，不法侵害他人之權利者" in expansions(
+        "他騎車撞到我,腿骨折住院兩週,醫藥費四萬多"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
