@@ -1205,6 +1205,22 @@ def test_a_consignment_shop_is_a_commission_agent():
     assert "行紀，除本節有規定者外，適用關於委任之規定" in out            # §577
 
 
+def test_lending_a_car_for_nothing_is_not_a_mandate():
+    """The window was §528/§542/§546 (委任), §409 (贈與) and 消費借貸. Lending a car
+    for nothing is 使用借貸, and both answers were unreachable."""
+    out = expansions("我把車借給同事開去辦事,他停紅線被拖吊還吃罰單,車借出去沒收他一毛錢")
+    assert "借用人應以善良管理人之注意，保管借用物" in out              # §468
+    assert "借用物之通常保管費用，由借用人負擔" in out                  # §469
+
+
+def test_the_article_the_employer_stands_on():
+    """All eight seats were 勞基法 — the asker's own position — and §553, the
+    definition his boss is invoking, was structurally unreachable."""
+    assert "稱經理人者，謂由商號之授權，為其管理事務及簽名之人" in expansions(
+        "我在飲料店當店長三年,老闆說我是經理人不是勞工,所以沒有加班費也沒有勞保"
+    )                                                                    # §553
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

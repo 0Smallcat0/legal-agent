@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **304/309 (98%)** | `evaluation/real_recall.py`, 149 lived problems |
+| retrieval recall, real user wording | **307/312 (98%)** | `evaluation/real_recall.py`, 151 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -232,6 +232,15 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   務旅館、砍掉一個景點」 already surfaces §514-5 and §514-7 through plain lexical
   overlap — 旅遊/團費/行程 appear in the articles themselves. Stored as a regression
   lock, labelled as one.
+  Twelfth and thirteenth: 「把車借給同事,他停紅線被拖吊還吃罰單,車借出去沒收他一毛
+  錢」 returned §528/§542/§546 (委任) and §409 (贈與) — lending for nothing is
+  使用借貸, and §468 (borrower owes 善良管理人之注意 and pays for damage) plus §469
+  (通常保管費用由借用人負擔, which is what a tow fee is) were both unreachable. And
+  「當店長三年,老闆說我是經理人不是勞工」 filled all eight seats with 勞基法 — the
+  asker's own position — while 民法§553, the definition his employer is standing on,
+  was unreachable. That one is the cleanest instance yet of 「the article the other
+  side relies on is missing」: 「打卡上下班、薪水固定、大小事要問老闆」 are facts
+  offered to be measured against §553, and the window could not show the yardstick.
   Nine instances now, and the ninth paid a dividend the others had not: adding the
   承攬 DEFINITION (§490) for 「訂做的東西」 also recovered 民法§505 in
   pay-only-after-delivery, a miss that had survived every round since it was

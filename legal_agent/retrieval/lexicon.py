@@ -882,6 +882,26 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
       "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
 
+    # ── 車借人開出了事 (民法§468, §469) ──
+    # 「把車借給同事開去辦事,他停紅線被拖吊還吃罰單,車頭也刮傷,他說拖吊費要我自己
+    # 付」 returned §528/§542/§546 (委任)、§409 (贈與) and 消費借貸 — lending a car for
+    # nothing is 使用借貸, and the two articles that answer him were unreachable:
+    # §468 puts a 善良管理人 duty on the borrower and makes him liable for damage,
+    # §469 puts 通常保管費用 on the borrower, which is what a tow fee is.
+    (("借給同事", "車借給", "借出去沒收"),
+     ("借用人應以善良管理人之注意，保管借用物",
+      "借用物之通常保管費用，由借用人負擔")),
+
+    # ── 店長是勞工還是經理人 (民法§553) ──
+    # 「當店長三年,排班進貨招人都我在做,老闆說我是經理人不是勞工,所以沒有加班費也
+    # 沒有勞保」 returned 勞基§16/§17/§18/§22/§24/§32-1/§70 — ALL of it the asker's own
+    # position, and none of it the article his employer is standing on. §553 defines
+    # 經理人 as someone given 商號之授權 to manage its affairs AND to sign for it; a
+    # man who clocks in and must ask the owner before deciding anything is being
+    # measured against that definition, and the window could not show it to him.
+    (("當店長", "我是經理人", "不是勞工"),
+     ("稱經理人者，謂由商號之授權，為其管理事務及簽名之人",)),
+
     # ── 寄賣是行紀 (民法§576, §577) ──
     # 「把二手名牌包交給二手店寄賣,講好賣出後抽三成,店家用他自己的名義賣掉六萬,只肯
     # 給我三萬」 returned §354/§359/§363 (買賣瑕疵)、§390、§476 and even §807-1
