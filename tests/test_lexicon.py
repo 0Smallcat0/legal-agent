@@ -1133,6 +1133,27 @@ def test_the_contract_row_can_reach_when_the_balance_falls_due():
     assert out.index("報酬應於工作交付時給付之") < 3                  # §505 in a reserved seat
 
 
+def test_a_builder_walking_off_is_not_a_mandate_ending():
+    """「做到一半」 was the 委任-termination row's only foothold in a renovation
+    session, where §548 and §550 took two of the three reserved seats and pushed
+    民法§494 to expansion position 5. 辦到一半 is what the mandate session says."""
+    building = expansions("我家裝潢做到一半,師傅品質很差我不想再做下去了,想直接喊停找別人")
+    assert "委任關係，因當事人一方死亡、破產或喪失行為能力而消滅" not in building
+    # …and the 承攬 remedies move up behind §511 rather than sitting at position 5.
+    assert building.index("定作人得解除契約或請求減少報酬") < 4        # §494
+    paperwork = expansions("代書辦到一半就過世了,錢我先付了,想知道做多少算多少怎麼算")
+    assert "委任關係，因當事人一方死亡、破產或喪失行為能力而消滅" in paperwork
+
+
+def test_one_row_cannot_answer_three_questions_with_three_seats():
+    """The 承攬 row was split by question. Each half must deliver inside the first
+    three phrases for the sessions that need it."""
+    defect = expansions("我家裝潢驗收發現磁磚貼歪,櫃子門關不起來")
+    assert defect.index("定作人得解除契約或請求減少報酬") < 3          # §494
+    money = expansions("報價單只寫一個總價,做完他說材料另外算要再加十二萬,尾款還沒付")
+    assert money.index("報酬應於工作交付時給付之") < 3                 # §505
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

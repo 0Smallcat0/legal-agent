@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **293/303 (97%)** | `evaluation/real_recall.py`, 146 lived problems |
+| retrieval recall, real user wording | **295/303 (97%)** | `evaluation/real_recall.py`, 146 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -253,6 +253,25 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   loses to 民法§511 (定作人得隨時終止契約), which is *also* right for that session,
   and §478 loses to the 脫產 row's own three phrases. N=4 reserved seats was
   measured and rejected long ago (13/11/2 golden), so these stay missing.
+- **Two wrong diagnoses in a row, both caught by re-measuring.** Worth recording
+  because the corrections are the useful part. §494 was first written down as
+  「loses to §511」, then, after the phrase-position rule was found, as 「sits at
+  phrase index 4 and is therefore undeliverable」. Acting on the second reading —
+  splitting the 承攬 row by question (有沒有瑕疵 / 報酬何時到期), so every phrase
+  falls inside some row's first three — did gain a case, but not that one: it
+  recovered 民法§359 for seller-lied-on-purpose instead. §494's real cause was a
+  third thing: 「做到一半」 is a trigger on the 委任-TERMINATION row, so in a session
+  about a builder abandoning a renovation, §548 and §550 (a mandate ending) took
+  two of the three reserved seats and pushed §494 to expansion position 5. The
+  mandate row's own session says 「辦到一半」 — paperwork at a 代書 — and keeps
+  firing on that plus 做多少算多少. Dropping 做到一半 recovered §494 at no cost
+  (294 -> 295). The lesson is procedural: a diagnosis that explains the symptom is
+  not the same as the cause, and the only test is to apply it and see which case
+  actually moves.
+  A test written in the same round asserted §494 must land in the first three
+  expansion positions. It does not — it wins a seat from position 3, because the
+  promoter skips phrases whose article the ranking already put in the window. The
+  assertion was measuring an incidental index rather than the contract.
 - **A context filter cannot tell an article ABOUT a topic from one that mentions
   it in a list.** Diagnosing the remaining misses by cause produced three buckets
   — unreachable (1), reachable but outranked (7), reachable but the row does not
