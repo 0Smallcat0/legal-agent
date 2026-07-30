@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **312/317 (98%)** | `evaluation/real_recall.py`, 154 lived problems |
+| retrieval recall, real user wording | **315/320 (98%)** | `evaluation/real_recall.py`, 155 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -253,6 +253,14 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   transferred as security, priority in the proceeds) and §893 is what the shop may
   actually do, its second paragraph subjecting a 流質 clause to §873-1 — which is
   why 「只肯退我五千」 is not the end of the matter.
+  Sixteenth, and the one that shows the seam is not always a coverage problem:
+  「外送平台系統派單不能挑,拒單太多會被降權,平台說我們是承攬不是僱傭」 returned
+  勞基§24/§32/§32-1/§33 mixed with 承攬§493/§502/§505 — every article presupposing a
+  classification already made, which is exactly what he is asking about. Unlike the
+  pawnshop, 勞基§2, 民法§482 and §490 were all REACHABLE; no row that reaches them
+  fires on a platform worker's words, so this was cause (c). Putting the three
+  definitions side by side lets the facts he offered — cannot decline jobs, gets
+  down-ranked, buys the uniform himself — be measured against all of them.
 - **The most expensive over-wide trigger measured so far was 「加收」.** A logo-design
   dispute — 「設計師說超出修改次數要加收一次五千」 — came back with 公寓大廈條例
   §14/§25/§28/§30/§32/§34 and 民法§56: eight seats of apartment-management law,

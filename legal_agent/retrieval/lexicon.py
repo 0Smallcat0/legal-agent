@@ -888,6 +888,20 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
       "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
 
+    # ── 平台說我是承攬不是僱傭 (勞基§2, 民法§482, §490) ──
+    # 「外送平台跑了兩年,系統派單不能挑,拒單太多會被降權還會停權,平台說我們是承攬
+    # 不是僱傭」 returned 勞基§24/§32/§32-1/§33 (加班與工時) mixed with 承攬
+    # §493/§502/§505 — every one of them presupposing a classification already made,
+    # which is precisely what he is asking about. Unlike the pawnshop case these
+    # three articles were REACHABLE all along; no row that reaches them fires on a
+    # platform worker's words, so cause (c), not (a). Putting 勞基§2's definition of
+    # 勞工 beside §482 and §490 lets the facts he offered — cannot decline jobs,
+    # gets down-ranked, buys the uniform himself — be measured against all three.
+    (("派單不能挑", "會被降權", "算不算他們的員工", "承攬不是僱傭"),
+     ("勞工：指受雇主僱用從事工作獲致工資者",
+      "稱僱傭者，謂當事人約定，一方於一定或不定之期限內為他方服勞務，他方給付報酬之契約",
+      "稱承攬者，謂當事人約定，一方為他方完成一定之工作，他方俟工作完成，給付報酬之契約")),
+
     # ── 當鋪把東西賣掉了 (民法§884, §893) ──
     # 「相機拿去當鋪借兩萬,第四個月拿錢去贖,他們說早就賣掉了只肯退我五千」 returned
     # §125/§126/§129/§144/§197 — eight seats of 消滅時效 — plus §473/§365/§205. Not one

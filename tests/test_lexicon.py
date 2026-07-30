@@ -1254,6 +1254,16 @@ def test_pawning_something_is_a_pledge():
     assert "質權人於債權已屆清償期，而未受清償者，得拍賣質物，就其賣得價金而受清償" in out  # §893
 
 
+def test_a_platform_worker_gets_all_three_definitions():
+    """Cause (c), not (a): 勞基§2, §482 and §490 were all reachable and none of the
+    rows reaching them fires on a platform worker's words. The window was
+    勞基§24/§32/§32-1/§33 and 承攬§493/§502/§505 — all presupposing the answer."""
+    out = expansions("外送平台系統派單不能挑,拒單太多會被降權,平台說我們是承攬不是僱傭")
+    assert "勞工：指受雇主僱用從事工作獲致工資者" in out                   # 勞基§2
+    assert "稱僱傭者，謂當事人約定，一方於一定或不定之期限內為他方服勞務，他方給付報酬之契約" in out  # §482
+    assert "稱承攬者，謂當事人約定，一方為他方完成一定之工作，他方俟工作完成，給付報酬之契約" in out  # §490
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
