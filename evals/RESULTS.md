@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **298/303 (98%)** | `evaluation/real_recall.py`, 146 lived problems |
+| retrieval recall, real user wording | **300/305 (98%)** | `evaluation/real_recall.py`, 147 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -215,6 +215,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   partnership cannot pay. Seven instances, and the shape keeps paying: the window
   is built from the surface facts (a building, a shop, a transfer) while the case
   turns on a category nobody in the transcript names.
+  Tenth instance: 「銀行說要有人一起簽,我以為只是當見證人就簽了,現在說我是共同借款
+  人不是保證人,連催告朋友都沒有就來找我」 returned §273/§274/§277/§280/§281/§282 —
+  the internal relations of joint debtors, every one of which presupposes the thing
+  in dispute. §272 decides it (連帶債務 needs an express undertaking or a statute)
+  and §745 is the right he is actually asking about: 先訴抗辯權, refuse to pay until
+  the creditor has executed against the main debtor without result. §745 and §746
+  were both structurally unreachable before this row.
   Nine instances now, and the ninth paid a dividend the others had not: adding the
   承攬 DEFINITION (§490) for 「訂做的東西」 also recovered 民法§505 in
   pay-only-after-delivery, a miss that had survived every round since it was
@@ -305,6 +312,11 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   is implied by arithmetic」, and the tort row holding two of its three seats is a
   second, independent cause. Measured: 3 tort seats across those four windows, 3 ->
   0, recall unchanged either way (298/303) — injury-claim keeps firing on 骨折/醫藥費.
+  The scan's next hit was left alone on purpose. signed-in-desperation also loses
+  seats to the WAGE row, off 「我一個月薪水三萬多」 — his capacity to repay, not an
+  employment dispute. But 薪水 appears in 7 stored sessions and 月薪 in 6, nearly all
+  genuine labour cases, and 薪水 simply IS the everyday word for wages: any narrowing
+  trades six real cases for one. Diagnosed, not shipped.
 - **A context filter cannot tell an article ABOUT a topic from one that mentions
   it in a list.** Diagnosing the remaining misses by cause produced three buckets
   — unreachable (1), reachable but outranked (7), reachable but the row does not
