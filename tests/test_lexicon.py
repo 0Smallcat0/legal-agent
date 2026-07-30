@@ -1118,6 +1118,21 @@ def test_a_unit_repaired_four_times_reaches_the_warranty_articles():
     assert "買受人得解除其契約或請求減少其價金" in out                    # §359
 
 
+def test_an_earnest_money_receipt_outranks_a_service_fee():
+    """民法§248 sat at expansion position 10 in the one session written for it:
+    「斡旋」 is two characters and lost every seat to 「手續費」 (three)."""
+    out = expansions("我付了十萬斡旋金,有簽斡旋金收據,上面寫如果屋主不同意會全額退還,房仲說要扣手續費")
+    assert out.index("由他方受有定金時，推定其契約成立") < 3          # §248 in a reserved seat
+
+
+def test_the_contract_row_can_reach_when_the_balance_falls_due():
+    """Seat arithmetic, not vocabulary: the 承攬 row won expansion positions 0-4 in
+    「材料另外算要再加十二萬」 and still could not deliver §505, because §505 was its
+    FIFTH phrase and only three seats exist with one article per phrase."""
+    out = expansions("我請師傅修屋頂,講好工錢八萬,做完他說材料另外算要再加十二萬,報價單只寫一個總價")
+    assert out.index("報酬應於工作交付時給付之") < 3                  # §505 in a reserved seat
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
