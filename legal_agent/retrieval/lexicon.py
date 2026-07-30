@@ -888,6 +888,18 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
       "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
 
+    # ── 當鋪把東西賣掉了 (民法§884, §893) ──
+    # 「相機拿去當鋪借兩萬,第四個月拿錢去贖,他們說早就賣掉了只肯退我五千」 returned
+    # §125/§126/§129/§144/§197 — eight seats of 消滅時效 — plus §473/§365/§205. Not one
+    # article about the pledge the whole transaction IS. §884 is 動產質權: possession
+    # transferred as security, with priority in the proceeds. §893 is what the shop
+    # may actually do — 屆期未受清償得拍賣質物 — and its second paragraph subjects a
+    # 流質 clause to §873-1, which is why 「只肯退我五千」 is not the end of it.
+    # 質權編 had never been reachable at all.
+    (("當鋪", "當票", "滿當", "贖回"),
+     ("稱動產質權者，謂債權人對於債務人或第三人移轉占有而供其債權擔保之動產，得就該動產賣得價金優先受償之權",
+      "質權人於債權已屆清償期，而未受清償者，得拍賣質物，就其賣得價金而受清償")),
+
     # ── 修車廠扣著車不還 (民法§928, §929) ──
     # 「估價一萬二,修好算我三萬八,我不同意就說錢沒付清車子不能牽走,已經扣在廠裡三個
     # 星期」 returned §493/§495/§505/§509 (承攬)、§601、§217、§196 — the work and what
