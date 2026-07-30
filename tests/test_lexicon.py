@@ -1243,6 +1243,17 @@ def test_charging_extra_is_not_a_residents_meeting():
     )
 
 
+def test_pawning_something_is_a_pledge():
+    """The window was eight seats of 消滅時效 plus §473/§365/§205 — not one article
+    about the pledge the whole transaction is. 質權編 had never been reachable."""
+    out = expansions("我把相機拿去當鋪借了兩萬,講好三個月贖回,當票上寫的滿當期是三個月")
+    assert (
+        "稱動產質權者，謂債權人對於債務人或第三人移轉占有而供其債權擔保之動產，得就該動產賣得價金優先受償之權"
+        in out
+    )                                                                    # §884
+    assert "質權人於債權已屆清償期，而未受清償者，得拍賣質物，就其賣得價金而受清償" in out  # §893
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

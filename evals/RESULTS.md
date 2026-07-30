@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **310/315 (98%)** | `evaluation/real_recall.py`, 153 lived problems |
+| retrieval recall, real user wording | **312/317 (98%)** | `evaluation/real_recall.py`, 154 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -246,6 +246,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   its price — while the FIRST thing he asks is whether they may hold the car at all.
   §928 is 留置權 and §929 is why a garage has one without agreeing anything (商人間
   因營業關係而占有之動產,視為有牽連關係). §928/§929/§936 were all unreachable.
+  Fifteenth, and the first time an entire 編 had never been reachable at all:
+  「相機拿去當鋪借兩萬,第四個月拿錢去贖,他們說早就賣掉了只肯退我五千」 returned
+  eight seats of 消滅時效 (§125/§126/§129/§144/§197) plus §473/§365/§205 — not one
+  article about the pledge the transaction IS. §884 is 動產質權 (possession
+  transferred as security, priority in the proceeds) and §893 is what the shop may
+  actually do, its second paragraph subjecting a 流質 clause to §873-1 — which is
+  why 「只肯退我五千」 is not the end of the matter.
 - **The most expensive over-wide trigger measured so far was 「加收」.** A logo-design
   dispute — 「設計師說超出修改次數要加收一次五千」 — came back with 公寓大廈條例
   §14/§25/§28/§30/§32/§34 and 民法§56: eight seats of apartment-management law,
