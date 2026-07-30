@@ -36,7 +36,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 賠錢 — so 民法§184 never fired for an upstairs leak. Bare 賠 is deliberately
     # not a trigger: it sits inside 違約金/賠償責任 in every contract dispute and
     # would push the tort articles into all of them.
+    # 震出/是他們造成的 added for a session that REFUSES money: 「隔壁施工把我家牆壁
+    # 震出好幾道裂縫…我要的是修回原狀不是拿五萬」 fired none of the trigger words
+    # below, because every one of them names a claim for cash and this asker wants
+    # the wall rebuilt. 民法§184 was reachable and simply never invoked; 「是他們造成
+    # 的」 is the causation the whole claim rests on and appears in no other session.
     (("賠償", "求償", "賠錢", "他賠", "要賠", "賠我", "誰賠", "告他", "提告", "損失", "損害",
+      "震出", "是他們造成的",
       "失眠", "就醫", "生病", "受傷", "健康", "身心", "耗弱",
       "骨折", "住院", "請假", "沒收入", "醫藥費", "醫療費"),
      # Sharpened after the seat-ordering change: 「不法侵害他人之權利」 matches
@@ -201,7 +207,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # exists. §345 II: agreement on the thing and the price IS the contract.
     (("談好價錢", "說沒簽約", "就這個價", "反悔說", "算不算成交",
       "口頭談好", "還沒簽約就"),
-     ("當事人就標的物及其價金互相同意時，買賣契約即為成立",)),
+     # §153 joins §345 rather than getting its own row: it is the same answer at a
+     # higher level of generality, and this row had ONE phrase, so both fit inside
+     # the three deliverable slots. The 意思表示解釋 row also reaches §153, but it
+     # fires on 各說各話/怎麼解釋 — a dispute about what words MEANT — while this
+     # session is a dispute about whether a contract exists at all.
+     ("當事人就標的物及其價金互相同意時，買賣契約即為成立",
+      "當事人互相表示意思一致者，無論其為明示或默示，契約即為成立")),
 
     # ── 損益相抵 (民法§216-1) ──
     # 「我的車體險先賠了十二萬,對方說他只要賠六萬」 returned §184/§188/§193/§213 —
@@ -1478,8 +1490,12 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 民法§976 (解除婚約!), §561 and 勞基§11 — everything in the corpus that
     # mentions 終止契約. The articles that decide a membership dispute say
     # 定型化契約 / 顯失公平, words no gym member would ever type.
+    # 為管轄法院 added: 「業者堅持契約寫以高雄地院為管轄法院」 is the textbook unfair
+    # standard term, and this row — the one that reaches 消保§12 — fired on none of
+    # its words, because the asker never says 定型化 or 審閱. A jurisdiction clause
+    # naming the trader's own home court is the clause 消保§12 exists for.
     (("解約", "退費", "退錢", "違約金", "會員", "定型化", "審閱", "綁約",
-      "不能退", "手續費"),
+      "不能退", "手續費", "為管轄法院"),
      ("定型化契約中之條款違反誠信原則，對消費者顯失公平者，無效",
       "應有三十日以內之合理期間，供消費者審閱全部條款內容",
       "按其情形顯失公平者，該部分約定無效", "加重他方當事人之責任者")),

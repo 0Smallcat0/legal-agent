@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **295/303 (97%)** | `evaluation/real_recall.py`, 146 lived problems |
+| retrieval recall, real user wording | **298/303 (98%)** | `evaluation/real_recall.py`, 146 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -272,6 +272,24 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   expansion positions. It does not — it wins a seat from position 3, because the
   promoter skips phrases whose article the ranking already put in the window. The
   assertion was measuring an incidental index rather than the contract.
+- **Cause (c) is usually one sentence the row never imagined.** Three of the five
+  (c)-class misses closed in a single pass, each because the row that reaches the
+  article described a different kind of asker:
+  民法§184 — the session REFUSES money (「我要的是修回原狀不是拿五萬」) while every
+  trigger on the tort row names a claim for cash; 「是他們造成的」 is the causation
+  the claim rests on and appears in no other stored session.
+  消保§12 — the asker never says 定型化 or 審閱, he says 「業者堅持契約寫以高雄地院
+  為管轄法院」, which is the textbook unfair term that article exists for.
+  民法§153 — joined §345's row rather than getting its own: same answer at a higher
+  level of generality, and that row had ONE phrase, so both sit inside the three
+  deliverable slots. The 意思表示解釋 row also reaches §153 but fires on
+  各說各話/怎麼解釋 — a fight about what words MEANT, not whether a contract exists.
+  Predicted three, fixed exactly those three, no new miss (295 -> 298).
+  Diagnosed and NOT shipped in the same pass: 民法§354 for damaged-in-transit. The
+  new 裂了/裂掉 triggers do fire, but §354 lands at expansion position 4 because the
+  broad 侵權 row takes seats 1-3 off the single word 「損失」 (「這個損失該誰承擔」) —
+  the same seat-theft shape as 做到一半 last round, one layer up. Dead triggers were
+  removed rather than left in to look busy; the cause is written down instead.
 - **A context filter cannot tell an article ABOUT a topic from one that mentions
   it in a list.** Diagnosing the remaining misses by cause produced three buckets
   — unreachable (1), reachable but outranked (7), reachable but the row does not
