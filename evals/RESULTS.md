@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **291/303 (96%)** | `evaluation/real_recall.py`, 146 lived problems |
+| retrieval recall, real user wording | **293/303 (97%)** | `evaluation/real_recall.py`, 146 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -236,6 +236,23 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   Reshuffle, both sides: repaired-four-times went from missing §354+§359 to missing
   §227 — two recovered, one evicted, and both 瑕疵擔保 and 不完全給付 are real
   routes for a unit repaired four times.
+- **A row's fourth and fifth phrases can never be delivered.** Seats are 3 and the
+  promoter takes ONE article per phrase, so position 4 onward is unreachable by
+  arithmetic, not by ranking. 民法§505 was the 承攬 row's fifth phrase: in
+  「材料另外算要再加十二萬」 that row won expansion positions 0,1,2,3,4 — it beat
+  everything — and still could not produce §505. Moving the phrase to the front
+  recovered the case and cost nothing across all 146 sessions (292 -> 293, no new
+  miss). Worth checking every row with more than three phrases against the
+  sessions it fires in; the ones that matter are where the fourth-or-later phrase
+  is the article the asker actually needs.
+  In the same pass 民法§248 came back for earnest-money, cause (b): 「斡旋」 is two
+  characters and lost every seat to 「手續費」 (three), so 斡旋金/斡旋金收據/全額退還
+  went in — the words only that session's kind of asker uses.
+  Not shipped, recorded: stop-the-renovation §494 and debtor-moved-assets §478 are
+  both blocked by the same three-seat ceiling with no reordering available. §494
+  loses to 民法§511 (定作人得隨時終止契約), which is *also* right for that session,
+  and §478 loses to the 脫產 row's own three phrases. N=4 reserved seats was
+  measured and rejected long ago (13/11/2 golden), so these stay missing.
 - **A context filter cannot tell an article ABOUT a topic from one that mentions
   it in a list.** Diagnosing the remaining misses by cause produced three buckets
   — unreachable (1), reachable but outranked (7), reachable but the row does not

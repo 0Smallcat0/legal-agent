@@ -1291,7 +1291,10 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # the whole answer sheet: returned when the deal completes, forfeited when
     # the payer walks, DOUBLED when the receiver walks, returned when neither is
     # to blame.
-    (("定金", "訂金", "斡旋", "加倍返還", "頭款"),
+    # 斡旋金/斡旋金收據/全額退還 added because 「斡旋」 is two characters and lost
+    # every reserved seat to the 定型化契約 row's 「手續費」 (three): 民法§248 sat at
+    # expansion position 10 in the one session written for it.
+    (("定金", "訂金", "斡旋", "斡旋金", "斡旋金收據", "全額退還", "加倍返還", "頭款"),
      ("由他方受有定金時，推定其契約成立",
       "契約履行時，定金應返還或作為給付之一部",
       "契約因可歸責於付定金當事人之事由，致不能履行時，定金不得請求返還",
@@ -1303,13 +1306,26 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 承攬 is its own chapter and it answers the whole question: §492 is the
     # quality owed, §493 is 定期限請求修補 then self-repair at the contractor's
     # cost, §494 is 解除契約或減少報酬, §505 is when the balance falls due.
+    # 材料另外算/報價單/做到一半/中途終止 added because 師傅 and 裝潢 are two
+    # characters: §505 sat at position 8 in the 「材料另外算要再加十二萬」 session and
+    # §494 at position 9 in the 「做到一半想直接喊停」 one, both behind rows firing on
+    # three-character words that had nothing to do with building work.
     (("裝修", "裝潢", "施工", "師傅", "工班", "尾款", "估價單", "驗收",
+      "材料另外算", "報價單", "做到一半", "中途終止",
       "貼歪", "做壞", "承攬", "定作", "工程合約"),
-     ("承攬人完成工作，應使其具備約定之品質",
+     # §505 sits FIRST, and the reason is the seat arithmetic rather than any view
+     # about which article matters most. Reserved seats are 3 and the promoter takes
+     # one article per phrase, so a row's fourth and fifth phrases can never be
+     # delivered — this row won expansion positions 0,1,2,3,4 in the
+     # 「材料另外算要再加十二萬」 session and STILL could not produce §505, because
+     # §505 was its fifth phrase. Measured over all 146 sessions: moving it to the
+     # front recovers who-pays-for-materials and costs nothing (292 -> 293, no new
+     # miss), so the 瑕疵 ladder below keeps every case it already had.
+     ("報酬應於工作交付時給付之",
+      "承攬人完成工作，應使其具備約定之品質",
       "定作人得定相當期限，請求承攬人修補之",
       "定作人得自行修補，並得向承攬人請求償還修補必要之費用",
-      "定作人得解除契約或請求減少報酬",
-      "報酬應於工作交付時給付之")),
+      "定作人得解除契約或請求減少報酬")),
 
     # ── 預扣工資 (勞動基準法§26) ──
     # 「遲到三次還打破設備,直接從薪水扣八千」 got §22 (全額直接給付) but not the
@@ -1354,8 +1370,12 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 「這個問題我的資料庫沒有涵蓋」 — but the corpus answers both questions he
     # asked: §478 how to demand it back, §233+§203 whether interest runs (5% a
     # year by default). Nothing in 借據/本票/推說沒錢 overlaps 消費借貸/遲延利息.
+    # 還款日/說沒錢還 added for the same reason as 斡旋金: every trigger here was two
+    # characters, so 民法§478 (催告一個月以上之相當期限後返還) sat at expansion
+    # position 11, behind the 脫產 row's 「名下唯一」 (four), in the session that
+    # needs both articles at once.
     (("借錢", "借款", "欠錢", "還錢", "借據", "本票", "欠我", "討債", "催討",
-      "借出去", "沒還"),
+      "還款日", "說沒錢還", "借出去", "沒還"),
      ("稱消費借貸者", "借用人應於約定期限內，返還與借用物種類、品質、數量相同之物",
       "貸與人亦得定一個月以上之相當期限，催告返還",
       "債權人得請求依法定利率計算之遲延利息", "週年利率為百分之五")),
