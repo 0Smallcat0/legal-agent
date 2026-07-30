@@ -559,7 +559,14 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # 「代書辦到一半過世,先付的六萬能不能拿回來」 reached §541/§544/§546/§549/§551 —
     # everything about a mandate that is still running. §550 ends it on death and
     # §548 II is the answer to 「做多少算多少」.
-    (("辦到一半", "做到一半", "做多少算多少", "事務所收掉", "受任人過世",
+    # 做到一半 is out. Measured: it was this row's only foothold in
+    # stop-the-renovation — a builder walking off a renovation — where §548 and §550
+    # (a MANDATE ending) took two of the three reserved seats and pushed 民法§494 to
+    # expansion position 5. 辦到一半 is what the mandate session actually says
+    # (paperwork at a 代書), 做到一半 is what a building session says; the row's own
+    # case keeps firing on 辦到一半 and 做多少算多少. Dropping it recovers §494 and
+    # costs nothing across all 146 sessions (294 -> 295, no new miss).
+    (("辦到一半", "做多少算多少", "事務所收掉", "受任人過世",
       "代書過世", "還沒辦完", "先付的錢"),
      ("委任關係，因當事人一方死亡、破產或喪失行為能力而消滅",
       "委任關係，因非可歸責於受任人之事由，於事務處理未完畢前已終止者")),
@@ -1310,22 +1317,24 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # characters: §505 sat at position 8 in the 「材料另外算要再加十二萬」 session and
     # §494 at position 9 in the 「做到一半想直接喊停」 one, both behind rows firing on
     # three-character words that had nothing to do with building work.
-    (("裝修", "裝潢", "施工", "師傅", "工班", "尾款", "估價單", "驗收",
-      "材料另外算", "報價單", "做到一半", "中途終止",
-      "貼歪", "做壞", "承攬", "定作", "工程合約"),
-     # §505 sits FIRST, and the reason is the seat arithmetic rather than any view
-     # about which article matters most. Reserved seats are 3 and the promoter takes
-     # one article per phrase, so a row's fourth and fifth phrases can never be
-     # delivered — this row won expansion positions 0,1,2,3,4 in the
-     # 「材料另外算要再加十二萬」 session and STILL could not produce §505, because
-     # §505 was its fifth phrase. Measured over all 146 sessions: moving it to the
-     # front recovers who-pays-for-materials and costs nothing (292 -> 293, no new
-     # miss), so the 瑕疵 ladder below keeps every case it already had.
-     ("報酬應於工作交付時給付之",
-      "承攬人完成工作，應使其具備約定之品質",
+    # SPLIT into two rows, for the seat arithmetic named in RESULTS.md: this row had
+    # five phrases and only three can ever be delivered, so whichever two sat at the
+    # back were dead weight. Moving §505 to the front last round recovered
+    # who-pays-for-materials and pushed §494 into the dead zone, which
+    # stop-the-renovation then needed. One row cannot serve three different
+    # questions — 有沒有瑕疵 / 報酬何時到期 / 能不能中途喊停 — out of three seats.
+    # Split by question, so every phrase sits inside the first three of a row that
+    # fires on the sessions needing it.
+    (("裝修", "裝潢", "施工", "師傅", "工班", "驗收",
+      "做到一半", "中途終止", "貼歪", "做壞", "工程合約"),
+     ("承攬人完成工作，應使其具備約定之品質",
       "定作人得定相當期限，請求承攬人修補之",
-      "定作人得自行修補，並得向承攬人請求償還修補必要之費用",
       "定作人得解除契約或請求減少報酬")),
+    # …and the money half: when the balance falls due, and what it costs to fix the
+    # work yourself. 尾款/估價單/報價單/材料另外算 are what those sessions say.
+    (("尾款", "估價單", "報價單", "材料另外算", "承攬", "定作"),
+     ("報酬應於工作交付時給付之",
+      "定作人得自行修補，並得向承攬人請求償還修補必要之費用")),
 
     # ── 預扣工資 (勞動基準法§26) ──
     # 「遲到三次還打破設備,直接從薪水扣八千」 got §22 (全額直接給付) but not the
