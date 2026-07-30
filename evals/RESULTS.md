@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **307/312 (98%)** | `evaluation/real_recall.py`, 151 lived problems |
+| retrieval recall, real user wording | **310/315 (98%)** | `evaluation/real_recall.py`, 153 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -241,6 +241,19 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   was unreachable. That one is the cleanest instance yet of 「the article the other
   side relies on is missing」: 「打卡上下班、薪水固定、大小事要問老闆」 are facts
   offered to be measured against §553, and the window could not show the yardstick.
+  Fourteenth: 「估價一萬二,修好算我三萬八,我不同意就說錢沒付清車子不能牽走,已經扣在
+  廠裡三個星期」 returned §493/§495/§505/§509 (承攬), §601, §217, §196 — the work and
+  its price — while the FIRST thing he asks is whether they may hold the car at all.
+  §928 is 留置權 and §929 is why a garage has one without agreeing anything (商人間
+  因營業關係而占有之動產,視為有牽連關係). §928/§929/§936 were all unreachable.
+- **The most expensive over-wide trigger measured so far was 「加收」.** A logo-design
+  dispute — 「設計師說超出修改次數要加收一次五千」 — came back with 公寓大廈條例
+  §14/§25/§28/§30/§32/§34 and 民法§56: eight seats of apartment-management law,
+  with all THREE reserved seats taken by the 會議決議 row. 加收 is what any service
+  dispute says; it is not the language of an owners' meeting. Removing it returns
+  that window to 承攬 (§493/§509) and the row's own session still fires on
+  開會通知/決議/會議紀錄/沒有出席. No case gained or lost across the stored set — the
+  measurement is the eight seats.
   Nine instances now, and the ninth paid a dividend the others had not: adding the
   承攬 DEFINITION (§490) for 「訂做的東西」 also recovered 民法§505 in
   pay-only-after-delivery, a miss that had survived every round since it was

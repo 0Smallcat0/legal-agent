@@ -742,7 +742,13 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # them, §56 is the three months they have to ask a court to set the
     # resolution aside, §34 is the minutes that should have followed.
     (("沒收到通知", "沒通知我", "開會通知", "決議", "會議紀錄", "撤銷決議",
-      "沒有出席", "臨時動議", "加收"),
+      # 加收 is out. Measured on a logo-design dispute (「超出次數要加收一次五千」):
+      # this row took ALL THREE reserved seats and the window came back
+      # 公寓大廈條例§14/§25/§28/§30/§32/§34 plus 民法§56 — eight seats of
+      # apartment-management law for a graphic designer charging for a fourth
+      # revision. 加收 is what any service dispute says; the row's own session keeps
+      # firing on 開會通知/決議/會議紀錄/沒有出席.
+      "沒有出席", "臨時動議"),
      ("應由召集人於開會前十日以書面載明開會內容，通知各區分所有權人",
       "社員得於決議後三個月內請求法院撤銷其決議",
       "區分所有權人會議應作成會議紀錄，載明開會經過及決議事項")),
@@ -881,6 +887,16 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("當本錢", "分我兩成", "算股東", "入股", "分紅"),
      ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
       "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
+
+    # ── 修車廠扣著車不還 (民法§928, §929) ──
+    # 「估價一萬二,修好算我三萬八,我不同意就說錢沒付清車子不能牽走,已經扣在廠裡三個
+    # 星期」 returned §493/§495/§505/§509 (承攬)、§601、§217、§196 — the work and what
+    # it costs, and nothing on whether they may hold the car, which is the first
+    # question asked. §928 is 留置權 itself, and §929 is why a garage has one without
+    # agreeing anything: 商人間因營業關係而占有之動產,視為有牽連關係.
+    (("扣我的車", "不能牽走", "扣在廠裡"),
+     ("稱留置權者，謂債權人占有他人之動產，而其債權之發生與該動產有牽連關係",
+      "商人間因營業關係而占有之動產，與其因營業關係所生之債權，視為有前條所定之牽連關係")),
 
     # ── 車借人開出了事 (民法§468, §469) ──
     # 「把車借給同事開去辦事,他停紅線被拖吊還吃罰單,車頭也刮傷,他說拖吊費要我自己
