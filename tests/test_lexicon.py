@@ -1221,6 +1221,28 @@ def test_the_article_the_employer_stands_on():
     )                                                                    # §553
 
 
+def test_whether_the_garage_may_hold_the_car_at_all():
+    """The window was §493/§495/§505/§509, §601, §217, §196 — the work and its
+    price — and nothing on the first question asked."""
+    out = expansions("我不同意這個金額,他們就說錢沒付清車子不能牽走,已經扣在廠裡三個星期了")
+    assert "稱留置權者，謂債權人占有他人之動產，而其債權之發生與該動產有牽連關係" in out  # §928
+    assert (
+        "商人間因營業關係而占有之動產，與其因營業關係所生之債權，視為有前條所定之牽連關係"
+        in out
+    )                                                                    # §929
+
+
+def test_charging_extra_is_not_a_residents_meeting():
+    """「加收」 took all three reserved seats on a logo-design dispute and returned
+    公寓大廈條例§14/§25/§28/§30/§32/§34 plus 民法§56."""
+    design = expansions("設計師說超出修改次數要加收一次五千,不然就照現在的交件")
+    assert "應由召集人於開會前十日以書面載明開會內容，通知各區分所有權人" not in design
+    # The row's own session still fires.
+    assert "應由召集人於開會前十日以書面載明開會內容，通知各區分所有權人" in expansions(
+        "管委會開會沒通知我,決議就這樣過了,我沒有出席也沒看到會議紀錄"
+    )
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
