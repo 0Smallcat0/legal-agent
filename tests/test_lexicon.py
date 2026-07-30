@@ -1194,6 +1194,17 @@ def test_whether_he_is_a_guarantor_at_all_comes_first():
     )                                                                        # §745
 
 
+def test_a_consignment_shop_is_a_commission_agent():
+    """The window was §354/§359/§363, §390, §476 and even §807-1 (遺失物) — nothing
+    that named the relationship. 行紀 is its own contract."""
+    out = expansions("我把二手名牌包交給二手店寄賣,講好抽三成,店家用他自己的名義賣掉了六萬")
+    assert (
+        "稱行紀者，謂以自己之名義，為他人之計算，為動產之買賣或其他商業上之交易，而受報酬之營業"
+        in out
+    )                                                                    # §576
+    assert "行紀，除本節有規定者外，適用關於委任之規定" in out            # §577
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
