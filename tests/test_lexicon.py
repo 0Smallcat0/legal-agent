@@ -1184,6 +1184,16 @@ def test_someone_elses_hospital_stay_is_not_an_injury_claim():
     )
 
 
+def test_whether_he_is_a_guarantor_at_all_comes_first():
+    """The window was §273/§274/§277/§280/§281/§282 — the internal relations of
+    joint debtors, every one of which presupposes the thing in dispute."""
+    out = expansions("銀行說要有人一起簽,我以為只是當見證人就簽了,現在說我是共同借款人不是保證人")
+    assert "無前項之明示時，連帶債務之成立，以法律有規定者為限" in out          # §272
+    assert (
+        "保證人於債權人未就主債務人之財產強制執行而無效果前，對於債權人得拒絕清償" in out
+    )                                                                        # §745
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")

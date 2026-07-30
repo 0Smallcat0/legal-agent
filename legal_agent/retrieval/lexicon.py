@@ -882,6 +882,20 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
       "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
 
+    # ── 保證人還是共同借款人 (民法§745, §272, §739) ──
+    # 「銀行說要有人一起簽,我以為只是當見證人就簽了,現在銀行說我是共同借款人不是
+    # 保證人,連催告朋友都沒有就來找我」 returned §273/§274/§277/§280/§281/§282 —
+    # the INTERNAL relations of joint debtors, which all presuppose the very thing
+    # in dispute. §272 decides it: 連帶債務 needs an express undertaking or a
+    # statute, nothing less. §745 is the right he is actually asking about —
+    # 先訴抗辯權, refuse to pay until the creditor has executed against the main
+    # debtor without result — and §746 lists how it is lost, so the window carries
+    # the bad news too. Tenth instance of 「which chapter applies decides it」.
+    (("共同借款人", "只是當見證人", "一起簽"),
+     ("保證人於債權人未就主債務人之財產強制執行而無效果前，對於債權人得拒絕清償",
+      "無前項之明示時，連帶債務之成立，以法律有規定者為限",
+      "稱保證者，謂當事人約定，一方於他方之債務人不履行債務時，由其代負履行責任之契約")),
+
     # ── 免費借住不是租 (民法§470, §464) ──
     # 「媽媽口頭答應讓弟弟免費住,沒有租約也沒收過一毛錢,住了五年,我們想賣掉」
     # returned §1138/§1141/§1144/§1151/§1164/§1166/§1176 — the whole 繼承編, i.e.
