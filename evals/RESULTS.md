@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **300/305 (98%)** | `evaluation/real_recall.py`, 147 lived problems |
+| retrieval recall, real user wording | **304/309 (98%)** | `evaluation/real_recall.py`, 149 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -222,6 +222,16 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   and §745 is the right he is actually asking about: 先訴抗辯權, refuse to pay until
   the creditor has executed against the main debtor without result. §745 and §746
   were both structurally unreachable before this row.
+  Eleventh: 「把二手名牌包交給二手店寄賣,抽三成,店家用他自己的名義賣掉六萬,只肯給
+  我三萬」 returned §354/§359/§363, §390, §476 and even §807-1 (遺失物) — nothing
+  that names the relationship. 行紀 is its own contract: §576 is 以自己之名義、為他
+  人之計算、為動產之買賣, which is exactly what a consignment shop does, and §577
+  routes the remainder to 委任 so the duty to hand over what was collected follows.
+  §576/§577/§579/§587 were all structurally unreachable.
+  Checked the same round and NOT a fix: the 旅遊 seam. 「出發前十天把溫泉飯店改成商
+  務旅館、砍掉一個景點」 already surfaces §514-5 and §514-7 through plain lexical
+  overlap — 旅遊/團費/行程 appear in the articles themselves. Stored as a regression
+  lock, labelled as one.
   Nine instances now, and the ninth paid a dividend the others had not: adding the
   承攬 DEFINITION (§490) for 「訂做的東西」 also recovered 民法§505 in
   pay-only-after-delivery, a miss that had survived every round since it was

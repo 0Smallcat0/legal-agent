@@ -882,6 +882,17 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
       "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
 
+    # ── 寄賣是行紀 (民法§576, §577) ──
+    # 「把二手名牌包交給二手店寄賣,講好賣出後抽三成,店家用他自己的名義賣掉六萬,只肯
+    # 給我三萬」 returned §354/§359/§363 (買賣瑕疵)、§390、§476 and even §807-1
+    # (遺失物). Nothing named the relationship. 行紀 is its own contract — §576, 以
+    # 自己之名義、為他人之計算、為動產之買賣 — which is exactly what a consignment
+    # shop does, and §577 routes the rest to 委任, so the duty to hand over what was
+    # collected (§541) follows. Eleventh instance of 「which chapter decides it」.
+    (("寄賣", "抽三成", "用他自己的名義"),
+     ("稱行紀者，謂以自己之名義，為他人之計算，為動產之買賣或其他商業上之交易，而受報酬之營業",
+      "行紀，除本節有規定者外，適用關於委任之規定")),
+
     # ── 保證人還是共同借款人 (民法§745, §272, §739) ──
     # 「銀行說要有人一起簽,我以為只是當見證人就簽了,現在銀行說我是共同借款人不是
     # 保證人,連催告朋友都沒有就來找我」 returned §273/§274/§277/§280/§281/§282 —
