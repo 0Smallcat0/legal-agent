@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **320/325 (98%)** | `evaluation/real_recall.py`, 157 lived problems |
+| retrieval recall, real user wording | **326/331 (98%)** | `evaluation/real_recall.py`, 159 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -193,6 +193,15 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   a cohabitant a family member outright, was absent. Her friend's claim (「沒結婚
   不算家暴」) is refuted by §3 and only awkwardly by §63-1. A neighbouring rule
   that reaches the same result is not the same as the rule that applies.
+- **And it can fail the other way: the borrowed rules arrive without the article
+  that lends them.** A man who swapped his camera for a phone that turned out to
+  be water-damaged asked 「這種交換有沒有保障」 and got 民法§354/§359/§360/§365/§367
+  — the sale-of-goods warranty chapter, which is exactly right, because §398 makes
+  it apply to a trade with no price. §398 itself was unreachable. The window was
+  therefore sale law offered to a man who knows he did not buy anything, with
+  nothing in it explaining why sale law governs. The 準用 article substituting for
+  the applicable one and the applicable rules arriving without their 準用 bridge
+  are the same defect seen from opposite ends.
 - **Which chapter applies decides everything, and nothing in the window asks.**
   Five instances now, and it is the most productive shape in the list. A contract
   labelled 承攬 returned the 承攬 chapter. A customer whose movers broke his table
