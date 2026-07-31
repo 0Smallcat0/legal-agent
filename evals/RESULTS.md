@@ -377,6 +377,20 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **The 存證信函 rung pointed at a template the page never printed.** 住宅噪音's rung
+  said 「見 letter_template」, app.py relabelled that string to 「見 存證信函範本」, and
+  nothing rendered it: `render()` left the field out and neither run.py nor app.py
+  picked it up. Every other kind of case had no template at all — the reader was told
+  「寄出書面請求」 and left to work out how a 存證信函 is written. It renders now, and
+  a generic one is built for every session from the retrieved articles: **168/168**
+  sessions get a template, **0** of their 依據 lines are anything but corpus text.
+  Only the request and the facts are blanks; the tool does not draft assertions of
+  fact on anyone's behalf.
+  Measured defect kept in the open: the letter cites the top three of the retrieval
+  window, and for 買到贓車 those are §950/§805/§807 — 遺失物拾得 — while §949 and §948,
+  the articles the case actually turns on, sit sixth and eighth. The template says
+  「與你情況不符者請自行刪去」 rather than pretending the selection is right. Same root
+  as the deadline rung's known limit: neither can tell whose right an article states.
 - **The first thing every reader was told to do was the same sentence.** The ladder
   opened with 「把事實與證據整理成一頁時間軸」 whether the person had lost a moving box,
   a wedding video or a motorbike to the police. It now names the documents THEY said

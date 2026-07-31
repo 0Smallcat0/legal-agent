@@ -75,6 +75,12 @@ class SolutionLadder:
             lines.append(f"   下一步:{r.next_step}")
         lines.append("")
         lines.append("※ " + self.note)
+        # Measured: the 住宅噪音 rung said 「見 letter_template」 and nothing ever
+        # printed it — render() left it out and neither run.py nor app.py picked it
+        # up. A reader was pointed at a template that did not exist on the page.
+        if self.letter_template:
+            lines.append("")
+            lines.append(self.letter_template)
         return "\n".join(lines)
 
 
@@ -230,6 +236,42 @@ def _evidence_next_step(collected_facts: dict) -> str | None:
     )
 
 
+def _generic_letter(retrieved, collected_facts: dict) -> str | None:
+    """A 存證信函 the reader can copy, with the law quoted VERBATIM from what was
+    retrieved. Only the 主旨 request and the facts are blanks for them to fill —
+    the tool does not draft assertions of fact or law on anyone's behalf."""
+    if not retrieved:
+        return None
+    cited = retrieved[:3]
+    basis = "\n".join(
+        f"    {i}. {s.statute_id}{s.article_no}:{(s.content or '').splitlines()[0]}"
+        for i, s in enumerate(cited, 1)
+    )
+    evidence = _evidence_next_step(collected_facts)
+    have = "(可附上:" + evidence.split("先把你提到的")[1].split("掃描")[0] + ")" if evidence else ""
+    deadlines = _deadline_sentences(retrieved)
+    period = ""
+    if deadlines:
+        ref, sentence = deadlines[0]
+        period = f"\n四、另請台端注意,{ref}定有:「{sentence}」。\n"
+    return (
+        "【存證信函範本(僅供參考,非法律意見;方括號請自行填寫)】\n"
+        "寄件人:【你的姓名】  地址:【你的地址】\n"
+        "收件人:【對方姓名/公司】  地址:【對方地址】\n"
+        "主旨:請台端於【期限,例:文到七日】內【你的請求,例:返還○○元 / 交付○○ / 修補瑕疵】,\n"
+        "      以維本人權益。\n"
+        "說明:\n"
+        f"一、本人與台端間【簡述關係與時間,例:於民國114年3月委由台端承攬○○工程】。{have}\n"
+        "二、【事實經過:發生什麼、你何時反映、對方如何回覆——照你自己的話寫】\n"
+        "三、上開情形涉及下列規定(逐字引錄自現行條文;與你情況不符者請自行刪去):\n"
+        f"{basis}\n"
+        f"{period}"
+        "五、請於上開期限內處理,逾期本人將依法主張權利,特此函達。\n"
+        "此致\n【收件人】\n"
+        "                              寄件人:【簽名】   中華民國【年】年【月】月【日】日\n"
+    )
+
+
 def _deadline_sentences(retrieved) -> list[tuple[str, str]]:
     """(article ref, verbatim sentence) for every retrieved article whose own text
     states a period. Nothing is paraphrased and nothing is computed. Sentences
@@ -306,7 +348,10 @@ def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadde
         Rung(
             "negotiate", "正式溝通與存證信函",
             "以書面(LINE/email/存證信函)明確提出請求與期限", (),
-            "低", "數天", "低", "寄出書面請求,保留送達證明", False, False,
+            "低", "數天", "低",
+            "照下方範本填好寄出(郵局存證信函一式三份),保留回執作為送達證明"
+            if retrieved else "寄出書面請求,保留送達證明",
+            False, False,
         ),
         Rung(
             "mediate", "調解",
@@ -327,7 +372,11 @@ def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadde
     ]
     if deadline is not None:
         rungs.insert(0, deadline)
-    return SolutionLadder(rungs=rungs, note=GENERIC_NOTE)
+    return SolutionLadder(
+        rungs=rungs,
+        note=GENERIC_NOTE,
+        letter_template=_generic_letter(retrieved, collected_facts),
+    )
 
 
 def build_solution_ladder(collected_facts: dict, retrieved=None) -> SolutionLadder:
