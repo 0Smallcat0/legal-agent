@@ -40,6 +40,23 @@ _11_1 = _Article(
 _226 = _Article("民法", "第226條", "因可歸責於債務人之事由，致給付不能者，債權人得請求賠償損害。")
 
 
+def test_the_letter_template_is_rendered_and_quotes_the_law_verbatim():
+    """Measured: 「見 letter_template」 pointed at something render() never printed and
+    neither run.py nor app.py picked up — the reader was sent to a page that did not
+    exist. The template now prints, and its 依據 lines are corpus text."""
+    ladder = build_generic_ladder({"problem": "我買到贓車"}, [_949])
+    out = ladder.render()
+    assert "存證信函範本" in out
+    assert "非法律意見" in out
+    assert "自喪失占有之時起二年以內" in out          # verbatim §949
+    assert "與你情況不符者請自行刪去" in out
+
+
+def test_no_letter_template_without_retrieval():
+    """Nothing retrieved, nothing to cite — the letter would be blanks around blanks."""
+    assert build_generic_ladder({"problem": "我買到贓車"}, []).letter_template is None
+
+
 def test_the_first_step_names_what_the_user_said_they_have():
     """Every session used to open with 「把事實與證據整理成一頁時間軸」, whether the
     reader had lost a moving box or a wedding video."""
