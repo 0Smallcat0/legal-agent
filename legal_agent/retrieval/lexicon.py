@@ -917,6 +917,21 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償",
       "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵")),
 
+    # ── 自己先修共同牆,再去跟鄰居要一半 (民法§822, §176, §172) ──
+    # 「連棟透天中間那道共同牆滲水,跟鄰居講三個月都不處理,雨季快到我就先找工班修了,
+    # 花八萬多,拿收據去找他分攤,他說又不是他叫我修的」 returned §437, §430, §793,
+    # §776, 公寓大廈條例§15/§16/§36 and 租賃住宅條例§12 — tenancy repair and the
+    # neighbour-nuisance chapter — because 鄰居/隔壁/發霉/滲水/修好/工班 each fired a
+    # row written for a TENANT or a 區分所有 flat. He owns a terraced house and paid
+    # for a wall he half-owns. §822 II is the sentence he needs: a co-owner who pays
+    # more than his share may demand the rest back按應有部分. It was unreachable
+    # (cause (a)); §172/§176 無因管理 were reachable and never fired (cause (c)).
+    # 分攤 was rejected as a trigger: it appears in rooftop-leak-whose-cost.
+    (("共同牆", "一毛都不出", "拿收據"),
+     ("共有人中之一人，就共有物之負擔為支付，而逾其所應分擔之部分者，對於其他共有人得按其各應分擔之部分，請求償還",
+      "管理事務，利於本人，並不違反本人明示或可得推知之意思者，管理人為本人支出必要或有益之費用，或負擔債務，或受損害時，得請求本人償還其費用及自支出時起之利息，或清償其所負擔之債務，或賠償其損害",
+      "未受委任，並無義務，而為他人管理事務者，其管理應依本人明示或可得推知之意思，以有利於本人之方法為之")),
+
     # ── 買到贓車被警察扣走 (民法§949, §950, §948) ──
     # 「網路上跟人買中古機車五萬八,行照也過戶了,騎了半年被警察攔下說是贓車當場扣走,
     # 賣家電話打不通」 returned FIVE articles of 道路交通管理處罰條例 plus §191-2,
