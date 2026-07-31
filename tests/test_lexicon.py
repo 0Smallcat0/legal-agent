@@ -692,6 +692,25 @@ def test_a_ruined_coat_reaches_what_the_cleaner_owes_not_only_damages():
     assert "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵" in out      # §492
 
 
+def test_a_lost_moving_box_reaches_carrier_law_not_defective_work():
+    """「二十八箱少了一箱,師傅說當天沒清點就是我自己的責任,合約背面寫最高賠三千」 got
+    the 承攬 defect chapter off the single word 「師傅」. Nothing was built badly — a box
+    is gone. §648 II answers 「沒清點」 and §649 answers 「最高賠三千」."""
+    out = expansions(
+        "我找搬家公司搬家,總共二十八箱,到新家清點少了一箱,師傅說當天沒清點就是我自己的責任,"
+        "合約背面寫遺失最高賠三千"
+    )
+    assert "運送人對於運送物之喪失、毀損或遲到，應負責任" in out                        # §634
+    assert (
+        "運送物內部有喪失或毀損不易發見者，以受貨人於受領運送物後，"
+        "十日內將其喪失或毀損通知於運送人為限，不適用前項之規定"
+    ) in out                                                                          # §648 II
+    assert (
+        "運送人交與託運人之提單或其他文件上，有免除或限制運送人責任之記載者，"
+        "除能證明託運人對於其責任之免除或限制明示同意外，不生效力"
+    ) in out                                                                          # §649
+
+
 def test_a_swap_reaches_the_article_that_makes_sale_law_apply():
     """The warranty rules already arrived for 「相機跟網友換手機」; §398 — the article
     that applies them to a trade with no price — did not. Without it the window is
