@@ -377,6 +377,28 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **The section the reader actually needs was boilerplate, and more facts made it
+  worse.** Sampled end to end as a user: 婚攝, 贓車 and 共同牆 all returned a correct
+  「法律明文」 block and then 「現有資料不足,建議諮詢律師」 under 分析研判. Re-running
+  the 婚攝 session with a FULL intake (金額/契約/時間/對方說法/證據/想要的結果) listed
+  **thirteen** articles and produced the same sentence. The cause was in the prompt:
+  it offered 「若資料不足…必須明說」 as an escape and said nothing about what the
+  section must contain. Now the escape is allowed only when 法律明文 is 「(無)」, and
+  the section must name who to claim against, under which article, whether the other
+  side's stated excuse holds, and what to keep.
+- **Then the model invented a deadline, so deadlines were taken off it.** With the
+  new instruction the 婚攝 answer asserted 「時效:半年內買方應該催告賣方履行」 citing
+  民法§254, which contains no period at all. Asking an 8B model to spot time limits
+  turns a useless answer into a confidently wrong one. The prompt now forbids it from
+  stating any period, and the ladder grows a rule-based rung that quotes the periods
+  the RETRIEVED ARTICLES themselves state — verbatim, no arithmetic, no inference.
+  It fires on **69 of 168** stored sessions. Two things it does not solve, recorded
+  rather than hidden: it cannot tell whose right a period belongs to (民法§805's
+  finder's-reward six months still lists above §949's two years for the stolen-bike
+  session), and it says so in the rung text instead of picking for the reader.
+  Within an article the selection did improve — 冷氣修四次 now surfaces §365's actual
+  limitation sentence instead of its 前項 exception clause, and 消保法§11-1's 審閱期
+  (a period the SELLER owes) no longer appears as a deadline at all.
 - **Promotion can only move an article that is already in the candidate pool.**
   A session about a co-inherited field one brother had let out on his own
   (「大哥私下把整塊地租給人家種果樹,契約只有他一個人簽,租金全進他口袋」) returned
