@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-414%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-416%20passing-brightgreen)
 
 Legal Q&A where **every citation is machine-verified** against a time-versioned
 statute corpus — and the verifier is itself graded by injecting errors:
