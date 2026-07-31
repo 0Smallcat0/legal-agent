@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **317/322 (98%)** | `evaluation/real_recall.py`, 156 lived problems |
+| retrieval recall, real user wording | **320/325 (98%)** | `evaluation/real_recall.py`, 157 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -267,6 +267,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   is measured by §535 (其受有報酬者,應以善良管理人之注意為之), which is exactly what
   「她在滑手機」 is offered against; §227 is the contractual route beside the tort one.
   §535 was structurally unreachable.
+  Eighteenth: 「六萬八請婚攝…後來說硬碟壞掉原始檔全沒了,只肯退我兩萬」 returned
+  §354/§359/§361/§363/§365 — the SALE-of-goods warranty chapter — plus §254/§259, with
+  only §502 touching 承攬. The point is not that the work is defective but that it is
+  GONE and cannot be redone: §226 給付不能, §256 the rescission that follows it, and
+  §495 for 「只退兩萬合理嗎」 — damages are not capped at the fee. Like the rider case
+  this was cause (c): all four articles were reachable and no row fires on a
+  photographer's words.
 - **The most expensive over-wide trigger measured so far was 「加收」.** A logo-design
   dispute — 「設計師說超出修改次數要加收一次五千」 — came back with 公寓大廈條例
   §14/§25/§28/§30/§32/§34 and 民法§56: eight seats of apartment-management law,

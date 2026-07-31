@@ -1279,6 +1279,15 @@ def test_a_paid_carer_is_held_to_the_paid_standard():
     )                                                                    # §227
 
 
+def test_work_that_is_gone_is_not_a_defective_good():
+    """The window was the SALE-of-goods warranty chapter (§354/§359/§361/§363/§365)
+    for a wedding that cannot be reshot. All four right articles were reachable —
+    no row fires on a photographer's words, so cause (c)."""
+    out = expansions("婚攝說硬碟壞掉原始檔全沒了,婚禮不可能重來")
+    assert "因可歸責於債務人之事由，致給付不能者，債權人得請求賠償損害" in out   # §226
+    assert "債權人於有第二百二十六條之情形時，得解除其契約" in out              # §256
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
