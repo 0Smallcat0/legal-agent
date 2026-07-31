@@ -692,6 +692,19 @@ def test_a_ruined_coat_reaches_what_the_cleaner_owes_not_only_damages():
     assert "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵" in out      # §492
 
 
+def test_a_house_in_a_brothers_name_reaches_mandate_not_sale_warranty():
+    """「登記在我哥名下,錢全部是我出的,我哥說登記誰的就是誰的」 got the whole sale-of-
+    goods warranty chapter off the word 「買房」. Nothing is wrong with the house — he
+    wants the title, and 借名登記 is decided by analogy to 委任."""
+    out = expansions(
+        "十年前我買房子因為要辦貸款方便,登記在我哥名下,錢全部是我出的,"
+        "現在我要把房子過戶回自己名下,我哥說房子登記誰的就是誰的"
+    )
+    assert "受任人以自己之名義，為委任人取得之權利，應移轉於委任人" in out            # §541 II
+    assert "當事人之任何一方，得隨時終止委任契約" in out                              # §549
+    assert "無法律上之原因而受利益，致他人受損害者，應返還其利益" in out              # §179
+
+
 def test_a_paid_supervisor_reaches_mandate_law_not_tenancy_repair():
     """「設計師說他只負責畫圖跟監工,施工是工班的事」 got 租賃住宅條例§8/公寓大廈§6/§430/
     §793 — tenancy repair and neighbour nuisance — off 「樓下」/「施工」/「漏水」. He owns
