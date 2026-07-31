@@ -917,6 +917,21 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償",
       "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵")),
 
+    # ── 搬家公司弄丟一箱 (民法§634, §648, §649) ──
+    # 「二十八箱到新家清點少了一箱,師傅說當天沒清點就是我自己的責任,合約背面寫遺失
+    # 最高賠三千」 returned §492/§493/§494/§495/§509/§512 — the 承攬 defect chapter —
+    # because a single row fired, on the word 「師傅」. Nothing was built defectively;
+    # a box is GONE, and 運送 is the chapter that governs. §634/§637/§638/§641/§648/
+    # §649 were ALL unreachable (cause (a)). The two articles that answer him by name
+    # were the missing ones: §648 II gives ten days for a loss inside the box that is
+    # not easily seen, which is the reply to 「當天沒清點」; §649 makes a limitation
+    # printed on the paperwork ineffective without express agreement, which is the
+    # reply to 「最高賠三千」. Triggers run 3–4 characters and beat 「師傅」 (2).
+    (("少了一箱", "沒清點", "最高賠"),
+     ("運送人對於運送物之喪失、毀損或遲到，應負責任",
+      "運送物內部有喪失或毀損不易發見者，以受貨人於受領運送物後，十日內將其喪失或毀損通知於運送人為限，不適用前項之規定",
+      "運送人交與託運人之提單或其他文件上，有免除或限制運送人責任之記載者，除能證明託運人對於其責任之免除或限制明示同意外，不生效力")),
+
     # ── 以物易物換到壞東西 (民法§398) ──
     # 「用單眼相機跟網友換一支手機,兩邊講好直接交換不補差價,換完三天就一直自動關機,
     # 維修說主機板泡過水,他說東西換出去就一切自負」 already returned §354/§359/§360/

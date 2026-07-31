@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **326/331 (98%)** | `evaluation/real_recall.py`, 159 lived problems |
+| retrieval recall, real user wording | **329/334 (99%)** | `evaluation/real_recall.py`, 160 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -366,6 +366,18 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   broad 侵權 row takes seats 1-3 off the single word 「損失」 (「這個損失該誰承擔」) —
   the same seat-theft shape as 做到一半 last round, one layer up. Dead triggers were
   removed rather than left in to look busy; the cause is written down instead.
+- **The row-relevance scan was measuring something narrower than it claimed.**
+  Thirteen rounds of「no row is dead」, then it flagged one: the row triggered by
+  「修了幾次」/「修過四次」 fires on three sessions and had never supplied an expected
+  article. Removing it cost recall — 326 down to 325, because repaired-four-times
+  loses 民法§359. The row carries §227's phrases, and §227 is a known miss in that
+  very session, so the scan scored it 0; what the row actually does is feed 不完全
+  給付/瑕疵/換新的 into the BM25 query, and §359 rides in on that. Window quality
+  moved the same way: without the row, renovation-defect picks up §430 (the
+  TENANCY repair article) and which-court-to-sue keeps §227 instead of 消保法§17.
+  A row can earn its seat through the query it expands rather than the articles it
+  names, and a scan that only credits the latter will keep proposing to delete it.
+  Kept, with the reason recorded here instead of in a commit that looked like work.
 - **The seat-theft scan only works with the miss filter on.** Written to hunt the
   shape caught twice by hand (委任's 做到一半, 侵權's 損失), the raw version flags
   12 rows that take a top-3 seat in a session whose expected articles they cannot
