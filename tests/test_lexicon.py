@@ -692,6 +692,23 @@ def test_a_ruined_coat_reaches_what_the_cleaner_owes_not_only_damages():
     assert "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵" in out      # §492
 
 
+def test_a_paid_supervisor_reaches_mandate_law_not_tenancy_repair():
+    """「設計師說他只負責畫圖跟監工,施工是工班的事」 got 租賃住宅條例§8/公寓大廈§6/§430/
+    §793 — tenancy repair and neighbour nuisance — off 「樓下」/「施工」/「漏水」. He owns
+    the flat; the question is whether the man he paid to supervise answers for it."""
+    out = expansions(
+        "我請設計師做室內設計加監工,設計費跟監工費另外算十二萬,完工後水電管線走法跟圖不一樣,"
+        "浴室還漏水到樓下,設計師說他只負責畫圖跟監工,施工是工班的事"
+    )
+    assert (
+        "受任人處理委任事務，應依委任人之指示，並與處理自己事務為同一之注意，"
+        "其受有報酬者，應以善良管理人之注意為之"
+    ) in out                                                                          # §535
+    assert (
+        "受任人因處理委任事務有過失，或因逾越權限之行為所生之損害，對於委任人應負賠償之責"
+    ) in out                                                                          # §544
+
+
 def test_a_lost_moving_box_reaches_carrier_law_not_defective_work():
     """「二十八箱少了一箱,師傅說當天沒清點就是我自己的責任,合約背面寫最高賠三千」 got
     the 承攬 defect chapter off the single word 「師傅」. Nothing was built badly — a box
