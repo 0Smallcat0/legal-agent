@@ -377,6 +377,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **The first thing every reader was told to do was the same sentence.** The ladder
+  opened with 「把事實與證據整理成一頁時間軸」 whether the person had lost a moving box,
+  a wedding video or a motorbike to the police. It now names the documents THEY said
+  they have — 婚攝 gets 合約, 贓車 gets 行照, 倒會 gets 匯款紀錄、會單, 送洗 gets 送洗單
+  — and falls back to the generic line when the session names nothing. **83 of 168**
+  stored sessions get a case-specific first step. Nothing is suggested: a word appears
+  only if the user typed it, so the rung never invents evidence they do not hold.
 - **Model reasoning was printing under the heading that promises statute text.**
   Eight sessions read end to end: 4 of 30 bullets under 法律明文 were the model's own
   inference, not law. In the 業務簽的約 session they were also backwards — 民法§169
