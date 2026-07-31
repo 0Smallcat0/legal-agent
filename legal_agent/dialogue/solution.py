@@ -12,6 +12,7 @@ unused in v1.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, replace
 
 # §9 / 環保局 exclusion note — ALWAYS present in the output (spec: this must appear).
@@ -189,6 +190,66 @@ _LEGAL_AID_RUNG = Rung(
 )
 
 
+# A period only counts when the sentence that carries it is ABOUT a deadline —
+# 「二年以內」 in §949 is one, 「二年」 inside a definition is not. Both halves must
+# be present in the same sentence, and the sentence is quoted VERBATIM: measured
+# this round, the 8B model asked to spot deadlines invented 「半年內應催告」 for
+# 民法§254, which contains no period at all.
+_PERIOD = re.compile(r"[一二三四五六七八九十兩0-9]+\s*(?:年|個月|月|日|星期|週)")
+# A right dying — that is what the user has to act before.
+_LOSES_RIGHT = ("時效", "不行使", "消滅", "屆滿")
+# A period that is merely a window to do something in. Kept, but ranked below.
+_PLAIN_PERIOD = ("以內", "期間", "逾期")
+# 消保法§11-1's 「三十日以內之合理期間，供消費者審閱」 is a period the SELLER owes,
+# not a deadline the reader can miss. Measured: it was heading the list for the
+# 冷氣修四次 session, above the §365 六個月 that actually ends his claim.
+_NOT_A_DEADLINE = ("審閱",)
+
+
+def _deadline_sentences(retrieved) -> list[tuple[str, str]]:
+    """(article ref, verbatim sentence) for every retrieved article whose own text
+    states a period. Nothing is paraphrased and nothing is computed. Sentences
+    about a right EXPIRING come first — measured, the plain-period ones were
+    crowding them out (§805's 報酬請求權 six months above §949's two years)."""
+    ranked: list[tuple[int, str, str]] = []
+    for statute in retrieved or []:
+        ref = f"{statute.statute_id}{statute.article_no}"
+        best: tuple[int, str] | None = None
+        for sentence in re.split(r"[。\n]", statute.content or ""):
+            if not _PERIOD.search(sentence) or any(w in sentence for w in _NOT_A_DEADLINE):
+                continue
+            if any(w in sentence for w in _LOSES_RIGHT):
+                rank = 0
+            elif any(w in sentence for w in _PLAIN_PERIOD):
+                rank = 1
+            else:
+                continue
+            if best is None or rank < best[0]:
+                best = (rank, sentence.strip())
+        if best is not None:
+            ranked.append((best[0], ref, best[1]))
+    ranked.sort(key=lambda row: row[0])
+    return [(ref, sentence) for _rank, ref, sentence in ranked]
+
+
+def _deadline_rung(retrieved) -> Rung | None:
+    """Surface the periods the retrieved articles themselves state. A claim dies of
+    a deadline the user never heard of, and no other rung mentions time at all."""
+    deadlines = _deadline_sentences(retrieved)
+    if not deadlines:
+        return None
+    quoted = ";".join(f"{ref}「{sentence}」" for ref, sentence in deadlines[:3])
+    return Rung(
+        "deadline", "先確認期限(檢索到的條文自己寫了期間)",
+        f"以下期間出現在本案檢索到的條文原文中,逐字引用:{quoted}。"
+        "起算日與是否中斷因個案而異,請以條文與律師意見為準",
+        tuple(ref for ref, _ in deadlines[:3]),
+        "免費", "立刻", "低",
+        "對照條文確認你的情況距離期間屆滿還有多久,再決定要不要先寄存證信函中斷時效",
+        False, True,
+    )
+
+
 def _authority_rung(retrieved) -> Rung:
     """The 主管機關 rung, named for the statute the case actually turned on."""
     for statute in retrieved or []:
@@ -209,12 +270,13 @@ def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadde
     same cheapest-first shape, no scenario-specific statutes baked in — the
     legal basis for a generic case is whatever Stage 3 retrieved, and the
     authority rung is named from those same retrieved statutes."""
+    deadline = _deadline_rung(retrieved)
     rungs = [
         Rung(
             "evidence", "蒐證與書面紀錄",
             "保存契約/對話紀錄/單據/照片,整理時間軸", (),
             "免費", "隨時", "低", "把事實與證據整理成一頁時間軸",
-            False, bool(retrieved),
+            False, bool(retrieved) and deadline is None,
         ),
         Rung(
             "negotiate", "正式溝通與存證信函",
@@ -238,6 +300,8 @@ def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadde
             "中~高", "數月以上", "高", "評估金額與勝算,必要時諮詢律師", False, False,
         ),
     ]
+    if deadline is not None:
+        rungs.insert(0, deadline)
     return SolutionLadder(rungs=rungs, note=GENERIC_NOTE)
 
 

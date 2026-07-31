@@ -10,7 +10,52 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from legal_agent.dialogue.solution import build_solution_ladder  # noqa: E402
+from legal_agent.dialogue.solution import (  # noqa: E402
+    _deadline_sentences,
+    build_generic_ladder,
+    build_solution_ladder,
+)
+
+
+class _Article:
+    """Minimal stand-in for a retrieved Statute: the ladder reads only these three."""
+
+    def __init__(self, statute_id: str, article_no: str, content: str) -> None:
+        self.statute_id = statute_id
+        self.article_no = article_no
+        self.content = content
+
+
+# Verbatim from the corpus.
+_949 = _Article(
+    "民法", "第949條",
+    "占有物如係盜贓、遺失物或其他非基於原占有人之意思而喪失其占有者，"
+    "原占有人自喪失占有之時起二年以內，得向善意受讓之現占有人請求回復其物。",
+)
+_805 = _Article("民法", "第805條", "第二項報酬請求權，因六個月間不行使而消滅。")
+_11_1 = _Article(
+    "消費者保護法", "第11-1條",
+    "企業經營者與消費者訂立定型化契約前，應有三十日以內之合理期間，供消費者審閱全部條款內容。",
+)
+_226 = _Article("民法", "第226條", "因可歸責於債務人之事由，致給付不能者，債權人得請求賠償損害。")
+
+
+def test_a_review_period_is_not_offered_as_a_deadline():
+    """消保法§11-1's thirty days is a period the SELLER owes, not one the reader can
+    miss. It was heading the list for the 冷氣修四次 session."""
+    assert _deadline_sentences([_11_1]) == []
+
+
+def test_an_article_with_no_period_surfaces_no_deadline():
+    assert _deadline_sentences([_226]) == []
+    assert all(r.key != "deadline" for r in build_generic_ladder({}, [_226]).rungs)
+
+
+def test_the_deadline_is_quoted_verbatim_and_leads_the_ladder():
+    ladder = build_generic_ladder({}, [_949])
+    assert ladder.rungs[0].key == "deadline"
+    assert ladder.rungs[0].recommended
+    assert "自喪失占有之時起二年以內" in ladder.rungs[0].what_it_is
 
 _COST_RANK = {"免費": 0, "低": 1, "中": 2, "高": 3}
 
