@@ -40,6 +40,23 @@ _11_1 = _Article(
 _226 = _Article("民法", "第226條", "因可歸責於債務人之事由，致給付不能者，債權人得請求賠償損害。")
 
 
+def test_the_letter_quotes_what_the_answer_cited_not_what_headed_the_window():
+    """買到贓車's letter quoted §950/§805/§807 — 遺失物拾得 — because they head the
+    retrieval window. Retrieval order cannot tell whose right an article states; the
+    answer's own citations can."""
+    # §949 sits fourth, as it sat sixth in the real 買到贓車 window — outside the three
+    # the letter quotes.
+    window = [_805, _11_1, _226, _949]
+    plain = build_generic_ladder({"problem": "我買到贓車"}, window)
+    focused = build_generic_ladder(
+        {"problem": "我買到贓車"}, window, cited=[("民法", "第949條")]
+    )
+    assert "自喪失占有之時起二年以內" not in plain.letter_template.split("四、")[0]
+    assert "自喪失占有之時起二年以內" in focused.letter_template
+    assert focused.rungs[0].key == "deadline"
+    assert "民法第949條" in focused.rungs[0].what_it_is
+
+
 def test_the_letter_template_is_rendered_and_quotes_the_law_verbatim():
     """Measured: 「見 letter_template」 pointed at something render() never printed and
     neither run.py nor app.py picked up — the reader was sent to a page that did not

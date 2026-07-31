@@ -331,11 +331,30 @@ def _authority_rung(retrieved) -> Rung:
     )
 
 
-def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadder:
+def _answer_first(retrieved, cited) -> list:
+    """Retrieval order with the articles the ANSWER actually cited moved to the front.
+
+    Measured: 買到贓車's letter quoted §950/§805/§807 — 遺失物拾得 — because they head
+    the retrieval window, while §949 and §948, which the case turns on and which the
+    answer cited, sat sixth and eighth. Ranking by retrieval alone cannot tell whose
+    right an article states; the answer's own citations can."""
+    if not retrieved or not cited:
+        return list(retrieved or [])
+    wanted = {(sid, ano) for sid, ano in cited}
+    head = [s for s in retrieved if (s.statute_id, s.article_no) in wanted]
+    tail = [s for s in retrieved if (s.statute_id, s.article_no) not in wanted]
+    return head + tail
+
+
+def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None) -> SolutionLadder:
     """Generic escalation ladder for non-noise problems (spec §3.4 fallback):
     same cheapest-first shape, no scenario-specific statutes baked in — the
     legal basis for a generic case is whatever Stage 3 retrieved, and the
-    authority rung is named from those same retrieved statutes."""
+    authority rung is named from those same retrieved statutes.
+
+    `cited` is the (statute_id, article_no) pairs the ANSWER cited; when given, the
+    deadline and the letter are drawn from those first."""
+    retrieved = _answer_first(retrieved, cited)
     deadline = _deadline_rung(retrieved)
     rungs = [
         Rung(

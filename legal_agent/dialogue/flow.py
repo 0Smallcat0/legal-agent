@@ -239,7 +239,16 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
     if state.problem_type == "noise":
         ladder = solution.build_solution_ladder(state.collected_facts, retrieved=s3.retrieved)
     else:
-        ladder = solution.build_generic_ladder(state.collected_facts, retrieved=s3.retrieved)
+        # The articles the ANSWER cited, so the letter and the deadline quote what the
+        # case turns on rather than whatever headed the retrieval window.
+        cited = tuple(
+            (v.citation.statute_id, v.citation.article_no)
+            for v in s3.verifications
+            if getattr(v, "citation", None) is not None
+        )
+        ladder = solution.build_generic_ladder(
+            state.collected_facts, retrieved=s3.retrieved, cited=cited,
+        )
     return PipelineResult(
         answer=s3.answer,
         honesty_tier=s3.honesty_tier,
