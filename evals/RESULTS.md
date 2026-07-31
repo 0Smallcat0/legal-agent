@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **315/320 (98%)** | `evaluation/real_recall.py`, 155 lived problems |
+| retrieval recall, real user wording | **317/322 (98%)** | `evaluation/real_recall.py`, 156 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -261,6 +261,12 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   fires on a platform worker's words, so this was cause (c). Putting the three
   definitions side by side lets the facts he offered — cannot decline jobs, gets
   down-ranked, buys the uniform himself — be measured against all of them.
+  Seventeenth: 「一歲女兒送去保母家,一個月兩萬四,保母說小孩自己跌倒縫了三針,但監視器
+  是她在滑手機」 returned §184/§191-2/§193 and — for a child who needed three stitches
+  — 民法§192, the article about compensating a DEATH, plus §611 (運送人). A PAID carer
+  is measured by §535 (其受有報酬者,應以善良管理人之注意為之), which is exactly what
+  「她在滑手機」 is offered against; §227 is the contractual route beside the tort one.
+  §535 was structurally unreachable.
 - **The most expensive over-wide trigger measured so far was 「加收」.** A logo-design
   dispute — 「設計師說超出修改次數要加收一次五千」 — came back with 公寓大廈條例
   §14/§25/§28/§30/§32/§34 and 民法§56: eight seats of apartment-management law,

@@ -1264,6 +1264,21 @@ def test_a_platform_worker_gets_all_three_definitions():
     assert "稱承攬者，謂當事人約定，一方為他方完成一定之工作，他方俟工作完成，給付報酬之契約" in out  # §490
 
 
+def test_a_paid_carer_is_held_to_the_paid_standard():
+    """The window gave §184/§191-2/§193 and — for a child who needed three stitches
+    — 民法§192, which is about compensating a DEATH, plus §611 (運送人). §535 is the
+    standard a PAID carer is measured by, and it was unreachable."""
+    out = expansions("我把一歲的女兒送去保母家帶,一個月兩萬四,保母說小孩自己跌倒縫了三針")
+    assert (
+        "受任人處理委任事務，應依委任人之指示，並與處理自己事務為同一之注意，其受有報酬者，應以善良管理人之注意為之"
+        in out
+    )                                                                    # §535
+    assert (
+        "因可歸責於債務人之事由，致為不完全給付者，債權人得依關於給付遲延或給付不能之規定行使其權利"
+        in out
+    )                                                                    # §227
+
+
 def test_expansions_are_deduplicated_and_ordered():
     # 「失眠」 appears in two entries; its shared terms must not repeat
     out = expansions("失眠又要賠償")
