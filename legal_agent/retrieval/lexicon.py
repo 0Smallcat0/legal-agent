@@ -902,6 +902,32 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "債權人於有第二百二十六條之情形時，得解除其契約",
       "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償")),
 
+    # ── 送洗把衣服洗壞 (民法§590, §495, §492) ──
+    # 「三萬多的羊毛大衣去乾洗,取件時領口整片褪色還縮水,店員說這種料子本來就會這樣,
+    # 只退我洗衣費六百」 returned §184/§196/§216/§217/§193 (tort) plus §611 旅店主人責任,
+    # §363 買賣, and 勞動基準法§6. Only two rows fired at all — 「要賠」 and 「賠多少」 —
+    # both general-purpose, so the whole window was the law of damages with no rule
+    # about what a cleaner owes. §589/§590 寄託 and §492/§495 承攬 were all REACHABLE:
+    # cause (c) again. Dry cleaning is 承攬 with a 保管 duty attached, and the paid
+    # bailee's standard in §590 is what makes 「這種料子本來就會這樣」 an excuse rather
+    # than a defence. Triggers are 4 characters so the row outranks 「賠多少」 (3).
+    # §611 and 勞基§6 come from BM25/dense, not from any row — nothing to narrow.
+    (("送洗單", "去乾洗", "整片褪色"),
+     ("受寄人保管寄託物，應與處理自己事務為同一之注意，其受有報酬者，應以善良管理人之注意為之",
+      "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償",
+      "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵")),
+
+    # ── 以物易物換到壞東西 (民法§398) ──
+    # 「用單眼相機跟網友換一支手機,兩邊講好直接交換不補差價,換完三天就一直自動關機,
+    # 維修說主機板泡過水,他說東西換出去就一切自負」 already returned §354/§359/§360/
+    # §365/§367 — the warranty rules ARE the right ones — but §398, the article that
+    # makes them apply to a swap at all, was UNREACHABLE. A window that answers
+    # 「這種交換有沒有保障」 with sale-of-goods law, and never says why sale-of-goods
+    # law governs a trade with no price, reads as inapt to the very person asking.
+    # New failure mode: the rules arrive without the article that lets them apply.
+    (("直接交換", "不補差價", "換出去"),
+     ("當事人雙方約定互相移轉金錢以外之財產權者，準用關於買賣之規定",)),
+
     # ── 保母帶小孩出事 (民法§535, §227) ──
     # 「一歲女兒送去保母家,一個月兩萬四,保母說小孩自己跌倒縫了三針,但監視器是她在
     # 滑手機」 returned §184/§191-2/§193 and — for a child who needed three stitches —

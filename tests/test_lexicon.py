@@ -680,6 +680,28 @@ def test_a_wedding_day_delivery_reaches_rescission_without_demand():
     assert "遲延後之給付，於債權人無利益者，債權人得拒絕其給付" in out                  # §232
 
 
+def test_a_ruined_coat_reaches_what_the_cleaner_owes_not_only_damages():
+    """「送洗大衣整片褪色,店員說這種料子本來就會這樣」 got the whole law of damages
+    (§184/§196/§216/§217/§193) and nothing about a cleaner's duty. §590's paid-bailee
+    standard is what makes the shop's sentence an excuse rather than a defence."""
+    out = expansions(
+        "我拿一件三萬多的羊毛大衣去乾洗,取件時發現領口整片褪色還縮水,"
+        "店員說這種料子本來就會這樣,只退我洗衣費六百。送洗單上沒有寫任何免責"
+    )
+    assert "受寄人保管寄託物，應與處理自己事務為同一之注意，其受有報酬者，應以善良管理人之注意為之" in out  # §590
+    assert "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵" in out      # §492
+
+
+def test_a_swap_reaches_the_article_that_makes_sale_law_apply():
+    """The warranty rules already arrived for 「相機跟網友換手機」; §398 — the article
+    that applies them to a trade with no price — did not. Without it the window is
+    sale-of-goods law for something the asker knows was not a sale."""
+    assert "當事人雙方約定互相移轉金錢以外之財產權者，準用關於買賣之規定" in expansions(
+        "我用我的單眼相機跟網友換一支手機,兩邊講好直接交換不補差價,"
+        "換完三天就一直自動關機,他說東西換出去就一切自負"
+    )                                                                    # §398
+
+
 def test_mould_that_makes_a_tenant_ill_reaches_the_right_to_leave():
     """「房東說當初帶看你自己也看過了」 — §424 answers that sentence directly: where
     the defect endangers health the tenant may terminate even having known."""
