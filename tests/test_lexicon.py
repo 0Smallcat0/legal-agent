@@ -692,6 +692,21 @@ def test_a_ruined_coat_reaches_what_the_cleaner_owes_not_only_damages():
     assert "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵" in out      # §492
 
 
+def test_a_salesman_without_authority_reaches_apparent_agency():
+    """「公司說那個業務早就離職了,他沒有權限簽這種約」 got tort and limitation articles
+    and nothing about agency. §169 is what answers the company: the switchboard and the
+    company card are the conduct by which it held him out."""
+    out = expansions(
+        "我跟一家系統公司的業務簽了維護合約,公司說那個業務早就離職了,他沒有權限簽這種約,"
+        "當初是我打公司總機轉分機找到他的,名片也是公司的"
+    )
+    assert (
+        "由自己之行為表示以代理權授與他人，或知他人表示為其代理人而不為反對之表示者，"
+        "對於第三人應負授權人之責任"
+    ) in out                                                                          # §169
+    assert "代理權之限制及撤回，不得以之對抗善意第三人" in out                        # §107
+
+
 def test_paying_for_a_shared_wall_reaches_co_ownership_not_tenancy_repair():
     """「連棟透天的共同牆滲水,鄰居三個月不處理,我先修了拿收據找他分攤」 got tenancy
     repair and 公寓大廈 articles — rows written for a TENANT or a flat owner. §822 II

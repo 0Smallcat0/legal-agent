@@ -917,6 +917,22 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償",
       "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵")),
 
+    # ── 業務簽的約,公司說他沒有權限 (民法§169, §107, §110) ──
+    # 「跟系統公司的業務簽維護合約付了十二萬訂金,合約有他簽名跟公司小章,三個月後公司說
+    # 那個業務早就離職了,他沒有權限簽這種約,叫我自己去找他。當初是我打公司總機轉分機
+    # 找到他的,名片也是公司的」 returned §245-1, §487-1, §563, §473, §188, §197,
+    # §185, §125 — tort and limitation law, with nothing about agency at all.
+    # §169 is the article that answers the company: a principal who by his own conduct
+    # holds someone out as his agent answers to the third party. The switchboard and
+    # the company card ARE that conduct. §169 and §107 (a limit on authority cannot
+    # be raised against a third party in good faith) were unreachable, cause (a);
+    # §110 and §170 were reachable and never fired, cause (c).
+    # 訂金 was rejected as a trigger — it is already one, on the 定金 row.
+    (("沒有權限", "打公司總機", "名片也是公司的"),
+     ("由自己之行為表示以代理權授與他人，或知他人表示為其代理人而不為反對之表示者，對於第三人應負授權人之責任",
+      "代理權之限制及撤回，不得以之對抗善意第三人",
+      "無代理權人，以他人之代理人名義所為之法律行為，對於善意之相對人，負損害賠償之責")),
+
     # ── 自己先修共同牆,再去跟鄰居要一半 (民法§822, §176, §172) ──
     # 「連棟透天中間那道共同牆滲水,跟鄰居講三個月都不處理,雨季快到我就先找工班修了,
     # 花八萬多,拿收據去找他分攤,他說又不是他叫我修的」 returned §437, §430, §793,
