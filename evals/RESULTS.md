@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **333/338 (99%)** | `evaluation/real_recall.py`, 162 lived problems |
+| retrieval recall, real user wording | **336/341 (99%)** | `evaluation/real_recall.py`, 163 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -366,13 +366,17 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   broad 侵權 row takes seats 1-3 off the single word 「損失」 (「這個損失該誰承擔」) —
   the same seat-theft shape as 做到一半 last round, one layer up. Dead triggers were
   removed rather than left in to look busy; the cause is written down instead.
-- **Diagnosed and not shipped: 「七天」 on the distance-selling row.** A package-tour
-  complaint (「跟團去日本七天」) pulled 消保法§19, the seven-day cooling-off right for
-  distance sales, into a window about a downgraded hotel. The trigger reads a
-  DURATION as a cancellation period. It fires on exactly one stored session out of
-  162, so narrowing it would be justified by one displaced article and risks the
-  distance-selling cases that depend on the row. Recorded, with the A/B prescribed
-  for whenever a second session makes it worth measuring.
+- **The obviously-wrong trigger was holding the right chapter up.** 「七天」 and
+  「解約」 on the distance-selling row pull 消保法§19 — a seven-day cooling-off right
+  for online purchases — into a package-tour complaint (「跟團去日本七天」, a DURATION)
+  and into a gym contract. Two sessions tripping it made it worth an A/B. Removing
+  just those two triggers: recall 333 down to 331, and the entire loss is the tour
+  session falling from 2/2 to **0/2** — §514-5 and §514-7 gone, replaced by three
+  articles of 道路交通管理處罰條例. The terms the row expands into were part of what
+  kept the 旅遊 chapter ranked; the 消保法§19 that looked like the defect came with
+  them. Second time this shape has been measured (the first was the 「修了幾次」 row),
+  and it is now the standing rule: a trigger earns its seat through the QUERY it
+  expands, not the articles it names, so nothing is narrowed without an A/B.
 - **The row-relevance scan was measuring something narrower than it claimed.**
   Thirteen rounds of「no row is dead」, then it flagged one: the row triggered by
   「修了幾次」/「修過四次」 fires on three sessions and had never supplied an expected
