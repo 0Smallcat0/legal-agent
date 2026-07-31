@@ -62,6 +62,23 @@ def conn(tmp_path):
     c.close()
 
 
+def test_a_judgment_stating_a_sum_is_listed_first(conn):
+    """The reader's question is 「我能拿回多少」. Measured on the 婚攝 session, the only
+    judgment carrying 判賠 260,000 元 was listed third, under two with no figure."""
+    conn.execute(
+        "INSERT INTO judgments (jid, court, year, case_type, issues, "
+        "cited_articles, holding, full_text) VALUES (?, ?, ?, ?, NULL, ?, NULL, ?)",
+        ("DDD,115,簡,9,20260401,1", "DDD", 115, "損害賠償",
+         json.dumps([{"statute_id": "民法", "article_no": "第184條"}], ensure_ascii=False),
+         "臺灣測試地方法院民事判決\r\n115年度簡字第9號\r\n主文\r\n"
+         "被告應給付原告新臺幣260,000元。\r\n事實及理由"),
+    )
+    conn.commit()
+    refs = related_judgments([_statute()], conn=conn)
+    assert refs[0].awards, "the judgment that names a sum has to come first"
+    assert refs[0].jid.startswith("DDD")
+
+
 def test_overlap_ranked_and_unrelated_excluded(conn):
     retrieved = [_statute(), _statute("民法", "第195條", "非財產上之損害…")]
     refs = related_judgments(retrieved, conn=conn)

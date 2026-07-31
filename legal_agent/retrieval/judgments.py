@@ -97,16 +97,28 @@ def related_judgments(
     # verbatim slices, no LLM; an unreadable one simply yields nothing.
     from legal_agent.data.judgment_text import awards as _awards
     from legal_agent.data.judgment_text import citation as _citation
+
+    # The reader's question is 「我能拿回多少」, so a judgment that states a sum goes
+    # first. Measured on the 婚攝 session: of the three shown, the only one carrying
+    # 判賠 260,000 元 was listed third, under two with no figure at all. Parsing is
+    # widened to a few more candidates than are shown — still verbatim slices of the
+    # 主文, still no LLM — and the sort is stable, so overlap ordering survives
+    # inside each group.
+    widened = [
+        (jid, meta, _awards(meta.get("full_text")), _citation(meta.get("full_text")))
+        for jid, meta in items[: limit * 3]
+    ]
+    widened.sort(key=lambda row: not row[2])
     return [
         JudgmentRef(
             jid=jid,
             court=meta["court"],
             case_type=meta["case_type"],
             matched=tuple(meta["matched"]),
-            awards=_awards(meta.get("full_text")),
-            cite=_citation(meta.get("full_text")),
+            awards=award,
+            cite=cite,
         )
-        for jid, meta in items[:limit]
+        for jid, meta, award, cite in widened[:limit]
     ]
 
 

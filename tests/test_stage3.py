@@ -154,5 +154,28 @@ def test_no_anthropic_client_constructed(real_conn, monkeypatch):
     assert boom.call_count == 0
 
 
+def test_insufficient_boilerplate_is_dropped_when_the_answer_has_analysis():
+    """Measured on the 婚攝 session: the model wrote four numbered points off
+    thirteen retrieved articles and still signed off with 「現有資料不足」. A reader
+    who reaches that sentence stops reading."""
+    answered = (
+        "**分析研判**\n\n"
+        "1. 你可以向承攬人請求損害賠償(民法第495條)。\n"
+        "2. 對方說硬碟壞掉,依民法第226條不能免責。\n"
+        "3. 保留合約、匯款紀錄與對話。\n\n"
+        "現有資料不足,建議諮詢律師。"
+    )
+    out = stage3._drop_insufficient_boilerplate(answered)
+    assert "現有資料不足" not in out
+    assert "民法第495條" in out
+
+
+def test_insufficient_boilerplate_survives_when_it_is_the_whole_answer():
+    """Then it is a truthful report that the model had nothing to say, and the
+    honesty tier is graded on it."""
+    only = "現有資料不足,建議諮詢律師。"
+    assert stage3._drop_insufficient_boilerplate(only) == only
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
