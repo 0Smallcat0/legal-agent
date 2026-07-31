@@ -917,6 +917,21 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償",
       "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵")),
 
+    # ── 房子登記在別人名下,現在要回來 (民法§541, §549, §179) ──
+    # 「十年前買房為了辦貸款方便登記在我哥名下,錢全部是我出的,現在要過戶回自己名下,
+    # 我哥說登記誰的就是誰的」 returned §354/§355/§358/§359/§360/§361/§363/§365 — the
+    # entire sale-of-goods warranty chapter — because 「買房」 fired the 瑕疵 row. He is
+    # not complaining that the house is defective. He wants the TITLE back, and
+    # 借名登記 is decided by analogy to 委任: §541 II makes a mandatary transfer what
+    # he holds in his own name, §549 lets either side end the arrangement at any time,
+    # §179 is the fallback in unjust enrichment. All three reachable, no row fires on
+    # his words: cause (c). 登記在 and 名下 were rejected as triggers — between them
+    # they appear in fourteen stored sessions, mostly 繼承.
+    (("過戶回", "錢全部是我出的", "登記誰的就是誰的"),
+     ("受任人以自己之名義，為委任人取得之權利，應移轉於委任人",
+      "當事人之任何一方，得隨時終止委任契約",
+      "無法律上之原因而受利益，致他人受損害者，應返還其利益")),
+
     # ── 設計師只畫圖跟監工,施工出事 (民法§535, §544) ──
     # 「設計費跟監工費另外算十二萬,完工後水電管線走法跟圖不一樣,浴室漏水到樓下,設計師
     # 說他只負責畫圖跟監工,施工是工班的事」 returned 租賃住宅條例§8, 公寓大廈條例§6,
