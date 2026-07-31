@@ -692,6 +692,24 @@ def test_a_ruined_coat_reaches_what_the_cleaner_owes_not_only_damages():
     assert "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵" in out      # §492
 
 
+def test_a_stolen_bike_reaches_good_faith_acquisition_not_traffic_tickets():
+    """「騎了半年被警察攔下說是贓車當場扣走」 got five articles of 道路交通管理處罰條例
+    off the word 「機車」. He was not in an accident — he bought stolen goods, and the
+    articles he needs answer against him, which is why they must be in the window."""
+    out = expansions(
+        "我在網路上跟人買一台中古機車五萬八,騎了半年被警察攔下來,說車是贓車,當場扣走,"
+        "還通知原車主來領"
+    )
+    assert (
+        "占有物如係盜贓、遺失物或其他非基於原占有人之意思而喪失其占有者，"
+        "原占有人自喪失占有之時起二年以內，得向善意受讓之現占有人請求回復其物"
+    ) in out                                                                          # §949
+    assert (
+        "以動產所有權，或其他物權之移轉或設定為目的，而善意受讓該動產之占有者，"
+        "縱其讓與人無讓與之權利，其占有仍受法律之保護"
+    ) in out                                                                          # §948
+
+
 def test_a_house_in_a_brothers_name_reaches_mandate_not_sale_warranty():
     """「登記在我哥名下,錢全部是我出的,我哥說登記誰的就是誰的」 got the whole sale-of-
     goods warranty chapter off the word 「買房」. Nothing is wrong with the house — he

@@ -917,6 +917,23 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償",
       "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵")),
 
+    # ── 買到贓車被警察扣走 (民法§949, §950, §948) ──
+    # 「網路上跟人買中古機車五萬八,行照也過戶了,騎了半年被警察攔下說是贓車當場扣走,
+    # 賣家電話打不通」 returned FIVE articles of 道路交通管理處罰條例 plus §191-2,
+    # because 「機車」 fired the vehicle-accident row. He was not in an accident. He
+    # bought stolen goods, and 善意取得 decides it: §948 protects a good-faith
+    # transferee, §949 lets the original owner demand the thing back within two years
+    # anyway, §950 makes that recovery conditional on refunding the price ONLY where
+    # the buyer bought from a public market or a dealer in such goods. §801/§948/
+    # §949/§950 were all unreachable (cause (a)); only §950 arrived, on BM25 luck.
+    # The answer is against him — he bought from a private seller online, so §950
+    # does not cover the 五萬八 — which is exactly why the articles have to be there.
+    # 中古 was rejected as a trigger: it appears in house-defect.
+    (("贓車", "被警察", "扣走"),
+     ("占有物如係盜贓、遺失物或其他非基於原占有人之意思而喪失其占有者，原占有人自喪失占有之時起二年以內，得向善意受讓之現占有人請求回復其物",
+      "盜贓、遺失物或其他非基於原占有人之意思而喪失其占有之物，如現占有人由公開交易場所，或由販賣與其物同種之物之商人，以善意買得者，非償還其支出之價金，不得回復其物",
+      "以動產所有權，或其他物權之移轉或設定為目的，而善意受讓該動產之占有者，縱其讓與人無讓與之權利，其占有仍受法律之保護")),
+
     # ── 房子登記在別人名下,現在要回來 (民法§541, §549, §179) ──
     # 「十年前買房為了辦貸款方便登記在我哥名下,錢全部是我出的,現在要過戶回自己名下,
     # 我哥說登記誰的就是誰的」 returned §354/§355/§358/§359/§360/§361/§363/§365 — the
