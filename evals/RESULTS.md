@@ -377,6 +377,18 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **The ladder now follows the answer's citations instead of the retrieval order.**
+  Retrieval rank cannot tell whose right an article states, which is why 買到贓車's
+  letter quoted §950/§805/§807 — 遺失物拾得 — and its deadline rung led with §805's
+  finder's-reward six months. Stage 3 already knows which articles the ANSWER cited;
+  the ladder simply was not given them. It is now, through the one call site in
+  flow.py. Measured on eight saved sessions: letter 依據 lines that the answer also
+  cited went **8/22 → 13/22**.
+  What it does NOT fix, and the trade recorded plainly: the ladder now inherits the
+  model's choices. In the saved 買到贓車 answer the model cited only §948, never §949
+  — so §948 moved to the front of the letter exactly as intended, and §949, the
+  article that decides whether he keeps the bike, still never reaches it. Retrieval
+  order was blind to the case; answer order is only as good as the answer.
 - **The 存證信函 rung pointed at a template the page never printed.** 住宅噪音's rung
   said 「見 letter_template」, app.py relabelled that string to 「見 存證信函範本」, and
   nothing rendered it: `render()` left the field out and neither run.py nor app.py
