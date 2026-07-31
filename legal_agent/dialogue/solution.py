@@ -346,6 +346,13 @@ def _answer_first(retrieved, cited) -> list:
     return head + tail
 
 
+# Tried and NOT shipped: ranking the un-cited tail by how many character bigrams each
+# article shares with the reader's own sentence. Expected articles reaching the
+# letter's three 依據 lines went 9 → 7 across seven sessions — 買到贓車 and 借名登記
+# each lost one. Lexical overlap with a lay description is not a signal for which
+# article governs, and the retrieval order it replaced was already better.
+
+
 def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None) -> SolutionLadder:
     """Generic escalation ladder for non-noise problems (spec §3.4 fallback):
     same cheapest-first shape, no scenario-specific statutes baked in — the

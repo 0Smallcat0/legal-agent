@@ -377,6 +377,19 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **The model, not retrieval, is what keeps articles off the page.** Across eight
+  sessions the answer cites **20 of the 56** articles retrieved, and in five of them
+  only nought to two. Retrieval had already found what the case turns on: for six of
+  the eight, **3 of 3** expected articles were in the window, while the answer cited
+  at most one of them. So the letter and the deadline are mostly filled from articles
+  the model ignored, and that is a ceiling no amount of retrieval work moves.
+- **Tried and not shipped: ranking the un-cited remainder by the reader's own words.**
+  If the tail must supply most of the letter, order it by how many character bigrams
+  each article shares with the session text. Measured: expected articles reaching the
+  letter's three 依據 lines went **9 → 7** across seven sessions — 買到贓車 and
+  借名登記 each lost one. Lexical overlap with a lay description does not indicate
+  which article governs, and plain retrieval order was already better. Reverted, with
+  the helper deleted rather than left behind a flag.
 - **The ladder now follows the answer's citations instead of the retrieval order.**
   Retrieval rank cannot tell whose right an article states, which is why 買到贓車's
   letter quoted §950/§805/§807 — 遺失物拾得 — and its deadline rung led with §805's
