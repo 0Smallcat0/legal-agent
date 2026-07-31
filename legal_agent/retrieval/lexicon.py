@@ -888,6 +888,17 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
       "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
 
+    # ── 保母帶小孩出事 (民法§535, §227) ──
+    # 「一歲女兒送去保母家,一個月兩萬四,保母說小孩自己跌倒縫了三針,但監視器是她在
+    # 滑手機」 returned §184/§191-2/§193 and — for a child who needed three stitches —
+    # 民法§192, the article about compensating for a DEATH, plus §611 (運送人).
+    # A paid carer is measured by §535: 其受有報酬者,應以善良管理人之注意為之, which
+    # is exactly what 「她在滑手機」 is offered against. §227 is the contractual route
+    # beside the tort one. §535 was structurally unreachable.
+    (("送去保母家", "保母說", "托育"),
+     ("受任人處理委任事務，應依委任人之指示，並與處理自己事務為同一之注意，其受有報酬者，應以善良管理人之注意為之",
+      "因可歸責於債務人之事由，致為不完全給付者，債權人得依關於給付遲延或給付不能之規定行使其權利")),
+
     # ── 平台說我是承攬不是僱傭 (勞基§2, 民法§482, §490) ──
     # 「外送平台跑了兩年,系統派單不能挑,拒單太多會被降權還會停權,平台說我們是承攬
     # 不是僱傭」 returned 勞基§24/§32/§32-1/§33 (加班與工時) mixed with 承攬
