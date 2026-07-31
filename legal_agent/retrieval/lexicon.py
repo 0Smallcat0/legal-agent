@@ -917,6 +917,19 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償",
       "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵")),
 
+    # ── 設計師只畫圖跟監工,施工出事 (民法§535, §544) ──
+    # 「設計費跟監工費另外算十二萬,完工後水電管線走法跟圖不一樣,浴室漏水到樓下,設計師
+    # 說他只負責畫圖跟監工,施工是工班的事」 returned 租賃住宅條例§8, 公寓大廈條例§6,
+    # 民法§776, §430, §793 — neighbour nuisance and TENANCY repair — because 「樓下」+
+    # 「施工」 fired the 相鄰關係 row and 「漏水」 fired the 租賃修繕 row. He owns the
+    # flat and the question is whether the man he paid to SUPERVISE answers for what
+    # the trades did. That is 委任, and both articles were reachable: cause (c).
+    # §535 makes a paid mandatary owe 善良管理人之注意; §544 makes him liable for his
+    # own 過失 — which is the answer to 「施工是工班的事,你自己去找工班」.
+    (("監工費", "只負責畫圖", "工班的事"),
+     ("受任人處理委任事務，應依委任人之指示，並與處理自己事務為同一之注意，其受有報酬者，應以善良管理人之注意為之",
+      "受任人因處理委任事務有過失，或因逾越權限之行為所生之損害，對於委任人應負賠償之責")),
+
     # ── 搬家公司弄丟一箱 (民法§634, §648, §649) ──
     # 「二十八箱到新家清點少了一箱,師傅說當天沒清點就是我自己的責任,合約背面寫遺失
     # 最高賠三千」 returned §492/§493/§494/§495/§509/§512 — the 承攬 defect chapter —

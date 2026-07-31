@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **329/334 (99%)** | `evaluation/real_recall.py`, 160 lived problems |
+| retrieval recall, real user wording | **333/338 (99%)** | `evaluation/real_recall.py`, 162 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -366,6 +366,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   broad 侵權 row takes seats 1-3 off the single word 「損失」 (「這個損失該誰承擔」) —
   the same seat-theft shape as 做到一半 last round, one layer up. Dead triggers were
   removed rather than left in to look busy; the cause is written down instead.
+- **Diagnosed and not shipped: 「七天」 on the distance-selling row.** A package-tour
+  complaint (「跟團去日本七天」) pulled 消保法§19, the seven-day cooling-off right for
+  distance sales, into a window about a downgraded hotel. The trigger reads a
+  DURATION as a cancellation period. It fires on exactly one stored session out of
+  162, so narrowing it would be justified by one displaced article and risks the
+  distance-selling cases that depend on the row. Recorded, with the A/B prescribed
+  for whenever a second session makes it worth measuring.
 - **The row-relevance scan was measuring something narrower than it claimed.**
   Thirteen rounds of「no row is dead」, then it flagged one: the row triggered by
   「修了幾次」/「修過四次」 fires on three sessions and had never supplied an expected
