@@ -692,6 +692,24 @@ def test_a_ruined_coat_reaches_what_the_cleaner_owes_not_only_damages():
     assert "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵" in out      # §492
 
 
+def test_paying_for_a_shared_wall_reaches_co_ownership_not_tenancy_repair():
+    """「連棟透天的共同牆滲水,鄰居三個月不處理,我先修了拿收據找他分攤」 got tenancy
+    repair and 公寓大廈 articles — rows written for a TENANT or a flat owner. §822 II
+    is the sentence he needs, and 「又不是他叫我修的」 is what §172 is about."""
+    out = expansions(
+        "我跟隔壁是連棟透天,中間那道共同牆滲水,我跟鄰居講了三個月他都不處理,"
+        "我就先自己找工班修了花了八萬多,拿收據去找他分攤,他說一毛都不出"
+    )
+    assert (
+        "共有人中之一人，就共有物之負擔為支付，而逾其所應分擔之部分者，"
+        "對於其他共有人得按其各應分擔之部分，請求償還"
+    ) in out                                                                          # §822 II
+    assert (
+        "未受委任，並無義務，而為他人管理事務者，其管理應依本人明示或可得推知之意思，"
+        "以有利於本人之方法為之"
+    ) in out                                                                          # §172
+
+
 def test_a_stolen_bike_reaches_good_faith_acquisition_not_traffic_tickets():
     """「騎了半年被警察攔下說是贓車當場扣走」 got five articles of 道路交通管理處罰條例
     off the word 「機車」. He was not in an accident — he bought stolen goods, and the

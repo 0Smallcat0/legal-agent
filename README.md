@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-405%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-406%20passing-brightgreen)
 
 Legal Q&A where **every citation is machine-verified** against a time-versioned
 statute corpus — and the verifier is itself graded by injecting errors:
@@ -28,7 +28,7 @@ python app.py     # web demo — builds the corpus on first run, no API key
 |---|---|
 | seeded defects caught (whole corpus) | **10,435/10,435, 0 false positives** |
 | statute coverage, 30-case golden set | **100% pass+partial** (73% strict) |
-| retrieval recall, real user wording | **342/347** |
+| retrieval recall, real user wording | **345/350** |
 | honesty tier / wrong-premise detection | **84% / 100%** |
 
 Three things you can lift: a pure-code
