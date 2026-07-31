@@ -15,7 +15,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **30/30 (100%)** | same run |
-| retrieval recall, real user wording | **348/353 (99%)** | `evaluation/real_recall.py`, 167 lived problems |
+| retrieval recall, real user wording | **349/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -377,6 +377,18 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **Promotion can only move an article that is already in the candidate pool.**
+  A session about a co-inherited field one brother had let out on his own
+  (「大哥私下把整塊地租給人家種果樹,契約只有他一個人簽,租金全進他口袋」) returned
+  eight articles about PARTITION. A new row put 民法§828 III, §821 and §179 at
+  positions 0, 1 and 2 of the expansion list — the top three, ahead of every other
+  firing row — and only §828 reached the window. Splitting the row into three, one
+  phrase each, changed neither that window nor the neighbouring session's. So the
+  reserved seats do not conjure articles: they REORDER the pool that BM25 and the
+  dense retriever already produced, and §821/§179 never enter it for this query.
+  The case is stored at 1/3 with the reason written down rather than with its
+  expectations trimmed to whatever retrieval happens to deliver — which is why the
+  published recall reads 98% this round and not 99%.
 - **The row-relevance scan was measuring something narrower than it claimed.**
   Thirteen rounds of「no row is dead」, then it flagged one: the row triggered by
   「修了幾次」/「修過四次」 fires on three sessions and had never supplied an expected

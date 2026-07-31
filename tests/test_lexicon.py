@@ -692,6 +692,22 @@ def test_a_ruined_coat_reaches_what_the_cleaner_owes_not_only_damages():
     assert "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵" in out      # §492
 
 
+def test_land_rented_out_by_one_co_heir_reaches_consent_not_partition():
+    """「大哥私下把整塊地租給人家種果樹,契約只有他一個人簽」 got eight articles about
+    PARTITION. The question is whether the lease binds the others (§828 III) and how
+    the rent comes back (§179)."""
+    out = expansions(
+        "爺爺過世留下一塊農地,我們四個兄弟都還沒分割,大哥私下把整塊地租給人家種果樹,"
+        "一年收租金十二萬,契約只有他一個人簽"
+    )
+    assert (
+        "公同共有物之處分及其他之權利行使，除法律另有規定外，應得公同共有人全體之同意"
+    ) in out                                                                          # §828 III
+    # §179 reaches the expansion but not the window: promotion can only move an
+    # article already in the candidate pool, and this query never puts §179 in it.
+    assert "無法律上之原因而受利益，致他人受損害者，應返還其利益" in out              # §179
+
+
 def test_a_salesman_without_authority_reaches_apparent_agency():
     """「公司說那個業務早就離職了,他沒有權限簽這種約」 got tort and limitation articles
     and nothing about agency. §169 is what answers the company: the switchboard and the
