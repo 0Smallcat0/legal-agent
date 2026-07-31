@@ -377,6 +377,26 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **Model reasoning was printing under the heading that promises statute text.**
+  Eight sessions read end to end: 4 of 30 bullets under 法律明文 were the model's own
+  inference, not law. In the 業務簽的約 session they were also backwards — 民法§169
+  makes the COMPANY answer for holding a salesman out, and the bullet told the reader
+  that HE had been treated as the agent. Under that heading a lay reader takes it as
+  the statute. Such lines are now moved into 分析研判 by code, with a marker saying
+  where they came from; nothing is deleted, because they are the model's to say, just
+  not there. Measured on the same eight: **4 → 0**. When the move empties the section
+  entirely — as it did for 業務簽的約, where both bullets were prose — it is rebuilt
+  from the retrieved articles verbatim rather than left as 「(無)」, which would hide
+  law that was actually found behind the model's silence. Honesty tier 27/32 and
+  wrong-premise 32/32 unchanged.
+  Limit, recorded rather than papered over: runs shorter than 14 characters are not
+  judged, so a brief assertion could still pass. Every paraphrase measured was a full
+  sentence, and the floor is what keeps list markers and 「(無)」 from being treated as
+  prose.
+  Also a correction to this round's own first measurement: it reported 12 of 30 by
+  comparing a punctuation-stripped line against unstripped corpus text, which called
+  民法§226 and §541 paraphrases when they were quoted word for word. Strip both sides
+  and it is 4.
 - **The number the reader came for was on the page, three lines below where they
   stop.** 「我能拿回多少」 has an answer: the corpus carries 1,367 judgments and the
   reference block prints the sum from each 主文 verbatim. Of 60 sampled sessions,

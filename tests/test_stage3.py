@@ -154,6 +154,55 @@ def test_no_anthropic_client_constructed(real_conn, monkeypatch):
     assert boom.call_count == 0
 
 
+class _Art:
+    def __init__(self, sid, ano, content):
+        self.statute_id, self.article_no, self.content = sid, ano, content
+
+
+_S169 = _Art(
+    "民法", "第169條",
+    "由自己之行為表示以代理權授與他人，或知他人表示為其代理人而不為反對之表示者，"
+    "對於第三人應負授權人之責任。",
+)
+
+
+def test_model_prose_is_moved_out_of_the_statute_section():
+    """Measured over eight sessions: 4 of 30 bullets under 法律明文 were the model's
+    own inference, and in the 業務 session backwards — §169 makes the COMPANY answer
+    for holding the salesman out; the bullet told the reader HE was the agent."""
+    answer = (
+        "**法律明文**\n"
+        "1. 由自己之行為表示以代理權授與他人，或知他人表示為其代理人而不為反對之表示者，"
+        "對於第三人應負授權人之責任。\n"
+        "2. 根據民法第169條，當初你與業務簽署維護合約時，你沒有表示反對，"
+        "他們就把你視為代理人之一。\n\n"
+        "**實務見解**\n(無)\n\n"
+        "**分析研判**\n1. 你可以向公司主張。\n"
+    )
+    out = stage3._move_model_prose_out_of_statute_section(answer, [_S169])
+    statute_part = out.split("**實務見解**")[0]
+    assert "他們就把你視為代理人之一" not in statute_part
+    assert "他們就把你視為代理人之一" in out.split("**分析研判**")[1]
+    assert "對於第三人應負授權人之責任" in statute_part
+
+
+def test_a_statute_section_emptied_by_the_move_is_rebuilt_from_the_corpus():
+    """Leaving 「(無)」 would hide law that WAS retrieved behind the model's silence."""
+    # Long enough to be judged: the check leaves runs under 14 characters alone, so a
+    # short assertion under 法律明文 still slips through. No measured session produced
+    # one — all four caught were full sentences — and the floor is what stops numbered
+    # list markers and 「(無)」 being treated as prose.
+    answer = (
+        "**法律明文**\n"
+        "1. 因為你當初沒有表示反對，所以公司大概要為這個業務簽的約負起全部的責任。\n\n"
+        "**實務見解**\n(無)\n\n**分析研判**\n1. 建議蒐證。\n"
+    )
+    out = stage3._move_model_prose_out_of_statute_section(answer, [_S169])
+    statute_part = out.split("**實務見解**")[0]
+    assert "民法第169條" in statute_part
+    assert "對於第三人應負授權人之責任" in statute_part
+
+
 def test_insufficient_boilerplate_is_dropped_when_the_answer_has_analysis():
     """Measured on the 婚攝 session: the model wrote four numbered points off
     thirteen retrieved articles and still signed off with 「現有資料不足」. A reader

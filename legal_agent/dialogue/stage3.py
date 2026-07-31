@@ -198,6 +198,66 @@ def _drop_insufficient_boilerplate(answer: str) -> str:
     return stripped
 
 
+_CJK = re.compile(r"[一-鿿]+")
+_HEADING = re.compile(r"^\*\*(法律明文|實務見解|分析研判)\*\*\s*$", re.MULTILINE)
+_MOVED_NOTE = "(以下由「法律明文」移入:這幾句不是條文原文,是模型的推論)"
+
+
+def _is_verbatim(line: str, corpus: str) -> bool:
+    """True when a run of the line's own characters appears in the retrieved text.
+    Punctuation is dropped from BOTH sides — measured: comparing a stripped line
+    against unstripped corpus text called 民法§226 and §541 paraphrases when they
+    were quoted word for word."""
+    text = "".join(_CJK.findall(line))
+    if len(text) < 14:
+        return True          # too short to judge; headings, numbering, 「(無)」
+    return any(text[i:i + 14] in corpus for i in range(len(text) - 13))
+
+
+def _move_model_prose_out_of_statute_section(answer: str, retrieved) -> str:
+    """「法律明文」 must hold statute text, not the model's reasoning about it.
+
+    Measured over eight sessions: 4 of 30 bullets under that heading were the
+    model's own inference, and in the 業務 session they were backwards — §169 makes
+    the COMPANY answer for holding the salesman out, and the line under 法律明文 told
+    the reader HE was the agent. Such lines are moved into 分析研判 rather than
+    deleted: they are the model's to say, just not under that heading."""
+    if not retrieved or not answer:
+        return answer
+    corpus = "".join(_CJK.findall(" ".join((s.content or "") for s in retrieved)))
+    parts = _HEADING.split(answer)
+    if len(parts) < 3:
+        return answer
+    # parts == [preamble, heading, body, heading, body, ...]
+    sections = {parts[i]: parts[i + 1] for i in range(1, len(parts) - 1, 2)}
+    if "法律明文" not in sections or "分析研判" not in sections:
+        return answer
+
+    kept, moved = [], []
+    for line in sections["法律明文"].split("\n"):
+        (kept if _is_verbatim(line, corpus) else moved).append(line)
+    if not moved:
+        return answer
+
+    body = "\n".join(kept).strip()
+    if not body:
+        # Every bullet was the model's own prose — 業務簽的約 came out that way. The
+        # articles WERE retrieved, so the section is rebuilt from them in code rather
+        # than left as 「(無)」, which would hide the law behind the model's silence.
+        body = "\n".join(
+            f"{i}. {s.statute_id}{s.article_no}:{(s.content or '').splitlines()[0]}"
+            for i, s in enumerate(retrieved[:5], 1)
+        )
+    sections["法律明文"] = body
+    sections["分析研判"] = (
+        sections["分析研判"].rstrip() + "\n\n" + _MOVED_NOTE + "\n" + "\n".join(moved).strip()
+    )
+    rebuilt = parts[0]
+    for i in range(1, len(parts) - 1, 2):
+        rebuilt += f"**{parts[i]}**\n" + sections[parts[i]].strip("\n") + "\n\n"
+    return rebuilt.rstrip() + "\n"
+
+
 def run_stage3(
     collected_facts: dict,
     llm: Callable[[str], str] | None = None,
@@ -257,6 +317,7 @@ def run_stage3(
         llm = default_anthropic_llm()
 
     answer = _drop_insufficient_boilerplate(llm(build_model_input(retrieved, collected_facts)))
+    answer = _move_model_prose_out_of_statute_section(answer, retrieved)
 
     honesty_label = None
     if tier == "marginal":
