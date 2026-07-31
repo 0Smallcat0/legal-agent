@@ -377,6 +377,20 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **The number the reader came for was on the page, three lines below where they
+  stop.** 「我能拿回多少」 has an answer: the corpus carries 1,367 judgments and the
+  reference block prints the sum from each 主文 verbatim. Of 60 sampled sessions,
+  50 had at least one judgment stating an amount — and the first one listed carried
+  a figure in **0** of them, because the block was ordered by article overlap alone.
+  For the 婚攝 session that put 判賠 260,000 元 third, under two citations with no
+  number at all. Parsing is now widened past the three shown and award-carrying
+  judgments sort first, stably, so overlap order survives inside each group:
+  first-listed carries an amount in **55 of 60**, and sessions with any amount rose
+  50 → 55 because the widened window reaches judgments the old top-three slice cut
+  off. Nothing is computed — the sums are verbatim slices of the 主文.
+  Correction to the previous round's defect list: 「沒有金額區間」 was wrong. The
+  feature existed; the end-to-end harness printed only `.answer` and skipped the
+  block that `run.py` and `app.py` both render.
 - **The section the reader actually needs was boilerplate, and more facts made it
   worse.** Sampled end to end as a user: 婚攝, 贓車 and 共同牆 all returned a correct
   「法律明文」 block and then 「現有資料不足,建議諮詢律師」 under 分析研判. Re-running

@@ -8,6 +8,7 @@ Retrieval fires EXACTLY ONCE (retrieve_scored) on the complete fact set (§3.3).
 """
 from __future__ import annotations
 
+import re
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -174,6 +175,29 @@ def default_anthropic_llm() -> Callable[[str], str]:
     return llm
 
 
+# The model appends this to 分析研判 even when it has just written four numbered
+# points off thirteen retrieved articles — measured on the 婚攝 session, and the
+# prompt's condition ("only when 法律明文 is 「(無)」") did not hold it. A reader who
+# reaches 「現有資料不足」 stops reading, so it is removed HERE rather than hoped for.
+_BOILERPLATE = re.compile(
+    r"[\s　]*現有資料不足[,，。]?\s*(?:建議諮詢律師)?[。.]?[\s　]*$|"
+    r"^[\s　]*現有資料不足[,，。]?\s*(?:建議諮詢律師)?[。.]?[\s　]*",
+    re.MULTILINE,
+)
+
+
+def _drop_insufficient_boilerplate(answer: str) -> str:
+    """Strip the 「現有資料不足」 sentence when the answer has other content.
+
+    When it is ALL the model produced it stays: that is a truthful report that the
+    model had nothing to say, and the honesty tier is graded on it."""
+    stripped = _BOILERPLATE.sub("", answer or "")
+    remaining = stripped.replace("現有資料不足", "").strip()
+    if not remaining or len(remaining) < 40:
+        return answer
+    return stripped
+
+
 def run_stage3(
     collected_facts: dict,
     llm: Callable[[str], str] | None = None,
@@ -232,7 +256,7 @@ def run_stage3(
     if llm is None:              # bind the real LLM LAZILY, only now that we need it
         llm = default_anthropic_llm()
 
-    answer = llm(build_model_input(retrieved, collected_facts))
+    answer = _drop_insufficient_boilerplate(llm(build_model_input(retrieved, collected_facts)))
 
     honesty_label = None
     if tier == "marginal":
