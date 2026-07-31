@@ -888,6 +888,20 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("稱合夥者，謂二人以上互約出資以經營共同事業之契約",
       "合夥財產不足清償合夥之債務時，各合夥人對於不足之額，連帶負其責任")),
 
+    # ── 交不出來的工作,而且不可能重做 (民法§226, §256, §495) ──
+    # 「六萬八請婚攝,說好三個月交原始檔跟精修五十張,拖半年只給二十張,後來說硬碟壞掉
+    # 原始檔全沒了,只肯退我兩萬」 returned §354/§359/§361/§363/§365 — the SALE-of-goods
+    # warranty chapter — plus §254/§259, with only §502 touching 承攬. All four right
+    # articles were REACHABLE; no row reaching them fires on a photographer's words,
+    # so cause (c). The point is not that the work is defective but that it is GONE
+    # and cannot be redone: §226 給付不能, §256 the right to rescind that follows it,
+    # and §495 for 「只退兩萬合理嗎」 — damages are not capped at the fee.
+    # 只肯退我 was rejected as a trigger: it also appears in pawnshop-sold-my-camera.
+    (("原始檔全沒了", "不可能重來", "硬碟壞掉"),
+     ("因可歸責於債務人之事由，致給付不能者，債權人得請求賠償損害",
+      "債權人於有第二百二十六條之情形時，得解除其契約",
+      "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償")),
+
     # ── 保母帶小孩出事 (民法§535, §227) ──
     # 「一歲女兒送去保母家,一個月兩萬四,保母說小孩自己跌倒縫了三針,但監視器是她在
     # 滑手機」 returned §184/§191-2/§193 and — for a child who needed three stitches —
