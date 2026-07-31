@@ -206,6 +206,30 @@ _PLAIN_PERIOD = ("以內", "期間", "逾期")
 _NOT_A_DEADLINE = ("審閱",)
 
 
+# Things a person says they already have. The first rung used to tell everyone
+# 「把事實與證據整理成一頁時間軸」 whether they had lost a moving box or a wedding
+# video; naming what THEY said they hold is the difference between a checklist and
+# an instruction. Nothing here is suggested — a word only appears if the user typed it.
+_EVIDENCE_WORDS = (
+    "合約", "契約", "收據", "發票", "匯款紀錄", "匯款單", "轉帳紀錄", "對話紀錄",
+    "LINE", "簡訊", "email", "照片", "影片", "監視器", "錄音", "診斷證明", "估價單",
+    "報價單", "行照", "名片", "會單", "存證信函", "出勤紀錄", "薪資單", "送洗單",
+    "行程表", "裝箱照片", "清單", "字條", "保固卡", "維修紀錄", "驗屋報告",
+)
+
+
+def _evidence_next_step(collected_facts: dict) -> str | None:
+    """The first rung's instruction, naming the documents the user said they have."""
+    said = " ".join(str(v) for v in (collected_facts or {}).values() if v)
+    have = [w for w in _EVIDENCE_WORDS if w in said]
+    if not have:
+        return None
+    return (
+        f"先把你提到的{'、'.join(have[:4])}掃描或截圖存檔,依發生時間排成一頁,"
+        "後面每一步都用得到"
+    )
+
+
 def _deadline_sentences(retrieved) -> list[tuple[str, str]]:
     """(article ref, verbatim sentence) for every retrieved article whose own text
     states a period. Nothing is paraphrased and nothing is computed. Sentences
@@ -275,7 +299,8 @@ def build_generic_ladder(collected_facts: dict, retrieved=None) -> SolutionLadde
         Rung(
             "evidence", "蒐證與書面紀錄",
             "保存契約/對話紀錄/單據/照片,整理時間軸", (),
-            "免費", "隨時", "低", "把事實與證據整理成一頁時間軸",
+            "免費", "隨時", "低",
+            _evidence_next_step(collected_facts) or "把事實與證據整理成一頁時間軸",
             False, bool(retrieved) and deadline is None,
         ),
         Rung(

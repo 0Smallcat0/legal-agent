@@ -40,6 +40,26 @@ _11_1 = _Article(
 _226 = _Article("民法", "第226條", "因可歸責於債務人之事由，致給付不能者，債權人得請求賠償損害。")
 
 
+def test_the_first_step_names_what_the_user_said_they_have():
+    """Every session used to open with 「把事實與證據整理成一頁時間軸」, whether the
+    reader had lost a moving box or a wedding video."""
+    step = build_generic_ladder(
+        {"problem": "我花六萬八請婚攝,合約寫明三個月交件,我有匯款紀錄跟LINE對話"}, [_949]
+    ).rungs
+    evidence = next(r for r in step if r.key == "evidence")
+    assert "合約" in evidence.next_step
+    assert "匯款紀錄" in evidence.next_step
+
+
+def test_the_first_step_falls_back_when_the_user_named_nothing():
+    """Nothing is suggested — a document is named only if the user typed it."""
+    evidence = next(
+        r for r in build_generic_ladder({"problem": "鄰居很吵"}, [_949]).rungs
+        if r.key == "evidence"
+    )
+    assert evidence.next_step == "把事實與證據整理成一頁時間軸"
+
+
 def test_a_review_period_is_not_offered_as_a_deadline():
     """消保法§11-1's thirty days is a period the SELLER owes, not one the reader can
     miss. It was heading the list for the 冷氣修四次 session."""
