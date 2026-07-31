@@ -917,6 +917,28 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
       "因可歸責於承攬人之事由，致工作發生瑕疵者，定作人除依前二條之規定，請求修補或解除契約，或請求減少報酬外，並得請求損害賠償",
       "承攬人完成工作，應使其具備約定之品質及無減少或滅失價值或不適於通常或約定使用之瑕疵")),
 
+    # ── 公同共有的地,一個人就租出去了 (民法§828, §821, §179) ──
+    # 「爺爺留下的農地登記還是爺爺的名字,四兄弟還沒分割,大哥私下把整塊地租給人家種果樹,
+    # 一年收十二萬,契約只有他一個人簽,租金也全進他口袋」 returned §824, §1164, §826,
+    # §1166, §824-1, §767, §823, §818 — every one about PARTITION, because 「分割」 and
+    # 「過世」 fired the 分割 and 繼承 rows. Nothing addressed whether the lease binds
+    # the others, which is the whole question. §828 III (公同共有物之處分應得全體同意)
+    # was reachable — the stored jointly-owned-cannot-rent session gets it — but no row
+    # fires on THIS man's words, cause (c). This is that session's retrospective twin:
+    # there the question was whether two of three MAY rent; here one already has.
+    # §821 limits what a single co-owner may demand back, and §179 is how the rent
+    # already in the brother's pocket comes back.
+    # Measured this round, and it is a ceiling worth writing down: promotion can only
+    # move an article that is ALREADY in the candidate pool. All three phrases sort to
+    # positions 0-2 of the expansion list, yet only §828 arrives; §821 and §179 never
+    # enter the pool for this query, and splitting the row into three (one phrase each)
+    # changed neither window. So the case stays at 1/3 with the reason recorded rather
+    # than with its expectations trimmed to match what retrieval happens to deliver.
+    (("租給人家", "契約只有他一個人簽", "收租金"),
+     ("公同共有物之處分及其他之權利行使，除法律另有規定外，應得公同共有人全體之同意",
+      "各共有人對於第三人，得就共有物之全部為本於所有權之請求。但回復共有物之請求，僅得為共有人全體之利益為之",
+      "無法律上之原因而受利益，致他人受損害者，應返還其利益")),
+
     # ── 業務簽的約,公司說他沒有權限 (民法§169, §107, §110) ──
     # 「跟系統公司的業務簽維護合約付了十二萬訂金,合約有他簽名跟公司小章,三個月後公司說
     # 那個業務早就離職了,他沒有權限簽這種約,叫我自己去找他。當初是我打公司總機轉分機
