@@ -377,6 +377,17 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **Tried and not shipped: ordering the model to walk the list.** If the answer cites
+  only 20 of 56 retrieved articles, the obvious move is to make the coverage clause
+  explicit — number every article in the model input (`[3/8]`, with the count stated
+  up front) and tell it to review each one and say what it does for this case. Result:
+  **16/56 cited, down from 20**, and expected articles reaching the answer went
+  **9/24 → 8/24**. A checklist did not widen the 8B model; if anything it narrowed it.
+  Reverted. Two caveats kept in the open: the run was on a degraded machine (the local
+  model was generating at 1.24 tokens/sec and one session needed a retry after a
+  three-minute timeout), so the exact figures are noisy; and golden could not finish at
+  all under those timeouts, which by the project's own rule is on its own sufficient
+  reason not to ship a SYSTEM_PROMPT change.
 - **The model, not retrieval, is what keeps articles off the page.** Across eight
   sessions the answer cites **20 of the 56** articles retrieved, and in five of them
   only nought to two. Retrieval had already found what the case turns on: for six of
