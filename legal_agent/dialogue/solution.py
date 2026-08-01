@@ -57,6 +57,7 @@ class SolutionLadder:
     rungs: list[Rung]
     note: str
     letter_template: str | None = None
+    also_retrieved: str | None = None
     specific_venue_suspected: bool = False
 
     def render(self) -> str:
@@ -78,6 +79,9 @@ class SolutionLadder:
         # Measured: the 住宅噪音 rung said 「見 letter_template」 and nothing ever
         # printed it — render() left it out and neither run.py nor app.py picked it
         # up. A reader was pointed at a template that did not exist on the page.
+        if self.also_retrieved:
+            lines.append("")
+            lines.append(self.also_retrieved)
         if self.letter_template:
             lines.append("")
             lines.append(self.letter_template)
@@ -233,6 +237,30 @@ def _evidence_next_step(collected_facts: dict) -> str | None:
     return (
         f"先把你提到的{'、'.join(have[:4])}掃描或截圖存檔,依發生時間排成一頁,"
         "後面每一步都用得到"
+    )
+
+
+def _also_retrieved_block(retrieved, cited) -> str | None:
+    """Articles retrieval found that the ANSWER never mentioned, quoted verbatim.
+
+    Measured: the answer cites 20 of 56 retrieved articles across eight sessions, and
+    two attempts to make the 8B model cite more both backfired — ranking the tail by
+    the reader's wording cost expected articles (9→7), and ordering it to walk a
+    numbered list cut citations further (20/56 → 16/56). So the fix is not to argue
+    with the model: the articles it skipped are printed for the reader instead."""
+    if not retrieved or not cited:
+        return None
+    wanted = {(sid, ano) for sid, ano in cited}
+    missing = [s for s in retrieved if (s.statute_id, s.article_no) not in wanted]
+    if not missing:
+        return None
+    body = "\n".join(
+        f"・{s.statute_id}{s.article_no}:{(s.content or '').splitlines()[0]}"
+        for s in missing[:5]
+    )
+    return (
+        "※ 以下條文有檢索到,但上面的分析沒有提到——逐字列出供你自己判斷是否相關"
+        f"(共 {len(missing)} 條,列出前 {min(len(missing), 5)} 條):\n{body}"
     )
 
 
@@ -402,6 +430,7 @@ def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None) -> S
         rungs=rungs,
         note=GENERIC_NOTE,
         letter_template=_generic_letter(retrieved, collected_facts),
+        also_retrieved=_also_retrieved_block(retrieved, cited),
     )
 
 

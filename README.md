@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-421%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-423%20passing-brightgreen)
 
 Legal Q&A where **every citation is machine-verified** against a time-versioned
 statute corpus — and the verifier is itself graded by injecting errors:
@@ -34,6 +34,7 @@ python app.py     # web demo — builds the corpus on first run, no API key
 | first reference judgment states an awarded sum | **55/60 sessions** |
 | first action names the reader's own documents | **83/168 sessions** |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** |
+| articles on the page the model skipped | **8 → 17 of 21 expected** |
 
 Three things you can lift: a pure-code
 [citation verifier](legal_agent/anti_hallucination/verifier.py) ·

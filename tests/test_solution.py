@@ -40,6 +40,26 @@ _11_1 = _Article(
 _226 = _Article("民法", "第226條", "因可歸責於債務人之事由，致給付不能者，債權人得請求賠償損害。")
 
 
+def test_articles_the_answer_skipped_are_shown_to_the_reader():
+    """The answer cites 20 of 56 retrieved articles and two attempts to make the 8B
+    model cite more both backfired. The ones it skipped are printed instead."""
+    ladder = build_generic_ladder(
+        {"problem": "我買到贓車"}, [_949, _805], cited=[("民法", "第805條")]
+    )
+    assert ladder.also_retrieved
+    assert "民法第949條" in ladder.also_retrieved
+    assert "自喪失占有之時起二年以內" in ladder.also_retrieved   # verbatim
+    assert "民法第805條" not in ladder.also_retrieved            # already discussed
+    assert ladder.also_retrieved in ladder.render()
+
+
+def test_no_skipped_block_when_the_answer_cited_everything():
+    ladder = build_generic_ladder(
+        {"problem": "我買到贓車"}, [_949], cited=[("民法", "第949條")]
+    )
+    assert ladder.also_retrieved is None
+
+
 def test_the_letter_quotes_what_the_answer_cited_not_what_headed_the_window():
     """買到贓車's letter quoted §950/§805/§807 — 遺失物拾得 — because they head the
     retrieval window. Retrieval order cannot tell whose right an article states; the
