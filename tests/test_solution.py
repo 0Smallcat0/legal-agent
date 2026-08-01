@@ -53,6 +53,19 @@ def test_articles_the_answer_skipped_are_shown_to_the_reader():
     assert ladder.also_retrieved in ladder.render()
 
 
+def test_an_article_with_a_period_leads_the_skipped_list():
+    """Read end to end, the 買到贓車 page claimed his good faith defeated the claim and
+    printed §949 — 二年以內…得請求回復其物 — three lines below, in the deadline rung
+    only: §949 sat sixth in retrieval order and the list showed five."""
+    window = [_11_1, _226, _805, _949]
+    block = build_generic_ladder(
+        {"problem": "我買到贓車"}, window, cited=[("民法", "第226條")]
+    ).also_retrieved
+    first = block.split("・")[1]
+    assert "民法第805條" in first or "民法第949條" in first
+    assert "民法第949條" in block
+
+
 def test_no_skipped_block_when_the_answer_cited_everything():
     ladder = build_generic_ladder(
         {"problem": "我買到贓車"}, [_949], cited=[("民法", "第949條")]
