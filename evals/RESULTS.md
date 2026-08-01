@@ -377,6 +377,18 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **Read end to end, the page contradicted itself.** The first full read of a finished
+  page — answer, ladder, deadline rung, letter, skipped-articles block, judgments,
+  2,694 characters — found 買到贓車 saying 「對方的說法…站不住腳,因為你已經將行照過戶,
+  且買賣雙方均有善意」 and then printing 民法§949 three lines below: 原占有人自喪失占有
+  之時起二年以內,得向善意受讓之現占有人請求回復其物. Good faith does not defeat §949;
+  the analysis was backwards and the page's own ladder said so. The model cannot be
+  argued out of this (two measured attempts), but §949 was reaching the reader ONCE,
+  inside the deadline rung, and was missing from the skipped-articles list because it
+  sat sixth in retrieval order and the list showed five. Articles that state a period
+  now lead that list — they are the ones a reader can be caught by. §949 now appears
+  in both places, and expected articles visible on the page went **17 → 18 of 21**,
+  with 買到贓車 reaching 3/3.
 - **What the model skipped is now printed for the reader.** Two attempts to widen the
   8B model's citations failed (below), so the ceiling was routed around instead of
   argued with: everything retrieval found and the answer never mentioned is listed

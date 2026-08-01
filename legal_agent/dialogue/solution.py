@@ -254,6 +254,11 @@ def _also_retrieved_block(retrieved, cited) -> str | None:
     missing = [s for s in retrieved if (s.statute_id, s.article_no) not in wanted]
     if not missing:
         return None
+    # An article that states a period is one the reader can be caught by, so it leads.
+    # Read end to end, the 買到贓車 page said his good faith defeated the claim and then
+    # printed §949 — 原占有人…二年以內…得請求回復其物 — three lines below, in the
+    # deadline rung only: §949 sat sixth in retrieval order and this list showed five.
+    missing.sort(key=lambda s: not _deadline_sentences([s]))
     body = "\n".join(
         f"・{s.statute_id}{s.article_no}:{(s.content or '').splitlines()[0]}"
         for s in missing[:5]
