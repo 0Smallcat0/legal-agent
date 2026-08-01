@@ -377,6 +377,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   them. Second time this shape has been measured (the first was the 「修了幾次」 row),
   and it is now the standing rule: a trigger earns its seat through the QUERY it
   expands, not the articles it names, so nothing is narrowed without an A/B.
+- **What the model skipped is now printed for the reader.** Two attempts to widen the
+  8B model's citations failed (below), so the ceiling was routed around instead of
+  argued with: everything retrieval found and the answer never mentioned is listed
+  under the ladder, verbatim, labelled as not-yet-discussed and left for the reader to
+  judge. Measured across the saved sessions: expected articles VISIBLE on the page
+  went **8 → 17 of 21**. 業務簽的約 went from **0 to 2** — that page previously showed
+  nothing the case turns on. Pure Stage 4 code, no prompt and no gate touched.
 - **Tried and not shipped: ordering the model to walk the list.** If the answer cites
   only 20 of 56 retrieved articles, the obvious move is to make the coverage clause
   explicit — number every article in the model input (`[3/8]`, with the count stated
