@@ -1,0 +1,50 @@
+name: Bug in a deterministic layer
+description: The verifier, retrieval filters, 主文 parsing, the ladder, the corpus build, or the demo — anything that is code rather than model output.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For a wrong or off-topic legal answer, use the **Wrong answer** template
+        instead — that is model and retrieval behaviour, and it needs different
+        information.
+
+        These layers are deterministic, so a report with the input in it is
+        usually reproducible on the first try.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: Include the command or the tab, and the full traceback if there was one.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Smallest input that shows it. A failing snippet against a fresh `ensure_corpus()` DB is ideal.
+      render: shell
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: Python version and OS
+      placeholder: 3.12 / Windows 11
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before filing
+      options:
+        - label: "`python -m pytest -q` passes on my checkout (so this is not a broken install)"
+          required: false
+        - label: I am on the latest `main`
+          required: false

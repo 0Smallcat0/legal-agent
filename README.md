@@ -87,6 +87,11 @@ Each is self-contained, with no Taiwan-specific logic worth speaking of:
 
 [SPEC.md](SPEC.md) design · [RESULTS.md](evals/RESULTS.md) every number, the
 method behind it, and the ones that went down ·
+[CONTRIBUTING.md](CONTRIBUTING.md) the bar a change has to clear ·
 [DEPLOY_SPACES.md](docs/DEPLOY_SPACES.md) hosting
+
+**Found a wrong answer?** That is the most useful thing you can send — the
+[issue template](.github/ISSUE_TEMPLATE/wrong-answer.yml) asks for the wording
+you actually typed, which is how all 168 stored regression sessions began.
 
 Personal engineering experiment, **not legal advice**. [MIT](LICENSE).
