@@ -1,7 +1,43 @@
 # Measured results
 
+> **This file is long on purpose, and most of it is failures.** If you read one
+> screen, read this one.
+>
+> **Three numbers that matter.**
+> 1. **10,435/10,435 seeded defects caught, 0/2,560 false positives.** Not the
+>    model's accuracy — the *verifier's* recall, measured by planting errors in
+>    otherwise-correct answers over every article in the corpus. A guardrail
+>    with no number on it is a wish.
+> 2. **349/356 retrieval recall** on 168 real problems, in the wording people
+>    actually use rather than in legal vocabulary.
+> 3. **100% pass+partial (73% strict)** statute coverage on a fixed 30-case
+>    golden set, re-run after every change.
+>
+> **Three things that looked obviously right and lost.** These are the reason to
+> trust the three above:
+> 1. **Widening the reserved retrieval seats.** Four seats measured identical to
+>    three, five seats measured *worse* (107/113 against 111/113). Measured
+>    twice, on 22 sessions and again on 47. Not shipped.
+> 2. **Telling the model to walk the retrieved list.** Numbering every article in
+>    the prompt and demanding it address each one took citations from **20 to 16
+>    of 56**, and expected articles reaching the answer from 9/24 to 8/24. A
+>    checklist narrowed the 8B model instead of widening it. Reverted.
+> 3. **Ranking the un-cited remainder by the reader's own words.** Character
+>    bigram overlap with the session text took the letter's 依據 lines from
+>    **9 to 7**. Lexical similarity to a lay description does not indicate which
+>    article governs. Reverted, and the helper deleted rather than left behind a
+>    flag.
+>
+> **The two limits worth knowing before trusting any of it.** The honesty tier
+> reads a BM25 score that the project's own vocabulary table inflates, so it
+> measures how much of my lexicon fired rather than how well the corpus covers
+> the question. And **precision has no harness at all**: every measure here asks
+> whether the right article reached the window, never what else the reader had
+> to wade through.
+
 Local, zero paid API. Models via Ollama on an RTX 4060 (8 GB). Corpus: 2,560
-articles across 11 everyday-law statutes + 1,367 harvested judgments.
+articles across 11 everyday-law statutes + 1,367 harvested judgments (386 of
+them shipped in the repo — see `corpus/README.md`).
 Last full run: 2026-07-25.
 
 **Closed-world caveat**: "not traceable to the corpus" is exactly the promise the
@@ -14,7 +50,7 @@ system makes — it never means "this statute does not exist."
 | seeded defects caught, every article | **10,435/10,435 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
-| wrong-premise detection | **30/30 (100%)** | same run |
+| wrong-premise detection | **32/32 (100%)** | same run |
 | retrieval recall, real user wording | **349/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
@@ -764,6 +800,32 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   inheritance case its §1141). Two of the seven were caught in the same run that
   introduced them, which is what the growing session set buys; every added row
   ships with the counter-example as a test.
+- **Shipping the judgments cost four sessions their headline number, and the
+  number moved in the published direction.** A fresh clone used to get 2,560
+  statutes and ZERO judgments — `db/*.db` is gitignored and the 司法院 API serves
+  only 00:00-06:00, one day at a time, seven days late — so the README's own
+  screenshot was the one thing nobody but me could reproduce. 386 of the 1,367
+  now ship, redacted to the header and the 主文, which is measured LOSSLESS for
+  what the page renders (`citation()` and `awards()` identical on all 386) and
+  takes 5.9 MB down to 0.27 MB.
+  The cost is real and is the reason this entry exists. 31 of the 386 name a
+  party inside a 主文 sentence and ship with their header alone, so `awards()`
+  goes silent on them. Re-measured over 60 stored sessions with a fresh harness:
+  first-listed judgment carries a sum **54/60 on the full local corpus, 50/60 on
+  the shipped one**. The published row moves to 50/60 — what a cloner actually
+  gets — rather than keeping the number only I can reproduce. (The previously
+  published 55/60 came from a hand count; this harness scores the full corpus at
+  54/60, so one case of the drop is harness difference, not redaction.)
+  Two alternatives were rejected on measurement, not taste. Masking the names
+  (陳○○) keeps all 386 and all 239 articles, and makes the 主文 no longer
+  verbatim — the rule the entire corpus rests on. Dropping the whole judgment
+  costs **19 of the 239 covered articles**, 勞基§24 and 民法§226/§194/§482 among
+  them, to remove names that withholding the 主文 removes anyway.
+  Worth recording separately: the detector reads the judgment's OWN party block
+  rather than surname shapes. A surname heuristic flagged **96** of 386, because
+  「連帶給付」 and 「平方公尺」 are surname-shaped; ground truth flags **31**. The
+  same discipline as everywhere else here — the data says who the parties are,
+  so do not guess.
 - **The ablation row is stale** (see the table).
 
 ## Measured, then NOT shipped
