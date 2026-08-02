@@ -26,8 +26,21 @@ Because output is consumed only by the owner (not distributed to third parties):
 
 ### 0.4 Build tool vs. runtime model (do not conflate)
 - **Build/dev tool**: Claude Code / Codex — used to *write* this system.
-- **Runtime reasoning model**: **Anthropic API** (Claude) — called by the agent at inference time to do legal reasoning.
-- These are different layers. The dev tool is not a runtime dependency. Runtime requires its own Anthropic API key (usage-billed; personal-use volume is negligible).
+- **Runtime reasoning model**: called by the agent at inference time to do legal reasoning.
+- These are different layers. The dev tool is not a runtime dependency.
+
+> **As built, this decision changed.** The spec assumed a paid Anthropic API key
+> at runtime. The implementation puts the model behind a `str -> str` seam with
+> three interchangeable backends — `manual` (prints the assembled prompt to paste
+> into any chat; no key, no model), `ollama` (local, free; the default for real
+> use), and `anthropic` (paid). Selected in
+> [`legal_agent/config.py`](legal_agent/config.py).
+>
+> Two consequences the original spec did not anticipate, both good. The whole
+> pipeline is testable against a fake model — no network and no key, which is how
+> all 433 tests run. And everything deterministic (retrieval, the verifier, the
+> honesty tier, deadline quotes, the action ladder, the 存證信函 template) works
+> with **no model at all**, so the hosted demo needs neither GPU nor key.
 
 ---
 
