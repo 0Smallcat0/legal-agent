@@ -1,44 +1,109 @@
 # Deploy the demo to Hugging Face Spaces (free)
 
-The Gradio demo (`app.py`) is designed for the **free CPU tier**: the corpus is
-built at startup, the 引用查核/檢索 tabs are pure Python (no model), and the
-完整流程 tab uses the paste-back "manual" flow — no API key, no GPU, no Ollama
-needed on the Space. (The one-click Ollama button simply reports "not
-available" there; it works when running `python app.py` locally.)
+**Live**: https://huggingface.co/spaces/NoirOAO/legal-agent-demo
 
-## Steps (one-time, ~10 minutes)
+The Gradio demo (`app.py`) needs no GPU, no API key, and no Ollama. The corpus
+is built at startup from the JSON files in `corpus/`, the 引用查核 and 檢索 tabs
+are pure Python, and the 完整流程 tab falls back to a scripted checklist when no
+model is reachable. (The one-click Ollama button reports "not available" there;
+it works when running `python app.py` locally.)
 
-1. Create a free account at https://huggingface.co → **New Space**
-   - Space name: `legal-agent-demo` (anything works)
-   - SDK: **Gradio** · Hardware: **CPU basic (free)** · Visibility: Public
-2. Add Spaces metadata at the TOP of the Space's `README.md`
-   (the Space UI creates this file; keep the repo's own README out of it):
+## Two things that make this not a plain `git push`
 
-   ```yaml
-   ---
-   title: Legal Agent — 防幻覺五閘門 Demo
-   emoji: ⚖️
-   colorFrom: indigo
-   colorTo: gray
-   sdk: gradio
-   app_file: app.py
-   pinned: false
-   ---
-   ```
+Both were hit in practice, and both are why this page is longer than "push the
+repo".
 
-3. Push this repository's files to the Space (either `git remote add space
-   https://huggingface.co/spaces/<user>/legal-agent-demo` + `git push space
-   main`, or drag-and-drop `app.py`, `requirements.txt`, `legal_agent/`,
-   `corpus/`, `evals/` in the web UI).
-4. The Space builds from `requirements.txt` and serves `app.py`. First build
-   takes a few minutes.
+**1. The Hub rejects committed binaries.** `docs/demo_web.png` (270 KB) sits in
+five commits of this repository's history, and the Hub's pre-receive hook
+refuses it, pointing at [Xet storage](https://huggingface.co/docs/hub/xet).
+Deleting the current copy does not help — it is the history that is checked.
+
+**2. The free Gradio tier is ZeroGPU, not CPU basic.** cpu-basic is now behind
+PRO. ZeroGPU refuses to start a Space that declares no `@spaces.GPU` function:
+
+```
+RUNTIME_ERROR | No @spaces.GPU function detected during startup
+```
+
+Nothing in this project touches a GPU, so the deployment branch carries a
+guarded shim — a decorated function nothing calls — rather than putting a fake
+GPU dependency on `main`.
+
+## The deployment branch
+
+`hf-space` is an **orphan** branch: one commit, no history, no binaries. That
+sidesteps the Xet requirement entirely instead of adding LFS for a 270 KB file.
+It differs from `main` in exactly three ways:
+
+1. `README.md` carries the Spaces YAML frontmatter (`main`'s README stays clean,
+   since GitHub renders that block as noise).
+2. `docs/demo_web.png` is deleted and the README `<img>` points at the GitHub
+   raw URL, so the screenshot still renders on the Space page.
+3. `app.py` carries the ZeroGPU shim.
+
+The frontmatter pins the gradio the app is developed against — leaving
+`sdk_version` off lets the Hub pick a different major:
+
+```yaml
+---
+title: Legal Agent Demo
+emoji: ⚖️
+colorFrom: indigo
+colorTo: gray
+sdk: gradio
+sdk_version: 6.20.0
+app_file: app.py
+pinned: false
+license: mit
+short_description: Legal RAG with a citation verifier graded at 10,435/10,435.
+---
+```
+
+## Setting up the remote, once
+
+```bash
+git remote add space https://huggingface.co/spaces/<user>/<space-name>
+```
+
+Pushing needs a **write token** from https://huggingface.co/settings/tokens,
+entered as the *password*. Hugging Face
+[stopped accepting account passwords over git](https://huggingface.co/blog/password-git-deprecation),
+and the resulting error is easy to misread as a wrong password rather than as
+the wrong *kind* of credential.
+
+## Updating the Space after a change to `main`
+
+```bash
+git checkout hf-space
+git checkout main -- .
+git rm --cached docs/demo_web.png && rm -f docs/demo_web.png
+```
+
+Re-apply the three differences above where `git checkout main -- .` overwrote
+them, then:
+
+```bash
+git add -A && git commit -m "sync with main"
+git push space hf-space:main
+```
+
+`--force` is needed only for the very first push, which replaces the stub commit
+the Space wizard creates.
+
+## Verifying a deploy without opening a browser
+
+```bash
+curl -s https://huggingface.co/api/spaces/<user>/<space-name> | python -c "import json,sys; r=json.load(sys.stdin)['runtime']; print(r['stage'], r.get('errorMessage') or '')"
+```
+
+`BUILDING` → `APP_STARTING` → `RUNNING` is the healthy sequence; anything ending
+in `_ERROR` carries its reason on the same line.
 
 ## Résumé link
 
-Put the Space URL next to the GitHub link, e.g.
-
 > Legal Agent — retrieval-first anti-hallucination pipeline
-> (GitHub: github.com/0Smallcat0/legal-agent · Live demo: huggingface.co/spaces/…)
+> (GitHub: github.com/0Smallcat0/legal-agent · Live demo:
+> huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
-Reviewers can reproduce the README's hallucination-catch story in ~30 seconds
-via the 引用查核 tab's pre-filled broken answer.
+Reviewers can reproduce the README's hallucination-catch story in ~30 seconds via
+the 引用查核 tab's pre-filled broken answer.
