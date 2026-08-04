@@ -22,6 +22,11 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
       check is actually enforced (SQLite leaves it OFF by default).
     - ``row_factory = sqlite3.Row`` so callers read columns by name.
     """
+    # The default DB now lives in a per-user data directory that does not exist
+    # on a fresh install, and sqlite3 does not create it — it raises
+    # 「unable to open database file」, which reads like a permission problem.
+    if str(db_path) != ":memory:":
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON;")

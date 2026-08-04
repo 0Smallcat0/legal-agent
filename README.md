@@ -27,8 +27,26 @@ the 引用查核 tab ships a pre-filled broken answer, so the whole story takes 
 thirty seconds to check for yourself.
 
 ```bash
-pip install -r requirements.txt   # no torch, no GPU
-python app.py                     # web demo — builds the corpus on first run
+pip install .                     # no torch, no GPU; the corpus ships inside
+```
+
+```python
+import legal_agent
+
+for r in legal_agent.verify("依社會秩序維護法第72條,深夜喧嘩可處新臺幣六萬元以下罰鍰。"):
+    print(r.flagged, r.reason)
+# True  主張金額 [60000] 元未見於條文(條文金額 [10000])
+```
+
+That is the whole setup. The database builds itself from the corpus inside the
+package on first call — no clone, no key, no model, no network. `verify` is pure
+Python, so it cannot be argued out of a verdict. Pass `as_of="2024-06-01"` to
+check the law as it stood on a date rather than today.
+
+To run the demo from a clone instead:
+
+```bash
+pip install .[demo] && python app.py
 ```
 
 The worked example is Taiwan law: 2,560 articles across 11 everyday statutes and
