@@ -32,6 +32,7 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 
 from legal_agent.anti_hallucination.verifier import (
+    _ALIASES,
     _amounts,
     _parse_number,
     _period_label,
@@ -297,6 +298,27 @@ def run_mutation_test(
     outcomes.append(_judge(
         "fake_statute", "台灣安寧保障法第3條", _FAKE_ANSWER, expect_flag=True, conn=conn,
     ))
+
+    # alias_typo — the blind spot the live demo exposed on 2026-08-04. An alias
+    # that is a SUFFIX of its canonical name (大廈管理條例 ⊂ 公寓大廈管理條例)
+    # used to be matched as a suffix, so misspelling the part the alias omits
+    # resolved the invented name into the real statute and passed all three
+    # axes. One case per suffix-shaped alias, corrupting the omitted prefix.
+    for short, canonical in sorted(_ALIASES.items()):
+        if short == canonical or not canonical.endswith(short):
+            continue                   # 刑法/勞基法-style abbreviations, not suffixes
+        prefix = canonical[: -len(short)]
+        corrupted = prefix[:-1] + "甲" + short          # 公寓… -> 公甲…
+        article = conn.execute(
+            "SELECT article_no FROM statutes WHERE statute_id = ? "
+            "AND effective_to IS NULL ORDER BY article_no LIMIT 1", (canonical,),
+        ).fetchone()
+        if article is None:
+            continue
+        ref = f"{corrupted}{article[0]}"
+        outcomes.append(_judge(
+            "alias_typo", ref, f"依{ref}規定辦理。", expect_flag=True, conn=conn,
+        ))
 
     # subject_swap — semantic-axis cases: structurally perfect, wrong 主體.
     if semantic_llm is not None:

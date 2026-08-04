@@ -9,38 +9,21 @@ status line under the answer, not as the headline: the user came for the
 answer; the gates are why the answer can be trusted.
 
 Everything deterministic (retrieval, honesty tier, ladder, verbatim statutes)
-works with NO model at all, so the full consultation flow runs on HF Spaces
-free CPU with zero keys. A local Ollama, when present, both conducts the
-interview and writes the 分析研判 narrative.
+works with NO model at all, so the full consultation flow runs on the free
+Hugging Face tier with zero keys and no GPU. A local Ollama, when present, both
+conducts the interview and writes the 分析研判 narrative.
 
 Local:      python app.py
-HF Spaces:  push this repo with app.py at the root (sdk: gradio) — see
-            docs/DEPLOY_SPACES.md.
+HF Spaces:  live at huggingface.co/spaces/NoirOAO/legal-agent-demo. Deploying is
+            NOT a plain push of this repo — the Hub rejects the committed PNG
+            and the free tier's ZeroGPU refuses a Space with no @spaces.GPU
+            function. See docs/DEPLOY_SPACES.md for the branch that handles both.
 """
 from __future__ import annotations
 
 from html import escape
 
 import gradio as gr
-
-# ── ZeroGPU startup check ────────────────────────────────────────────────────
-# The free Gradio tier on Hugging Face runs on ZeroGPU, which refuses to serve a
-# Space that declares no @spaces.GPU function ("No @spaces.GPU function detected
-# during startup"). This project never touches a GPU — every deterministic layer
-# is pure Python and the model sits behind an HTTP seam — so the check is
-# satisfied by a function nothing calls. Guarded, because `spaces` exists only on
-# that host and the same file has to keep running locally.
-# This shim lives on the deployment branch only; `main` stays GPU-free.
-try:
-    import spaces
-
-    @spaces.GPU(duration=1)
-    def _zerogpu_probe() -> str:
-        """Never called. Present only to satisfy ZeroGPU's startup check."""
-        return "ok"
-
-except ImportError:            # local run, or any non-ZeroGPU host
-    pass
 
 from legal_agent import config
 from legal_agent.anti_hallucination.honesty import grade_honesty
@@ -247,7 +230,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">238 項測試通過 · 植入錯誤抓取率 10,435/10,435(零誤報) · 1,367 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">433 項測試通過 · 植入錯誤抓取率 10,437/10,437(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -577,9 +560,9 @@ def compare_timeslice(query: str) -> str:
 # ── 評測結果 ─────────────────────────────────────────────────────────────────
 STATS = """
 <div class="statgrid">
-  <div class="stat"><div class="num">10,435/10,435</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
+  <div class="stat"><div class="num">10,437/10,437</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
   <div class="stat"><div class="num">96%</div><div class="lbl">法條涵蓋率(含部分命中)</div></div>
-  <div class="stat"><div class="num">1,367</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
+  <div class="stat"><div class="num">386</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(25/25)</div></div>
   <div class="stat"><div class="num">0–5%</div><div class="lbl">裸模型引用可回溯率(對照組)</div></div>
 </div>

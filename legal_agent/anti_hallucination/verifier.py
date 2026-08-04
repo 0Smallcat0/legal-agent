@@ -266,7 +266,15 @@ def _known_ids(retrieved_context: list[Statute], conn: sqlite3.Connection | None
 # Everyday short names for corpus statutes. A model (and a person) writes 刑法,
 # not 中華民國刑法 — and the verifier used to answer 「corpus 查無此法源」 to a
 # perfectly correct citation. An alias may only point at an id that EXISTS in
-# the corpus, so this can never launder an invented statute into a real one.
+# the corpus.
+#
+# That rule is NOT sufficient on its own, and the comment here used to claim it
+# was ("this can never launder an invented statute into a real one"). Measured
+# false on the live demo, 2026-08-04: several aliases are SUFFIXES of their own
+# canonical name (大廈管理條例, 道路交通處罰條例), so a suffix test resolved the
+# invented 公寀大廈管理條例 into 公寓大廈管理條例 and passed it on all three
+# axes. The alias lookup is therefore whole-name equality after the sentence
+# particle — never a suffix test.
 _ALIASES = {
     "刑法": "中華民國刑法",
     "勞基法": "勞動基準法",
@@ -295,23 +303,30 @@ _LEADING_PARTICLES = ("依據", "根據", "依照", "按照", "參照", "違反"
                       "依", "按", "及", "與", "和", "另", "並", "或", "暨")
 
 
+def _strip_particle(name_run: str) -> str:
+    """The name without the prose particle glued to its front (依/按/及…)."""
+    for particle in _LEADING_PARTICLES:
+        if name_run.startswith(particle) and len(name_run) > len(particle):
+            return name_run[len(particle):]
+    return name_run
+
+
 def _resolve_id(name_run: str, known_ids: set[str]) -> str:
+    # A full corpus id may still be matched as a suffix: to end with the whole
+    # canonical name, the run has to spell every character of it correctly, so a
+    # typo inside the name cannot survive this test.
     matches = [kid for kid in known_ids if name_run.endswith(kid)]
     if matches:
         return max(matches, key=len)
-    alias_hits = [
-        canonical for short, canonical in _ALIASES.items()
-        if name_run.endswith(short) and canonical in known_ids
-    ]
-    if alias_hits:
-        return max(alias_hits, key=len)
-    # Unresolved: strip the sentence particle so the warning reads
+    # An alias is shorter than what it stands for, so the same test would accept
+    # anything ending in it — including a misspelling of the part it omits. It
+    # must therefore match the whole name. See the note above _ALIASES.
+    stripped = _strip_particle(name_run)
+    canonical = _ALIASES.get(stripped)
+    if canonical is not None and canonical in known_ids:
+        return canonical
+    # Unresolved: return the particle-stripped name so the warning reads
     # 「corpus 查無此法源:台灣安寧保障法第3條」 rather than 「…:依台灣安寧保障法第3條」.
-    stripped = name_run
-    for particle in _LEADING_PARTICLES:
-        if stripped.startswith(particle) and len(stripped) > len(particle):
-            stripped = stripped[len(particle):]
-            break
     return stripped
 
 

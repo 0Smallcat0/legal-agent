@@ -8,7 +8,7 @@ sdk_version: 6.20.0
 app_file: app.py
 pinned: false
 license: mit
-short_description: Legal RAG with a citation verifier graded at 10,435/10,435.
+short_description: Legal RAG with a citation verifier graded at 10,437/10,437.
 ---
 
 # Legal Agent
@@ -17,9 +17,10 @@ short_description: Legal RAG with a citation verifier graded at 10,435/10,435.
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 ![Tests](https://img.shields.io/badge/tests-433%20passing-brightgreen)
+[![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
-itself graded by planting errors in correct answers: 10,435/10,435 caught,
+itself graded by planting errors in correct answers: 10,437/10,437 caught,
 0 false positives.**
 
 The usual defence against a hallucinated citation is a better prompt. This one
@@ -33,6 +34,10 @@ Everything that must be right is decided by code, not by the model: retrieval,
 the citation check, the confidence tier, the deadline quotes, the action ladder.
 The model writes the prose. **The whole pipeline runs with no model at all**,
 which is also how it is tested — no network, no API key.
+
+**[Try it without installing anything](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)** —
+the 引用查核 tab ships a pre-filled broken answer, so the whole story takes about
+thirty seconds to check for yourself.
 
 ```bash
 pip install -r requirements.txt   # no torch, no GPU
@@ -56,7 +61,7 @@ must be right are not left to it.</sub>
 
 | | |
 |---|---|
-| seeded defects caught (whole corpus) | **10,435/10,435, 0 false positives** |
+| seeded defects caught (whole corpus) | **10,437/10,437, 0 false positives** |
 | statute coverage, 30-case golden set | **100% pass+partial** (73% strict) |
 | retrieval recall, real user wording | **349/356** |
 | honesty tier / wrong-premise detection | **84% / 100%** |
