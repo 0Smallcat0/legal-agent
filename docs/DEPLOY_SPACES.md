@@ -55,7 +55,7 @@ sdk_version: 6.20.0
 app_file: app.py
 pinned: false
 license: mit
-short_description: Legal RAG with a citation verifier graded at 10,435/10,435.
+short_description: Legal RAG with a citation verifier graded at 10,437/10,437.
 ---
 ```
 
@@ -81,6 +81,13 @@ git rm --cached docs/demo_web.png && rm -f docs/demo_web.png
 
 Re-apply the three differences above where `git checkout main -- .` overwrote
 them, then:
+
+> **Do not guard the shim re-apply on the string `spaces.GPU`.** That phrase now
+> appears in `main`'s own `app.py` docstring describing this requirement, so a
+> "skip if already present" check written that way matches the docstring, skips
+> the shim, and the branch ships without it — the Space then dies on
+> `No @spaces.GPU function detected`. Guard on `_zerogpu_probe`, which exists
+> only in the shim itself. This happened on 2026-08-04.
 
 ```bash
 git add -A && git commit -m "sync with main"
