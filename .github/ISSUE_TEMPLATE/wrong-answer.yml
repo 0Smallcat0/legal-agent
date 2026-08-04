@@ -1,0 +1,58 @@
+name: Wrong answer or off-topic articles
+description: A consultation where the retrieved articles or the answer were wrong. The most useful report you can file.
+labels: ["wrong-answer"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Every one of the 168 stored regression sessions started as a report like
+        this. What matters most is **the wording you actually typed** — not a
+        tidied-up legal summary of it. Half the defects found so far were a
+        retrieval row failing to fire on how a real person states the problem.
+
+        Please do not paste anything you would not want public: this repository
+        is public, and so is the issue.
+  - type: textarea
+    id: input
+    attributes:
+      label: What you typed, verbatim
+      description: Your own words, uncorrected. If you went through the intake questions, include those answers too.
+      placeholder: 退租三個月了房東還是不退押金，說要抵修繕費，但我搬走前有拍照
+    validations:
+      required: true
+  - type: textarea
+    id: got
+    attributes:
+      label: What came back
+      description: Paste the 法律明文 block and, if you can, the retrieval window printed under the answer.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Which article should have been there
+      description: If you know it, name it (e.g. 民法第455條). If you only know the answer felt wrong, say that — an unnamed miss is still a report worth having.
+    validations:
+      required: false
+  - type: dropdown
+    id: shape
+    attributes:
+      label: Which of these fits, if any
+      description: These are failure shapes already named in RESULTS.md. Guessing is fine.
+      options:
+        - The window answered the wrong question entirely
+        - The right articles were there but the answer ignored them
+        - The article the other side relies on was missing
+        - It agreed with a premise I had already ruled out
+        - An irrelevant statute took up most of the window
+        - Not sure
+    validations:
+      required: false
+  - type: input
+    id: backend
+    attributes:
+      label: Model backend
+      description: config.LLM_PROVIDER — manual, ollama (which model?), or anthropic.
+      placeholder: ollama / llama3.1:8b
+    validations:
+      required: false
