@@ -93,12 +93,244 @@ GENERIC_CHECKLIST: list[list[IntakeField]] = [
 ]
 
 
+# ── Per-domain checklists ────────────────────────────────────────────────────
+# Triage has classified rent / labor / consumer / traffic / family since corpus
+# v2, and every one of them was then handed the same four generic questions: the
+# classification was computed and thrown away, so a car-accident claim and an
+# unreturned deposit were asked the identical 「發生了什麼事?」.
+#
+# Each list below is built the way SPEC §3.2 says a checklist must be — from the
+# element-facts the governing articles actually require, decided in advance. The
+# `why` names the article an answer feeds, so a question that stops earning its
+# place becomes visible.
+
+RENT_CHECKLIST: list[list[IntakeField]] = [
+    [
+        IntakeField(
+            "rent_issue",
+            "租屋的問題是哪一種?(押金不退、修繕不處理、房東要提前收回、漲租、違約金、二房東)",
+            "分辨 租賃住宅條例§7(押金) / §10(修繕) / 民法§429 修繕義務",
+        ),
+        IntakeField(
+            "deposit_terms",
+            "月租多少?押金押了幾個月?有沒有書面租約?",
+            "租賃住宅條例§7 押金上限二個月;有無書面影響舉證",
+        ),
+    ],
+    [
+        IntakeField(
+            "landlord_claim",
+            "房東主張要扣什麼、金額多少?理由是什麼?",
+            "區分正常使用之折舊(不得扣)與可歸責損害",
+        ),
+        IntakeField(
+            "handover",
+            "點交時有沒有拍照或簽紀錄?搬離日期是哪天?",
+            "舉證責任 + 返還押金的起算日",
+        ),
+    ],
+    [
+        IntakeField(
+            "evidence",
+            "有沒有匯款紀錄、對話紀錄、照片?",
+            "各路徑的舉證",
+        ),
+        IntakeField(
+            "actions_taken",
+            "已經跟房東談過嗎?寄過存證信函或申請過調解嗎?",
+            "決定下一步升級",
+        ),
+    ],
+]
+
+LABOR_CHECKLIST: list[list[IntakeField]] = [
+    [
+        IntakeField(
+            "labor_issue",
+            "勞資問題是哪一種?(加班費、資遣費、欠薪、違法解僱、特休未休、職災)",
+            "分辨 勞基法§24(延長工時工資) / §16-17(資遣) / §11-12(終止) / §38(特休)",
+        ),
+        IntakeField(
+            "work_terms",
+            "薪資怎麼算(月薪/時薪、多少)?每天大約工作幾小時、一週幾天?",
+            "勞基法§24 加班費計算基礎與§30 正常工時",
+        ),
+    ],
+    [
+        IntakeField(
+            "employment_span",
+            "到職和離職(或現在)的日期?年資多久?",
+            "勞基法§17 資遣費年資計算、§38 特休天數",
+        ),
+        IntakeField(
+            "employer_reason",
+            "雇主給的理由或說法是什麼?(例:責任制、業務緊縮、你自願離職)",
+            "勞基法§84-1 需核備、§11 各款事由是否成立",
+        ),
+    ],
+    [
+        IntakeField(
+            "evidence",
+            "有沒有出勤紀錄、薪資單、勞動契約、對話紀錄?",
+            "勞基法§30 出勤紀錄由雇主保存,舉證有利勞方",
+        ),
+        IntakeField(
+            "actions_taken",
+            "申請過勞資爭議調解嗎?向勞工局申訴過嗎?",
+            "決定下一步升級",
+        ),
+    ],
+]
+
+CONSUMER_CHECKLIST: list[list[IntakeField]] = [
+    [
+        IntakeField(
+            "consumer_issue",
+            "消費問題是哪一種?(七日鑑賞期退貨、商品瑕疵、預付型會員、定型化契約、廣告不實)",
+            "分辨 消保法§19(通訊交易解除權) / 民法§354 物之瑕疵擔保",
+        ),
+        IntakeField(
+            "purchase_channel",
+            "在哪裡買的?(網購平台、實體店面)金額多少?",
+            "消保法§19 只適用通訊交易與訪問交易",
+        ),
+    ],
+    [
+        IntakeField(
+            "delivery_date",
+            "什麼時候收到商品或服務?",
+            "消保法§19 七日鑑賞期自收受起算 — 這題決定權利還在不在",
+        ),
+        IntakeField(
+            "seller_response",
+            "賣家怎麼回應?有沒有說不能退的理由?",
+            "消保法§19-1 合理例外情事、定型化契約條款是否無效",
+        ),
+    ],
+    [
+        IntakeField(
+            "evidence",
+            "有沒有訂單紀錄、對話截圖、商品照片?",
+            "各路徑的舉證",
+        ),
+        IntakeField(
+            "actions_taken",
+            "向平台或賣家申訴過嗎?打過1950或向消保官申訴嗎?",
+            "決定下一步升級",
+        ),
+    ],
+]
+
+TRAFFIC_CHECKLIST: list[list[IntakeField]] = [
+    [
+        IntakeField(
+            "injury_damage",
+            "是人受傷、車損,還是兩者都有?傷勢與修車金額大概多少?",
+            "民法§193(醫療/工作損失) / §195(慰撫金) / §196(物之毀損)",
+        ),
+        IntakeField(
+            "accident_date",
+            "事故發生在哪一天?",
+            "民法§197 侵權時效二年 — 這題決定還告不告得成",
+        ),
+    ],
+    [
+        IntakeField(
+            "fault",
+            "有沒有報警、做筆錄?拿到初判表或申請過鑑定嗎?雙方各自怎麼說?",
+            "民法§217 與有過失,決定求償折扣",
+        ),
+        IntakeField(
+            "insurance",
+            "雙方有沒有強制險?對方有沒有第三人責任險?聯絡過保險公司嗎?",
+            "強制險是人身傷害的第一順位,先於訴訟",
+        ),
+    ],
+    [
+        IntakeField(
+            "evidence",
+            "有沒有行車紀錄器、現場照片、醫療單據、修車估價單?",
+            "損害數額的舉證",
+        ),
+        IntakeField(
+            "actions_taken",
+            "談過和解嗎?申請過調解嗎?對方態度如何?",
+            "決定下一步升級",
+        ),
+    ],
+]
+
+FAMILY_CHECKLIST: list[list[IntakeField]] = [
+    [
+        IntakeField(
+            "family_issue",
+            "家事問題是哪一種?(離婚、未成年子女監護或會面、扶養費、遺產繼承、贍養費)",
+            "分辨 民法§1052(裁判離婚) / §1055(未成年子女) / §1114(扶養) / §1138 起(繼承)",
+        ),
+        IntakeField(
+            "relationship",
+            "雙方的關係與期間?(結婚幾年、被繼承人與你的關係)",
+            "身分關係決定適用哪一編",
+        ),
+    ],
+    [
+        IntakeField(
+            "family_timeline",
+            "關鍵時點是哪天?(分居起、被繼承人過世日、對方停止給付日)",
+            "民法§1174 拋棄繼承三個月、§1146 回復請求權時效",
+        ),
+        IntakeField(
+            "assets_children",
+            "有沒有未成年子女?有沒有財產或債務要處理?",
+            "民法§1055 子女最佳利益、§1030-1 剩餘財產分配",
+        ),
+    ],
+    [
+        IntakeField(
+            "evidence",
+            "有沒有戶籍謄本、財產清單、對話或轉帳紀錄?",
+            "各路徑的舉證",
+        ),
+        IntakeField(
+            "actions_taken",
+            "談過協議嗎?聲請過調解或訪視了嗎?",
+            "決定下一步升級",
+        ),
+    ],
+]
+
+# problem_type -> checklist. A type absent from here falls to GENERIC_CHECKLIST,
+# so adding a triage category can never dead-end a conversation.
+CHECKLISTS: dict[str, list[list[IntakeField]]] = {
+    "noise": NOISE_CHECKLIST,
+    "rent": RENT_CHECKLIST,
+    "labor": LABOR_CHECKLIST,
+    "consumer": CONSUMER_CHECKLIST,
+    "traffic": TRAFFIC_CHECKLIST,
+    "family": FAMILY_CHECKLIST,
+    "generic": GENERIC_CHECKLIST,
+}
+
+
+def domain_of(problem_type: str | None) -> str:
+    """The checklist key for a triage label.
+
+    Triage reports the finer types prefixed — 「other:rent」, not 「rent」 — and a
+    plain dict lookup on that silently missed, which is how five domains kept
+    getting the generic questionnaire after they had their own checklists.
+    """
+    key = (problem_type or "generic").split(":")[-1]
+    return key if key in CHECKLISTS else "generic"
+
+
+def checklist_for(problem_type: str | None) -> list[list[IntakeField]]:
+    """The checklist for a triage label, generic when it names no domain."""
+    return CHECKLISTS[domain_of(problem_type)]
+
+
 def _checklist(session_state) -> list[list[IntakeField]]:
-    """noise keeps its hand-designed checklist; everything else gets the
-    generic fallback (problem_type is duck-typed off the session state)."""
-    if getattr(session_state, "problem_type", None) == "noise":
-        return NOISE_CHECKLIST
-    return GENERIC_CHECKLIST
+    """The checklist for this session (problem_type is duck-typed off state)."""
+    return checklist_for(getattr(session_state, "problem_type", None))
 
 
 def next_questions(session_state) -> list[IntakeField]:
