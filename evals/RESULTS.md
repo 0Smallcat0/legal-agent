@@ -4,7 +4,7 @@
 > screen, read this one.
 >
 > **Three numbers that matter.**
-> 1. **10,435/10,435 seeded defects caught, 0/2,560 false positives.** Not the
+> 1. **10,437/10,437 seeded defects caught, 0/2,560 false positives.** Not the
 >    model's accuracy — the *verifier's* recall, measured by planting errors in
 >    otherwise-correct answers over every article in the corpus. A guardrail
 >    with no number on it is a wish.
@@ -47,7 +47,7 @@ system makes — it never means "this statute does not exist."
 
 | what | number | harness |
 |---|---|---|
-| seeded defects caught, every article | **10,435/10,435 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
+| seeded defects caught, every article | **10,437/10,437 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **32/32 (100%)** | same run |
@@ -826,6 +826,32 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   「連帶給付」 and 「平方公尺」 are surname-shaped; ground truth flags **31**. The
   same discipline as everywhere else here — the data says who the parties are,
   so do not guess.
+- **The live demo caught the verifier laundering an invented statute into a real
+  one — the fourth 0%→100% blind spot, and the first one a USER-FACING page
+  found rather than a mutation.** 2026-08-04, checking the deployed Space's
+  引用查核 tab against its own copy: the tab promises two flags on its sample
+  (an inflated amount, a typo'd statute name) and delivered one. 公寀大廈管理條例
+  第16條 — 公寀 is not a word — came back `exists ✓ 內容 ✓ 時效 ✓`.
+  Root cause was a comment that asserted safety instead of measuring it. The
+  alias table maps everyday short names onto corpus ids, and the guard was "an
+  alias may only point at an id that EXISTS in the corpus, so this can never
+  launder an invented statute into a real one." That is true only if the alias
+  is an *abbreviation*. Two of them are **suffixes of their own canonical name**
+  — 大廈管理條例 ⊂ 公寓大廈管理條例, 道路交通處罰條例 ⊂ 道路交通管理處罰條例 —
+  and the lookup was `name_run.endswith(short)`. Anything ending in the alias
+  resolved, so misspelling the part the alias omits was invisible: 公寀, 公宇,
+  公任 all became 公寓大廈管理條例 and passed all three axes.
+  Fix: alias lookup is whole-name equality after the sentence particle, never a
+  suffix test. Matching a *full* corpus id as a suffix is kept — to end with the
+  whole canonical name you have to spell every character of it, so a typo inside
+  cannot survive that test. Aliases still resolve (公寓大廈條例, 大廈管理條例,
+  刑法, 勞基法, 社維法, and the 違反/依/及 particles all re-verified).
+  New `alias_typo` mutation, one case per suffix-shaped alias, corrupting the
+  omitted prefix: **0 → 2/2**, whole corpus **10,437/10,437, 0/2,560 FP**.
+  Worth naming: three previous blind spots were found by inventing a harder
+  mutation; this one was found by reading the product page and checking whether
+  it did what it said. The mutation suite had no case for it because I wrote
+  both the guard and the exam from the same wrong assumption.
 - **The ablation row is stale** (see the table).
 
 ## Measured, then NOT shipped
