@@ -237,18 +237,31 @@ def test_no_retrieval_called_in_stages_1_2(monkeypatch):
     assert spy.call_count == 0                 # and retrieval was never called
 
 
-def test_non_noise_problem_reaches_ready_via_generic_flow():
+def test_non_noise_problem_reaches_ready_via_its_own_checklist():
     # corpus v2: a deposit dispute must NOT dead-end in the noise-only triage.
+    # It also must not be handed the four generic questions — triage knows this
+    # is a rent problem, so the rent checklist is what it gets.
     s = SessionState()
     r1, s = handle_turn(s, "退租時房東要扣我兩個月押金當違約金,合理嗎?")
     assert "噪音、漏水、占用空間" not in r1        # old noise-era phrasing is gone
-    _, s = handle_turn(s, "租屋押金糾紛,房東拒還押金")   # clarification -> generic intake
+    _, s = handle_turn(s, "租屋押金糾紛,房東拒還押金")   # clarification -> rent intake
     assert s.stage == Stage.INTAKE
-    assert "押金" in s.collected_facts["problem"]   # opening complaint preserved
-    _, s = handle_turn(s, "拿回押金")                 # goal
-    _, s = handle_turn(s, "上個月退租\n口頭要求被拒") # timeline + actions_taken
+    assert intake.domain_of(s.problem_type) == "rent"
+    # The opening complaint survives — under the rent checklist's own first
+    # field, not a hardcoded key. Preservation is the invariant; the key is not.
+    assert any("押金" in v for v in s.collected_facts.values())
+
+    for reply in ("月租8000押金16000,有書面租約", "說牆壁有釘孔要扣一萬",
+                  "退租當天有拍照,上個月底搬離", "有匯款紀錄和對話",
+                  "口頭要求被拒,還沒寄存證信函"):
+        _, s = handle_turn(s, reply)
     assert s.stage == Stage.READY_FOR_STAGE3
-    assert set(s.collected_facts) == {"problem", "goal", "timeline", "actions_taken"}
+    rent_keys = {f.key for batch in intake.checklist_for("rent") for f in batch}
+    # Every fact came from the rent checklist, and the generic questionnaire —
+    # which is what this session used to get — never appeared.
+    assert set(s.collected_facts) <= rent_keys
+    assert {"rent_issue", "deposit_terms"} <= set(s.collected_facts)
+    assert "problem" not in s.collected_facts
 
 
 if __name__ == "__main__":

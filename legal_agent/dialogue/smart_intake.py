@@ -19,21 +19,26 @@ import json
 import re
 from dataclasses import dataclass
 
-from legal_agent.dialogue.intake import GENERIC_CHECKLIST, NOISE_CHECKLIST
+from legal_agent.dialogue.intake import (
+    CHECKLISTS,
+    checklist_for,
+    domain_of,
+)
 
-# problem_type -> checklist. The generic flow (spec §3.4) collects a thinner,
-# domain-neutral fact set; both paths reuse the SAME checklists the rule-based
-# intake asks from, so either intake hands Stage 3 an identical fact shape.
-_CHECKLISTS = {"noise": NOISE_CHECKLIST, "generic": GENERIC_CHECKLIST}
+# problem_type -> checklist, shared with the rule-based intake so either path
+# hands Stage 3 an identical fact shape. It used to name only noise and generic,
+# which quietly capped the model-driven intake at the same two domains the
+# rule-based one was capped at.
+_CHECKLISTS = CHECKLISTS
 
 
 def field_keys(problem_type: str = "noise") -> list[str]:
-    checklist = _CHECKLISTS.get(problem_type, GENERIC_CHECKLIST)
+    checklist = checklist_for(problem_type)
     return [f.key for batch in checklist for f in batch]
 
 
 def _field_spec(problem_type: str) -> str:
-    checklist = _CHECKLISTS.get(problem_type, GENERIC_CHECKLIST)
+    checklist = checklist_for(problem_type)
     return "\n".join(
         f"- {f.key}: {f.question}  (為什麼問:{f.rationale})"
         for batch in checklist
@@ -84,12 +89,17 @@ _N_FIELDS_ZH = {4: "四", 6: "六"}
 
 
 def build_system_prompt(problem_type: str = "noise") -> str:
-    ptype = problem_type if problem_type in _CHECKLISTS else "generic"
+    ptype = domain_of(problem_type)
     n = len(field_keys(ptype))
-    return _ROLE_LINES[ptype] + _PROMPT_RULES.format(
+    keys = field_keys(ptype)[:2]
+    # A domain without its own role line falls back to the generic one rather
+    # than raising: adding a checklist must never be able to break the prompt.
+    return _ROLE_LINES.get(ptype, _ROLE_LINES["generic"]) + _PROMPT_RULES.format(
         field_spec=_field_spec(ptype),
         n_fields=_N_FIELDS_ZH.get(n, str(n)),
-        facts_example=_FACTS_EXAMPLES[ptype],
+        facts_example=_FACTS_EXAMPLES.get(
+            ptype, ", ".join(f'"{k}": "…"' for k in keys)
+        ),
     )
 
 
@@ -179,7 +189,7 @@ def parse_intake_response(text: str, prev_facts: dict,
 
 def _missing_fields(facts: dict, problem_type: str):
     """Checklist fields not yet filled, in checklist order."""
-    checklist = _CHECKLISTS.get(problem_type, GENERIC_CHECKLIST)
+    checklist = checklist_for(problem_type)
     return [f for batch in checklist for f in batch if f.key not in (facts or {})]
 
 

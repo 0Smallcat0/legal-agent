@@ -105,6 +105,12 @@ def _render_ready(state: SessionState) -> str:
     )
 
 
+def _seed_key(problem_type: str | None) -> str:
+    """The field the opening complaint answers — the first one in that domain's
+    checklist. Their own words beat asking 「發生了什麼事?」 right after they said."""
+    return intake.checklist_for(problem_type)[0][0].key
+
+
 def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionState]:
     """Advance one turn (Stages 1-2 only). Returns (reply, state). Never retrieves."""
     if state.user_text is None:
@@ -130,11 +136,12 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
             # noise now. Keep the finer other:* label when triage produced one.
             state.problem_type = result.problem_type or "generic"
             state.stage = Stage.INTAKE
-            if state.collected_facts.get("problem") is None:
+            seed = _seed_key(state.problem_type)
+            if state.collected_facts.get(seed) is None:
                 # seed with the ORIGINAL complaint plus this turn's clarifying
                 # reply (when they differ) — nothing the user typed is dropped
                 parts = [p.strip() for p in (state.user_text, user_message) if p and p.strip()]
-                state.collected_facts["problem"] = " / ".join(dict.fromkeys(parts))
+                state.collected_facts[seed] = " / ".join(dict.fromkeys(parts))
             batch = intake.next_questions(state)[:1]
             state.pending_questions = [f.key for f in batch]
             state.asked_keys.update(state.pending_questions)
@@ -189,15 +196,15 @@ def handle_turn_smart(state: SessionState, user_message: str,
         state.problem_type = (
             "noise" if result.kind == "noise" else (result.problem_type or "generic")
         )
-        if state.problem_type == "noise":
-            state.collected_facts.setdefault("noise_type", user_message)
-        else:
-            state.collected_facts.setdefault("problem", user_message)
+        state.collected_facts.setdefault(_seed_key(state.problem_type), user_message)
         if result.urgent and result.message:
             preface = f"{result.message}\n"
         state.stage = Stage.INTAKE
 
-    ptype = "noise" if state.problem_type == "noise" else "generic"
+    # Was 「noise if noise else generic」, which threw away what triage had just
+    # worked out: a car-accident claim and an unreturned deposit both landed on
+    # the same four generic questions.
+    ptype = state.problem_type or "generic"
     turn = run_smart_intake_turn(
         history, state.collected_facts, intake_llm, ptype, state.pending_key,
     )
