@@ -255,6 +255,7 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         )
         ladder = solution.build_generic_ladder(
             state.collected_facts, retrieved=s3.retrieved, cited=cited,
+            domain=intake.domain_of(state.problem_type),
         )
     return PipelineResult(
         answer=s3.answer,
