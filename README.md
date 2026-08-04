@@ -7,7 +7,7 @@
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
-itself graded by planting errors in correct answers: 10,435/10,435 caught,
+itself graded by planting errors in correct answers: 10,437/10,437 caught,
 0 false positives.**
 
 The usual defence against a hallucinated citation is a better prompt. This one
@@ -48,7 +48,7 @@ must be right are not left to it.</sub>
 
 | | |
 |---|---|
-| seeded defects caught (whole corpus) | **10,435/10,435, 0 false positives** |
+| seeded defects caught (whole corpus) | **10,437/10,437, 0 false positives** |
 | statute coverage, 30-case golden set | **100% pass+partial** (73% strict) |
 | retrieval recall, real user wording | **349/356** |
 | honesty tier / wrong-premise detection | **84% / 100%** |
