@@ -9,13 +9,15 @@ status line under the answer, not as the headline: the user came for the
 answer; the gates are why the answer can be trusted.
 
 Everything deterministic (retrieval, honesty tier, ladder, verbatim statutes)
-works with NO model at all, so the full consultation flow runs on HF Spaces
-free CPU with zero keys. A local Ollama, when present, both conducts the
-interview and writes the 分析研判 narrative.
+works with NO model at all, so the full consultation flow runs on the free
+Hugging Face tier with zero keys and no GPU. A local Ollama, when present, both
+conducts the interview and writes the 分析研判 narrative.
 
 Local:      python app.py
-HF Spaces:  push this repo with app.py at the root (sdk: gradio) — see
-            docs/DEPLOY_SPACES.md.
+HF Spaces:  live at huggingface.co/spaces/NoirOAO/legal-agent-demo. Deploying is
+            NOT a plain push of this repo — the Hub rejects the committed PNG
+            and the free tier's ZeroGPU refuses a Space with no @spaces.GPU
+            function. See docs/DEPLOY_SPACES.md for the branch that handles both.
 """
 from __future__ import annotations
 
