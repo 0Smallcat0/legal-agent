@@ -386,7 +386,91 @@ def _answer_first(retrieved, cited) -> list:
 # article governs, and the retrieval order it replaced was already better.
 
 
-def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None) -> SolutionLadder:
+# The venue that actually hears this kind of dispute. Triage has told these five
+# apart since corpus v2 and every one of them was pointed at 「鄉鎮市調解委員會」,
+# which is right for a neighbour quarrel and wrong for most of the rest: a car
+# crash is paid by 強制險 long before anyone mediates, a consumer complaint has a
+# free hotline and a 消保官, and family matters are legally required to attempt
+# 調解 first. Free/low-cost steps stay ahead of paid ones, litigation stays last.
+_GENERIC_MEDIATE = Rung(
+    "mediate", "調解",
+    "鄉鎮市(區)調解委員會或主管機關調解,免費且具執行力", (),
+    "免費", "數週", "中", "向所在地調解委員會聲請調解", False, False,
+)
+
+_DOMAIN_RUNGS: dict[str, list[Rung]] = {
+    "rent": [
+        Rung(
+            "rent_dispute", "租賃住宅爭議調處",
+            "直轄市/縣市不動產租賃爭議處理,由主管機關受理,免費",
+            ("租賃住宅市場發展及管理條例第16條",),
+            "免費", "數週", "中",
+            "向房屋所在地的地政或建管單位申請租賃爭議調處", False, False,
+        ),
+        _GENERIC_MEDIATE,
+    ],
+    "labor": [
+        Rung(
+            "labor_report", "向勞工局申訴/檢舉",
+            "主管機關可命雇主限期改善並裁罰;申訴人身分受保密",
+            ("勞動基準法第74條",),
+            "免費", "數週", "低",
+            "向公司所在地勞工局(處)申訴,附出勤與薪資紀錄", False, False,
+        ),
+        Rung(
+            "labor_mediate", "勞資爭議調解",
+            "勞資爭議處理法的正式程序,免費;調解成立與民事確定判決同一效力",
+            (),
+            "免費", "數週", "中",
+            "向勞工局申請勞資爭議調解(可線上申請)", False, False,
+        ),
+    ],
+    "consumer": [
+        Rung(
+            "consumer_hotline", "1950 消費者服務專線 / 消保官申訴",
+            "先向企業經營者申訴;未獲妥適處理可向消保官申訴",
+            ("消費者保護法第43條",),
+            "免費", "數日~數週", "低",
+            "撥 1950 或到消費者保護會線上申訴,附訂單與對話紀錄", False, False,
+        ),
+        Rung(
+            "consumer_mediate", "消費爭議調解",
+            "直轄市/縣市消費爭議調解委員會,免費且具執行力",
+            ("消費者保護法第44條",),
+            "免費", "數週", "中",
+            "申訴未果後向消費爭議調解委員會申請調解", False, False,
+        ),
+    ],
+    "traffic": [
+        Rung(
+            "compulsory_insurance", "申請強制汽車責任保險給付",
+            "人身傷亡不論肇責都可先向對方強制險請求;不影響後續求償",
+            (),
+            "免費", "數週", "低",
+            "備診斷證明、醫療單據與事故證明,向對方投保的產險公司申請理賠", False, False,
+        ),
+        Rung(
+            "traffic_mediate", "鄉鎮市調解委員會調解",
+            "車禍調解的常見途徑,免費;調解成立經法院核定與判決同效力",
+            (),
+            "免費", "數週", "中",
+            "向事故地或對方住所地調解委員會聲請,帶初判表與估價單", False, False,
+        ),
+    ],
+    "family": [
+        Rung(
+            "family_mediate", "家事調解(多數家事事件的前置程序)",
+            "向法院聲請調解,由調解委員協助;離婚、親權、扶養多須先經調解",
+            (),
+            "低", "數週~數月", "中",
+            "向對方住所地的地方法院家事庭聲請調解", False, False,
+        ),
+    ],
+}
+
+
+def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
+                         domain: str | None = None) -> SolutionLadder:
     """Generic escalation ladder for non-noise problems (spec §3.4 fallback):
     same cheapest-first shape, no scenario-specific statutes baked in — the
     legal basis for a generic case is whatever Stage 3 retrieved, and the
@@ -412,11 +496,7 @@ def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None) -> S
             if retrieved else "寄出書面請求,保留送達證明",
             False, False,
         ),
-        Rung(
-            "mediate", "調解",
-            "鄉鎮市(區)調解委員會或主管機關調解,免費且具執行力", (),
-            "免費", "數週", "中", "向所在地調解委員會聲請調解", False, False,
-        ),
+        *_DOMAIN_RUNGS.get(domain, [_GENERIC_MEDIATE]),
         _authority_rung(retrieved),
         # When retrieval came back EMPTY the honesty gate has just told the user
         # 「這個問題我的資料庫沒有涵蓋」 — and then the ladder used to point at
