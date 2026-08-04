@@ -1,3 +1,50 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legal-agent"
+version = "0.1.0"
+description = "Retrieval-augmented legal Q&A whose citations are verified by code, with the verifier itself graded by seeded defects"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+keywords = ["rag", "hallucination-detection", "llm-evaluation", "retrieval", "legal-tech"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Text Processing :: Linguistic",
+]
+# Runtime only. The verifier and the retriever are the point of this package, so
+# the model clients are NOT here: `manual` needs nothing, `ollama` talks over
+# stdlib urllib, and `anthropic` is an extra.
+dependencies = [
+    "rank-bm25==0.2.2",
+    "jieba==0.42.1",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+demo = ["gradio>=4.0.0"]
+anthropic = ["anthropic>=0.116.0", "python-dotenv>=1.0.0"]
+dev = ["pytest>=8.0.0", "ruff>=0.15.0"]
+
+[project.urls]
+Homepage = "https://github.com/0Smallcat0/legal-agent"
+Demo = "https://huggingface.co/spaces/NoirOAO/legal-agent-demo"
+Results = "https://github.com/0Smallcat0/legal-agent/blob/main/evals/RESULTS.md"
+
+[project.scripts]
+legal-agent = "legal_agent.run:main"
+
+[tool.setuptools.packages.find]
+include = ["legal_agent*"]
+
+# The corpus ships INSIDE the package so a fresh install can build its own
+# database — `pip install legal-agent` then works with no git clone.
+[tool.setuptools.package-data]
+legal_agent = ["corpus/*.json", "prompts/*", "data/*.sql"]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 100

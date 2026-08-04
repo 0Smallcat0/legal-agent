@@ -18,9 +18,26 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Install the package
+        run: pip install .[dev,demo]
       - name: Lint
         run: python -m ruff check legal_agent app.py tests
       - name: Run tests
         run: python -m pytest -q
+      # The library used to be un-installable: every path hung off the repo
+      # root, so an installed copy looked in site-packages for a corpus that was
+      # never shipped there. Proving `pip install` succeeds is only half of it —
+      # this runs the INSTALLED package from a directory with no checkout in it,
+      # so that failure mode cannot come back unnoticed.
+      - name: Use the installed package outside the repo
+        run: |
+          mkdir -p "$RUNNER_TEMP/elsewhere"
+          cd "$RUNNER_TEMP/elsewhere"
+          python -c "
+          import os, legal_agent
+          assert legal_agent.ensure_corpus() > 2000, 'corpus did not ship with the package'
+          results = legal_agent.verify('依公寀大廈管理條例第16條,住戶應維持安寧。')
+          assert results and results[0].flagged, 'verifier did not flag an invented statute'
+          assert legal_agent.retrieve('退租後房東不退押金'), 'retrieval returned nothing'
+          print('installed package works from', os.getcwd())
+          "
