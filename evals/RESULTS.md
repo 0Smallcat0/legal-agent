@@ -10,7 +10,7 @@
 >    with no number on it is a wish.
 > 2. **348/356 retrieval recall** on 168 real problems, in the wording people
 >    actually use rather than in legal vocabulary.
-> 3. **100% pass+partial (73% strict)** statute coverage on a fixed 30-case
+> 3. **100% pass+partial, 0 miss (81% strict)** statute coverage on a fixed 32-case
 >    golden set, re-run after every change.
 >
 > **Three things that looked obviously right and lost.** These are the reason to
@@ -48,7 +48,7 @@ system makes — it never means "this statute does not exist."
 | what | number | harness |
 |---|---|---|
 | seeded defects caught, every article | **10,437/10,437 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
-| statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
+| statute coverage, 32-case golden set | **pass 21 / partial 5 / miss 0** of 26 scorable — 100% pass+partial, 81% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **32/32 (100%)** | same run |
 | retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
@@ -880,6 +880,28 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   勞資爭議處理法 is not in the corpus. Reverted to an empty basis with the reason
   in a comment. A rung naming no article is honest; a rung naming the wrong one
   is the exact failure this project exists to catch.
+  **Golden set after the import: strict coverage 73% → 81%** (pass 19→21,
+  partial 7→5, **miss stays 0**); tier 27/32 and premise 32/32 both unchanged.
+  The batch bought 2 cases of strict coverage for 1 case of recall.
+  The five tier misses all lean one way — three said `normal` where `marginal`
+  was right, two claimed more confidence than the retrieval had earned. That is
+  the BM25-inflation limit named at the top of this file, and more corpus did not
+  touch it. Worst single reading is oos-10 (卡債更生): 消費者債務清理條例 is not
+  in the corpus, the honesty gate should have refused, and instead top BM25
+  105.13 read as `marginal` and the 8B model answered a credit-card debt question
+  out of 勞基法§28 積欠工資墊償基金. More articles raise every BM25 score, so an
+  ABSOLUTE floor detects out-of-scope worse as the corpus grows — the argument
+  for a relative or semantic signal, recorded again with a fresh example.
+- **A ten-minute evaluation finished and then threw its own result away.** Same
+  day. `python -m legal_agent.evaluation.golden_set` — the command both README
+  and CONTRIBUTING tell people to run — completed every case and died in the
+  final `print` with `UnicodeEncodeError: 'cp950' codec can't encode character
+  '⚠'`. The scorecard carries 「⚠」 and a Windows console is cp950.
+  `cli.py` and `run.py` have guarded stdout since the first CLI; none of the five
+  eval entry points did. One shared `enable_utf8_stdout()` in
+  `evaluation/__init__.py`, wired into all five. Worth naming as its own class of
+  incompleteness: the feature worked, the measurement ran, and the user still got
+  nothing — a harness that cannot report is not a harness.
 - **The ablation row is stale** (see the table).
 
 ## Measured, then NOT shipped

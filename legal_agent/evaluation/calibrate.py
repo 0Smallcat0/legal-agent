@@ -152,6 +152,9 @@ def collect_points(scorecard) -> list[CalibrationPoint]:
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.calibrate <golden.json>
+    from legal_agent.evaluation import enable_utf8_stdout
+
+    enable_utf8_stdout()
     import sys as _sys
 
     if len(_sys.argv) < 2:
