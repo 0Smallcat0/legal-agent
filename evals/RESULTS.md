@@ -1031,6 +1031,38 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   through the broken ruler and is discarded, not published. Whether a wider
   window beats k=8 in HYBRID mode remains unmeasured.
 
+- **k=12 beats k=8 by three cases, and is not shipped.** 2026-08-05, re-run
+  after `ollama pull bge-m3` (the model had vanished in an Ollama 0.31.1 restart,
+  which is what the fallback counter above caught). All four runs verified
+  `dense_fallbacks 0/168`, and **k=8 reproduced 348/356 exactly** — the published
+  figure holds under the fixed ruler.
+
+  | window | recall | misses |
+  |---|---|---|
+  | k=8 | 348/356 | 7 |
+  | k=10 | 349/356 | 6 |
+  | k=12 | **351/356** | **5** |
+  | k=16 | 350/356 | 6 |
+
+  Not shipped, for two reasons that are about the measurement, not the result.
+  **It trades a measured axis for an unmeasured one.** Precision still has no
+  harness here — every number in this file asks whether the right article reached
+  the window, never what the reader had to wade through — and k=8→12 puts 50%
+  more articles in front of them and into the model's prompt. Buying +3 recall
+  with an unpriced precision cost is optimising the metric that exists.
+  **And the other published numbers cannot be re-measured right now.** `DEFAULT_K`
+  feeds the honesty tier (which reads retrieval scores) and statute coverage;
+  re-running the golden set needs llama3.1, which is also gone from this machine.
+  A golden-set score from a different model is not comparable to the published
+  one, so shipping would mean changing a retrieval parameter while three of the
+  five headline numbers go unchecked.
+  The finding stands and is reproducible: `k=12` is worth revisiting once
+  llama3.1 is back and precision has any harness at all.
+  Worth noting for the record: the earlier k-sweep run through the broken ruler
+  produced the same SHAPE (320→349→351→350, k=12 best) with a wrong baseline.
+  The ordering happened to survive; that is luck, not method, and it is why the
+  discarded run stayed discarded.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
