@@ -49,7 +49,7 @@ To run the demo from a clone instead:
 pip install .[demo] && python app.py
 ```
 
-The worked example is Taiwan law: 2,560 articles across 11 everyday statutes and
+The worked example is Taiwan law: 2,922 articles across 16 everyday statutes and
 386 real court judgments, all shipped in the repo, so a fresh clone reproduces
 every number below.
 
@@ -68,7 +68,7 @@ must be right are not left to it.</sub>
 |---|---|
 | seeded defects caught (whole corpus) | **10,437/10,437, 0 false positives** |
 | statute coverage, 30-case golden set | **100% pass+partial** (73% strict) |
-| retrieval recall, real user wording | **349/356** |
+| retrieval recall, real user wording | **348/356** |
 | honesty tier / wrong-premise detection | **84% / 100%** |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
 | first reference judgment states an awarded sum | **50/60 sessions** |

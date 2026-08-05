@@ -8,7 +8,7 @@
 >    model's accuracy — the *verifier's* recall, measured by planting errors in
 >    otherwise-correct answers over every article in the corpus. A guardrail
 >    with no number on it is a wish.
-> 2. **349/356 retrieval recall** on 168 real problems, in the wording people
+> 2. **348/356 retrieval recall** on 168 real problems, in the wording people
 >    actually use rather than in legal vocabulary.
 > 3. **100% pass+partial (73% strict)** statute coverage on a fixed 30-case
 >    golden set, re-run after every change.
@@ -35,8 +35,8 @@
 > whether the right article reached the window, never what else the reader had
 > to wade through.
 
-Local, zero paid API. Models via Ollama on an RTX 4060 (8 GB). Corpus: 2,560
-articles across 11 everyday-law statutes + 1,367 harvested judgments (386 of
+Local, zero paid API. Models via Ollama on an RTX 4060 (8 GB). Corpus: 2,922
+articles across 16 everyday-law statutes + 1,367 harvested judgments (386 of
 them shipped in the repo — see `corpus/README.md`).
 Last full run: 2026-07-25.
 
@@ -51,7 +51,7 @@ system makes — it never means "this statute does not exist."
 | statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **32/32 (100%)** | same run |
-| retrieval recall, real user wording | **349/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
+| retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
 
@@ -852,6 +852,34 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   mutation; this one was found by reading the product page and checking whether
   it did what it said. The mutation suite had no case for it because I wrote
   both the guard and the exam from the same wrong assumption.
+- **The corpus grew to close a hole the product had just admitted to, and my
+  first measurement of it was worthless.** 2026-08-05. The action ladder had
+  started telling a hurt rider to claim 強制汽車責任保險 before anything else —
+  correct advice, and the statute saying they may claim *regardless of fault*
+  (強制汽車責任保險法§7) was not in the corpus at all, so that rung shipped with
+  an empty `legal_basis`. Triage was classifying traffic and labor cases the
+  corpus could not answer.
+  Imported from the official bulk XML: 強制汽車責任保險法 56, 勞工保險條例 104,
+  就業服務法 85, 性別平等工作法 50, 個人資料保護法 66 — **361 articles,
+  2,561 → 2,922, 12 → 17 statutes.** §7 and §25 (payment within ten working days
+  of complete documents) now back the insurance rung.
+  **The first re-measurement said recall fell 349/356 → 320/356, and it was a lie
+  of my own making.** Moving `DB_PATH` to a per-user directory in the packaging
+  commit had orphaned the dense index, which lives beside the database: the old
+  2,561-key index stayed in the repo's `db/`, the new location had none, and
+  `DENSE_RETRIEVAL="auto"` degraded to pure BM25 without a word. A hybrid number
+  was being compared against a BM25-only run. Rebuilt at the new location
+  (2,922 slices) and re-measured: **348/356 (98%)**. The corpus expansion cost
+  exactly ONE case; the other 28 were the missing index.
+  The silent degradation is a real regression for anyone who upgrades, not only a
+  measurement artefact — the index must be rebuilt after the move, and nothing
+  says so at runtime.
+  Second self-inflicted error, recorded because the first draft shipped it: the
+  labor rung was briefly given 「就業服務法第5條」 as its basis. That article
+  prohibits employment discrimination; it is not authority for 勞資爭議調解, and
+  勞資爭議處理法 is not in the corpus. Reverted to an empty basis with the reason
+  in a comment. A rung naming no article is honest; a rung naming the wrong one
+  is the exact failure this project exists to catch.
 - **The ablation row is stale** (see the table).
 
 ## Measured, then NOT shipped

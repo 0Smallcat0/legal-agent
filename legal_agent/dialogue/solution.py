@@ -420,6 +420,9 @@ _DOMAIN_RUNGS: dict[str, list[Rung]] = {
         Rung(
             "labor_mediate", "勞資爭議調解",
             "勞資爭議處理法的正式程序,免費;調解成立與民事確定判決同一效力",
+            # Deliberately empty: 勞資爭議處理法 is not in the corpus, and this
+            # project does not cite what it cannot verify. The rung still tells
+            # the reader where to go — it just does not pretend to a legal basis.
             (),
             "免費", "數週", "中",
             "向勞工局申請勞資爭議調解(可線上申請)", False, False,
@@ -445,8 +448,8 @@ _DOMAIN_RUNGS: dict[str, list[Rung]] = {
         Rung(
             "compulsory_insurance", "申請強制汽車責任保險給付",
             "人身傷亡不論肇責都可先向對方強制險請求;不影響後續求償",
-            (),
-            "免費", "數週", "低",
+            ("強制汽車責任保險法第7條", "強制汽車責任保險法第25條"),
+            "免費", "交齊文件次日起十個工作日內給付", "低",
             "備診斷證明、醫療單據與事故證明,向對方投保的產險公司申請理賠", False, False,
         ),
         Rung(
