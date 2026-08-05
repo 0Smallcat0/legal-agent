@@ -28,7 +28,7 @@ import sqlite3
 from datetime import date
 from pathlib import Path
 
-from legal_agent.cli import insert_statute
+from legal_agent.data.database import insert_statute
 from legal_agent.data.models import Statute
 
 
