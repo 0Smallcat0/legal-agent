@@ -107,6 +107,9 @@ def run_real_recall(path, conn=None, k: int | None = None) -> RecallReport:
 
 
 if __name__ == "__main__":   # python -m legal_agent.evaluation.real_recall [path]
+    from legal_agent.evaluation import enable_utf8_stdout
+
+    enable_utf8_stdout()
     import sys as _sys
 
     target = _sys.argv[1] if len(_sys.argv) > 1 else "evals/real_sessions.json"

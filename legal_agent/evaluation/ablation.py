@@ -256,6 +256,9 @@ def run_ablation(
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.ablation <golden.json>
+    from legal_agent.evaluation import enable_utf8_stdout
+
+    enable_utf8_stdout()
     import argparse
 
     from legal_agent import config

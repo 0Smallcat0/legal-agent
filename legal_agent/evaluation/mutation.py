@@ -336,6 +336,9 @@ def run_mutation_test(
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation [--semantic]
+    from legal_agent.evaluation import enable_utf8_stdout
+
+    enable_utf8_stdout()
     import argparse
 
     from legal_agent.config import DB_PATH

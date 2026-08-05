@@ -256,6 +256,9 @@ def run_golden_set(golden_path, llm, conn=None) -> Scorecard:
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.golden_set <golden.json>
+    from legal_agent.evaluation import enable_utf8_stdout
+
+    enable_utf8_stdout()
     import sys as _sys
 
     if len(_sys.argv) < 2:
