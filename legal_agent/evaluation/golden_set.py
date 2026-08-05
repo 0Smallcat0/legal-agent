@@ -264,8 +264,20 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.golden_set <golde
     if len(_sys.argv) < 2:
         print("用法:python -m legal_agent.evaluation.golden_set <golden.json>")
         raise SystemExit(2)
+    from legal_agent import config
     from legal_agent.run import build_runtime_llm  # reuses the model/key config checks
 
-    _llm = build_runtime_llm()   # exits cleanly if MODEL/key not set
+    # A GRADER samples at temperature 0, or it measures the dice. ollama_llm's
+    # own docstring has said exactly that since it gained the parameter — and
+    # this entry point went on using build_runtime_llm()'s 0.2 default, which is
+    # how the Tier-1 scorecard came to swing 73.1–80.8% strict coverage across
+    # five runs of identical code. At 0.0, consecutive runs are identical.
+    # Measured 2026-08-05; see RESULTS.md.
+    if config.LLM_PROVIDER == "ollama":
+        from legal_agent.dialogue.ollama_llm import ollama_llm
+
+        _llm = ollama_llm(temperature=0.0)
+    else:
+        _llm = build_runtime_llm()   # exits cleanly if MODEL/key not set
     print(run_golden_set(_sys.argv[1], llm=_llm).render())
 

@@ -10,7 +10,7 @@
 >    with no number on it is a wish.
 > 2. **348/356 retrieval recall** on 168 real problems, in the wording people
 >    actually use rather than in legal vocabulary.
-> 3. **100% pass+partial, 0 miss (81% strict)** statute coverage on a fixed 32-case
+> 3. **100% pass+partial, 0 miss (73% strict)** statute coverage on a fixed 32-case
 >    golden set, re-run after every change.
 >
 > **Three things that looked obviously right and lost.** These are the reason to
@@ -48,7 +48,7 @@ system makes — it never means "this statute does not exist."
 | what | number | harness |
 |---|---|---|
 | seeded defects caught, every article | **10,437/10,437 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
-| statute coverage, 32-case golden set | **pass 21 / partial 5 / miss 0** of 26 scorable — 100% pass+partial, 81% strict | `evaluation/golden_set.py` |
+| statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py`, grader at temperature 0 |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **32/32 (100%)** | same run |
 | retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
@@ -880,9 +880,13 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   勞資爭議處理法 is not in the corpus. Reverted to an empty basis with the reason
   in a comment. A rung naming no article is honest; a rung naming the wrong one
   is the exact failure this project exists to catch.
-  **Golden set after the import: strict coverage 73% → 81%** (pass 19→21,
-  partial 7→5, **miss stays 0**); tier 27/32 and premise 32/32 both unchanged.
-  The batch bought 2 cases of strict coverage for 1 case of recall.
+  **RETRACTED 2026-08-05 — the golden-set half of this entry was noise.** It
+  originally read 「strict coverage 73% → 81%, the batch bought 2 cases of strict
+  coverage for 1 case of recall」. That 81% was a SINGLE run of a grader sampling
+  at temperature 0.2; five runs of identical code span 73.1–80.8%. The corpus
+  import cannot be credited with a coverage change at this noise level. What
+  survives from the measurement is the recall figure (348/356, deterministic
+  retrieval) and tier 27/32 / premise 32/32, which held on every run.
   The five tier misses all lean one way — three said `normal` where `marginal`
   was right, two claimed more confidence than the retrieval had earned. That is
   the BM25-inflation limit named at the top of this file, and more corpus did not
@@ -1062,6 +1066,49 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   produced the same SHAPE (320→349→351→350, k=12 best) with a wrong baseline.
   The ordering happened to survive; that is luck, not method, and it is why the
   discarded run stayed discarded.
+
+- **The Tier-1 grader was rolling dice, and I published one roll as a result.**
+  2026-08-05. Chasing whether `k=12` should ship, the golden-set baseline would
+  not reproduce: identical code, dense verified live (`dense_fallbacks 0/12` on a
+  probe before every run), llama3.1 restored — and strict coverage came back 73%
+  where 81% was published. Five runs, all listed, none dropped:
+
+  | grader temperature | strict coverage | tier | premise |
+  |---|---|---|---|
+  | 0.2 | 76.9% (pass 20 / partial 6) | 27/32 | 32/32 |
+  | 0.2 | 76.9% (pass 20 / partial 6) | 27/32 | 32/32 |
+  | 0.2 | 73.1% (pass 19 / partial 7) | 27/32 | 32/32 |
+  | **0.0** | **73.1% (pass 19 / partial 7)** | 27/32 | 32/32 |
+  | **0.0** | **73.1% (pass 19 / partial 7)** | 27/32 | 32/32 |
+
+  With the earlier run of the day (73.1%) and the published figure (80.8%), the
+  observed spread at temperature 0.2 is **73.1–80.8%, 7.7 points** — larger than
+  any effect being chased. At 0.0 the runs are identical.
+  The cause is one default. `run_golden_set` takes an injected llm, and the entry
+  point built it with `build_runtime_llm()`, whose ollama path defaults to
+  temperature 0.2. Coverage is scored as 「expected refs ∈ retrieved ∪ the model's
+  own citations」, so the model's sampling lands directly in the score. Meanwhile
+  `ollama_llm`'s docstring has read 「graders/checkers pass 0.0 so repeated runs
+  measure the model, not the dice」 since the parameter was added. The project
+  knew, and applied it everywhere except its Tier-1 grader. Fixed: that entry
+  point now builds the grader at 0.0.
+  **Two published numbers were wrong and are corrected here and in the README.**
+  Strict coverage is **73%**, not 81%. And the corpus-import entry above claimed
+  「strict coverage 73% → 81%, the batch bought 2 cases of coverage for 1 case of
+  recall」 — retracted, because both endpoints were single samples from a
+  7.7-point distribution. That entry's recall figure survives: retrieval is
+  deterministic and 348/356 reproduced exactly under the verified ruler.
+  What this does NOT touch: tier 27/32 and premise 32/32 were identical on all
+  five runs, so those two axes were never sampling-dependent.
+  Fourth bad ruler in this file in one day — orphaned dense index, the ablation's
+  double-meaning column, dense degrading in silence, and now a grader at
+  temperature 0.2. This is the only one that reached the README, and the lesson
+  is narrower than 「measure twice」: **before publishing a delta, measure the
+  instrument's own spread.** A single run is a sample; I reported one as an
+  effect.
+  `k=12` remains unresolved and unshipped. It needs a rerun against the now
+  deterministic grader — cheap to do, and deliberately not folded into this entry,
+  whose subject is the instrument rather than the window.
 
 ## Measured, then NOT shipped
 
