@@ -42,6 +42,10 @@ class CaseRecall:
 @dataclass
 class RecallReport:
     cases: list[CaseRecall]
+    # Queries whose dense half silently failed and fell back to pure BM25.
+    # Without this the harness prints a number and never says which retriever
+    # produced it — see render() and RESULTS.md, 2026-08-05.
+    dense_fallbacks: int = 0
 
     @property
     def expected_total(self) -> int:
@@ -68,6 +72,14 @@ class RecallReport:
             f"hit@k 總計:{self.hit_total}/{self.expected_total}({self.rate:.0%})"
             "——量的是「該出現的條文有沒有進入模型可引用的窗口」,不是法律判斷正確性"
         )
+        if self.dense_fallbacks:
+            lines.append(
+                f"⚠ 這個數字不是混合檢索的:{self.dense_fallbacks}/{len(self.cases)} "
+                "個查詢的 dense 半邊失敗並退回純 BM25(Ollama 未載入 bge-m3?)。"
+                "重跑前先確認 Ollama,否則此數不可與已發布數字相比。"
+            )
+        else:
+            lines.append("dense 全程參與(0 次退回),此數可與已發布數字相比。")
         return "\n".join(lines)
 
 
@@ -77,8 +89,14 @@ def load_cases(path) -> list[dict]:
 
 def run_real_recall(path, conn=None, k: int | None = None) -> RecallReport:
     """Retrieve for every case and score hit@k. `conn` defaults to the corpus."""
-    from legal_agent.retrieval.retriever import DEFAULT_K, retrieve
+    from legal_agent.retrieval.retriever import (
+        DEFAULT_K,
+        dense_fallback_count,
+        reset_dense_fallbacks,
+        retrieve,
+    )
 
+    reset_dense_fallbacks()
     own = None
     if conn is None:
         from legal_agent.config import DB_PATH
@@ -103,7 +121,7 @@ def run_real_recall(path, conn=None, k: int | None = None) -> RecallReport:
     finally:
         if own is not None:
             own.close()
-    return RecallReport(cases)
+    return RecallReport(cases, dense_fallbacks=dense_fallback_count())
 
 
 if __name__ == "__main__":   # python -m legal_agent.evaluation.real_recall [path]
