@@ -943,6 +943,36 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   buy the next reader not having to work out which of two corpus loaders is live,
   and not having to explain why the data layer imports a CLI.
 
+- **The 1,843-line hand-written lexicon is not redundant with the embeddings —
+  it is carrying the system, and I had it backwards.** 2026-08-05, the last item
+  of the audit. I had called `retrieval/lexicon.py` the most suspicious thing in
+  the codebase: 19% of production code doing a job (bridging the everyday →
+  statutory vocabulary gap) that dense retrieval with bge-m3 exists to do. The
+  instruction was to measure rather than cut, so: four runs over the 168 lived
+  sessions, expansion × dense.
+
+  | 口語→法條 expansion | dense (bge-m3) | hit@k |
+  |---|---|---|
+  | on | on | **348/356 (98%)** |
+  | on | off | 320/356 (90%) |
+  | off | on | **110/356 (31%)** |
+  | off | off | 55/356 (15%) |
+
+  Removing the lexicon costs **238 cases**. Dense alone reaches 110; the lexicon
+  alone reaches 320; dense adds 28 on top of it. They are not two implementations
+  of one job — the table does the heavy lifting and the embeddings supply a
+  margin, and the intuition that they overlap was wrong by a factor of three.
+  Two reasons it beats the embedder here, both visible in the code: the table is
+  not only a ranking signal, it opens an exact-phrase channel and holds reserved
+  seats (`LEXICON_RESERVED_SEATS`), so a matched everyday phrase can pull its
+  article into the window outright rather than nudging a score. And Taiwanese
+  legal register is far from the everyday phrasing people type — 「加班費」 vs
+  「延長工作時間之工資」 — which is exactly the distance a general-purpose
+  embedder does not close reliably.
+  Kept in full. The line count is the price of the single largest measured
+  contribution in the retrieval stack, and this entry exists because the audit
+  that was supposed to delete it produced the number that saved it.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
