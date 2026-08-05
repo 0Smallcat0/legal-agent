@@ -53,7 +53,7 @@ system makes — it never means "this statute does not exist."
 | wrong-premise detection | **32/32 (100%)** | same run |
 | retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
-| bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
+| bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190) | `evaluation/ablation.py`, llama3.1 over golden_v2, corpus v2 |
 
 ```bash
 python -m legal_agent.evaluation.mutation                          # catch rate
@@ -902,7 +902,32 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   `evaluation/__init__.py`, wired into all five. Worth naming as its own class of
   incompleteness: the feature worked, the measurement ran, and the user still got
   nothing — a harness that cannot report is not a harness.
-- **The ablation row is stale** (see the table).
+
+- **The ablation was re-run instead of deleted, and the gap turned out WIDER at
+  v2 scale.** 2026-08-05. The row had been marked STALE since the corpus grew
+  from 11 articles to 2,560; the audit question was whether 278 lines earn their
+  place. They do — this is the only measurement that answers 「what does the
+  pipeline buy over just asking the model?」. Mutation grades the verifier
+  against planted errors; ablation grades the gates against a real model's real
+  behaviour.
+  llama3.1 over the 32-case golden set, corpus v2 (2,922 articles):
+  **bare 34/51 citations flagged (67%), gated 9/190 (5%).** The prediction going
+  in was that the gap would NARROW — a bigger corpus should make more of the
+  model's memory-cited articles traceable. It widened instead. Retrieval-first
+  hands the model verbatim text, so it cites nearly four times as much
+  (51 → 190) while the untraceable count barely moves (34 → 9 flagged). The
+  honesty tier over the same run: insufficient 3, marginal 2, normal 27.
+- **Reading that table exposed a defect in the table itself.** The 「corpus查無」
+  column claimed one meaning and carried two. `_run_bare` verifies with `conn=`
+  and an empty window, so its baseline is the whole corpus. `gated` inherits
+  `run_stage3`'s call — `verify_answer(answer, retrieved, as_of_date,
+  corpus_conn=conn)`, no `conn=` — so its baseline is the RETRIEVED WINDOW. That
+  is why gated shows 39 「missing」 against only 9 flagged: thirty of them are
+  articles that exist in the corpus and simply were not retrieved, which is
+  correctly not a hallucination. The two numbers were never comparable and the
+  header said they were. Renamed to 「未回溯*」 with the asterisk spelling out the
+  differing baselines; `flagged` is the one column measured identically on both
+  rows, so it is the one the published figure quotes.
 
 ## Measured, then NOT shipped
 
