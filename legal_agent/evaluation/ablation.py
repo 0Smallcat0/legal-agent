@@ -116,9 +116,17 @@ class AblationReport:
     def render(self) -> str:
         lines = [
             "═══════ Ablation:bare(憑記憶引用) vs gated(五閘門) ═══════",
-            "(unverifiable = 引用無法回溯到 corpus;closed-world,見模組 docstring)",
+            "(closed-world:「回溯」= 追得到來源,不等於真實世界不存在;見模組 docstring)",
+            "* 未回溯的比較基準兩列不同 —— bare 對「整個語料庫」,gated 對"
+            "「這次的檢索視窗」。只有 flagged 兩列同義,可直接相比。",
             "",
-            f"{'model':<20}{'cond.':<7}{'citations':<10}{'corpus查無':<10}"
+            # The old header said 「corpus查無」 for both rows and that was wrong.
+            # bare verifies with conn= and an empty window, so its baseline is the
+            # WHOLE CORPUS. gated inherits run_stage3's call, which passes only
+            # corpus_conn=, so its baseline is the RETRIEVED WINDOW — an article
+            # that exists but was not retrieved lands in this column and is
+            # correctly NOT flagged. Only `flagged` is measured identically.
+            f"{'model':<20}{'cond.':<7}{'citations':<10}{'未回溯*':<10}"
             f"{'金額不符':<9}{'非現行':<8}{'flagged'}",
         ]
         for model in self.models:
