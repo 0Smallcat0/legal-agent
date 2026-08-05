@@ -973,6 +973,37 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   contribution in the retrieval stack, and this entry exists because the audit
   that was supposed to delete it produced the number that saved it.
 
+- **Expanding the lexicon: two rows shipped, seven measured and reverted.**
+  2026-08-05, after the A/B above showed the table is the dominant retrieval
+  component. Growing it is the obvious next move, and the obvious next move is
+  where this project has repeatedly been wrong, so every row was written against
+  a measured miss.
+  **The real gap was structural**: the corpus had gained 361 articles
+  (強制險 / 勞保 / 就服 / 性平 / 個資) and the table had gained nothing, so five
+  statutes had no everyday-phrase route into them at all. Probed first —
+  「面試被問結婚生小孩的打算,還說女生不方便」 returned eight 民法 rows and no
+  性平法; 「仲介收我服務費還扣護照」 returned 民法 and 消保法, because 扣護照,
+  the entire complaint for a migrant worker, matched nothing and 服務費 alone
+  reads as an ordinary consumer charge. Two rows fixed both. Recall held at
+  **348/356** and the already-working 「懷孕被公司調職減薪」 kept its hit.
+  **The other seven rows moved nothing and were reverted.** Written against the
+  seven remaining real_recall misses (民法§227 不完全給付, §1166 胎兒繼承,
+  §205 利率上限, §514-7 旅遊, §821+§179 共有物, §354 瑕疵擔保, §478 借貸返還),
+  they left recall at exactly 348/356. Two were worse than useless: they pulled
+  the targeted article in and pushed a DIFFERENT expected article out of the same
+  eight-seat window — `unborn-child-inheritance` traded a miss on §1166 for a
+  miss on §7, `tour-hotel-downgraded` traded §514-7 for §514-5. Seat
+  displacement, net zero, more table to maintain. Not shipped.
+  Two process notes, both mine, both caught by the project's own guards. The
+  script written to revert those seven rows matched an earlier occurrence of its
+  anchor string and deleted **97 rows, 1,150 lines**; recall fell 348 → 177 and
+  `git checkout` restored it. And the first draft of the two surviving rows
+  paraphrased the statutory side — 「不得以性別或性傾向為由」 for the article's
+  「不得因性別或性傾向而有差別待遇」 — which
+  `test_every_statutory_term_appears_verbatim_in_the_corpus` rejected. That rule
+  is enforced by a test precisely because the person adding a row is the person
+  most tempted to approximate.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:

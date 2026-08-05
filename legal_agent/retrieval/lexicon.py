@@ -1803,6 +1803,30 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     (("資遣", "被辭", "叫我走", "不用來了", "非自願離職", "預告", "遣散"),
      ("預告期間", "應給付預告期間之工資", "應依下列規定發給勞工資遣費",
       "相當於一個月平均工資之資遣費")),
+
+    # ── 招募 / 僱用 性別歧視 (性平法§7, §11) ── added 2026-08-05
+    # The corpus gained 361 articles (強制險/勞保/就服/性平/個資) and this table
+    # gained nothing, so those statutes had no everyday-phrase route into them.
+    # Probed before writing this: 「面試被問結婚生小孩的打算,還說女生不方便」
+    # returned eight 民法 rows and no 性平法 at all. 「懷孕被公司調職減薪」 already
+    # reached the statute — it is the INTERVIEW half that was unreachable,
+    # because a rejected applicant repeats the question they were asked and
+    # never says 歧視 or 差別待遇.
+    (("面試被問", "結婚生小孩", "打算生", "什麼時候生", "女生不方便",
+      "有沒有男朋友", "就業歧視", "性別歧視", "因為我是女生", "懷孕被"),
+     ("之招募、甄試、進用、分發、配置、考績或陞遷等",
+      "不得因性別或性傾向而有差別待遇",
+      "有結婚、懷孕、分娩或育兒之情事時")),
+
+    # ── 私立就業服務機構 / 仲介 (就服法§40) ── added 2026-08-05
+    # 「仲介收我服務費還扣護照」 returned 民法 and 消保法: 扣護照 is the entire
+    # complaint for a migrant worker and matched nothing, while 服務費 on its own
+    # reads as an ordinary consumer charge. Now top-8 is all 就業服務法.
+    (("仲介", "中介", "介紹工作", "人力公司", "扣護照", "扣證件", "押證件",
+      "扣我證件", "外籍看護", "移工"),
+     ("私立就業服務機構及其從業人員從事就業服務業務",
+      "留置其國民身分證、工作憑證或其他證明文件",
+      "扣留求職人財物或收取推介就業保證金")),
 )
 
 
