@@ -1004,6 +1004,33 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   is enforced by a test precisely because the person adding a row is the person
   most tempted to approximate.
 
+- **The recall harness could report a BM25-only number and call it hybrid.**
+  2026-08-05. Chasing the seven remaining misses, the same command produced
+  **348, then 334, then 320** on one machine inside an hour — and 320 is exactly
+  the pure-BM25 figure from the lexicon A/B. Ollama was up, the index loaded, a
+  test embedding succeeded. The cause is one line: `retriever._dense_fuse` wraps
+  the whole dense path in `except Exception: return None`. Graceful degradation
+  is CORRECT for the product — a demo with no Ollama must still answer — and
+  wrong for a measurement, because it fires PER QUERY when Ollama unloads bge-m3
+  under memory pressure, and the harness then publishes a number without saying
+  which retriever produced it.
+  Fixed by counting, not by changing behaviour: `dense_fallback_count()` /
+  `reset_dense_fallbacks()`, and `RecallReport` carries `dense_fallbacks` and
+  either says 「dense 全程參與(0 次退回),此數可與已發布數字相比」 or refuses the
+  comparison outright. The first run after the fix printed **recall 320/356,
+  dense_fallbacks 168/168** — every query had been degrading, invisibly, for the
+  whole session.
+  What this does and does not invalidate: the published **348/356** was measured
+  with dense working, and the four-way A/B separates cleanly (348 hybrid vs 320
+  BM25-only, a 28-case delta that matches the fallback story exactly), so those
+  figures stand. What was missing is the DISCLOSURE that reproducing them needs a
+  live bge-m3 — a reader running the command without one gets 320 and no warning.
+  Third instance in this file of bad-ruler-before-wrong-conclusion, and the first
+  where the ruler was lying about which system it measured.
+  Left undone on purpose: the k-sweep that prompted this (k=8/10/12/16) ran
+  through the broken ruler and is discarded, not published. Whether a wider
+  window beats k=8 in HYBRID mode remains unmeasured.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
