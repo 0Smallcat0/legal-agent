@@ -67,8 +67,8 @@ must be right are not left to it.</sub>
 | | |
 |---|---|
 | seeded defects caught (whole corpus) | **10,437/10,437, 0 false positives** |
-| statute coverage, 32-case golden set | **100% pass+partial, 0 miss** (73% strict) |
-| retrieval recall, real user wording | **348/356** |
+| statute coverage, 32-case golden set | **100% pass+partial, 0 miss** (81% strict) |
+| retrieval recall, real user wording | **351/356** |
 | honesty tier / wrong-premise detection | **84% / 100%** |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
 | first reference judgment states an awarded sum | **50/60 sessions** |

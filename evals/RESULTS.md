@@ -8,9 +8,9 @@
 >    model's accuracy — the *verifier's* recall, measured by planting errors in
 >    otherwise-correct answers over every article in the corpus. A guardrail
 >    with no number on it is a wish.
-> 2. **348/356 retrieval recall** on 168 real problems, in the wording people
+> 2. **351/356 retrieval recall** on 168 real problems, in the wording people
 >    actually use rather than in legal vocabulary.
-> 3. **100% pass+partial, 0 miss (73% strict)** statute coverage on a fixed 32-case
+> 3. **100% pass+partial, 0 miss (81% strict)** statute coverage on a fixed 32-case
 >    golden set, re-run after every change.
 >
 > **Three things that looked obviously right and lost.** These are the reason to
@@ -48,10 +48,10 @@ system makes — it never means "this statute does not exist."
 | what | number | harness |
 |---|---|---|
 | seeded defects caught, every article | **10,437/10,437 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
-| statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py`, grader at temperature 0 |
+| statute coverage, 32-case golden set | **pass 21 / partial 5 / miss 0** of 26 scorable — 100% pass+partial, 81% strict | `evaluation/golden_set.py`, grader at temperature 0, k=12 |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **32/32 (100%)** | same run |
-| retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
+| retrieval recall, real user wording | **351/356 (99%)** | `evaluation/real_recall.py`, 168 lived problems, k=12 |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190) | `evaluation/ablation.py`, llama3.1 over golden_v2, corpus v2 |
 
@@ -1109,6 +1109,36 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   `k=12` remains unresolved and unshipped. It needs a rerun against the now
   deterministic grader — cheap to do, and deliberately not folded into this entry,
   whose subject is the instrument rather than the window.
+
+- **k=12 shipped, decided against a deterministic grader.** 2026-08-05, the
+  question the previous three entries were clearing the ground for. With the
+  grader pinned at temperature 0 the comparison finally means something, and
+  every run was preceded by a probe confirming `dense_fallbacks 0`:
+
+  | | k=8 | k=12 |
+  |---|---|---|
+  | strict coverage | 73.1% (pass 19 / partial 5+2) | **80.8% (pass 21 / partial 5)** |
+  | miss | 0 | 0 |
+  | honesty tier | 27/32 | 27/32 |
+  | wrong premise | 32/32 | 32/32 |
+  | retrieval recall | 348/356 | **351/356** |
+
+  Two golden cases move partial → pass and three recall cases are recovered;
+  the two axes that could have gone the wrong way did not move at all. The rule
+  set before the run was: coverage up or flat AND tier not down, or it does not
+  ship. It cleared both. `DEFAULT_K = 12`.
+  **A coincidence worth stating so it does not read as a reversal.** 80.8% is
+  the same figure retracted earlier the same day. That one was k=8 winning a
+  temperature-0.2 dice roll; this one is k=12 measured deterministically and
+  reproducible. Same number, unrelated provenance.
+  **The cost that is still unmeasured, and is being accepted knowingly.** The
+  window is 50% wider, so the reader — and the model's prompt — receive 50% more
+  articles. Precision has no harness in this project; every figure above asks
+  whether the right article arrived, never what had to be waded through to reach
+  it. Three measured axes improved or held and one unmeasured axis got worse by
+  construction. That is the trade, stated rather than hidden, and it is the
+  strongest argument in this file for building a precision harness before the
+  next window change.
 
 ## Measured, then NOT shipped
 
