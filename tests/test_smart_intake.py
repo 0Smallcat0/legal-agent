@@ -112,13 +112,13 @@ def test_run_smart_intake_turn_calls_llm_once():
 @pytest.fixture
 def real_conn(tmp_path):
     # isolated noise-corpus copy — tests must never write the live DB
-    from legal_agent.data.noise_seed import load_noise_statutes
+    from tests.conftest import load_noise_fixture
 
     db = tmp_path / "t.db"
     init_db(db)
     conn = connect(db)
     seed_source_hierarchy(conn)
-    load_noise_statutes(conn)
+    load_noise_fixture(conn)
     yield conn
     conn.close()
 

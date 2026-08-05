@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.noise_seed import load_noise_statutes  # noqa: E402
+from tests.conftest import load_noise_fixture  # noqa: E402
 from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
 from legal_agent.evaluation.ablation import run_ablation, strip_think  # noqa: E402
 from legal_agent.evaluation.calibrate import (  # noqa: E402
@@ -47,7 +47,7 @@ def real_conn(tmp_path):
     init_db(db)
     conn = connect(db)
     seed_source_hierarchy(conn)
-    load_noise_statutes(conn)
+    load_noise_fixture(conn)
     yield conn
     conn.close()
 
@@ -201,7 +201,7 @@ def test_real_recall_scores_hits_and_misses(tmp_path):
     init_db(db)
     conn = connect(db)
     seed_source_hierarchy(conn)
-    load_noise_statutes(conn)          # includes 社會秩序維護法第72條
+    load_noise_fixture(conn)          # includes 社會秩序維護法第72條
 
     cases = [{
         "id": "noise", "label": "噪音",
