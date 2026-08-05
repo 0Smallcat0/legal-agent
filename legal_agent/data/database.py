@@ -1,15 +1,21 @@
-"""SQLite connection + schema initialization for the data layer.
+"""SQLite connection, schema, and the single write path into `statutes`.
 
-Responsibility: open connections to the local SQLite database and create the
-three tables defined in schema.sql (spec §1.4). This is the ONLY 'real' code in
-the data layer — it wires up the schema so the file can be validated and, later,
-populated. It does NOT import, fetch, or generate any legal data; that is a
-separate, later build step (spec §5, steps after this one).
+Responsibility: open connections to the local SQLite database, create the three
+tables defined in schema.sql (spec §1.4), and own the one INSERT that every
+ingest route goes through. It does NOT fetch or generate legal data — deciding
+WHAT to persist belongs to the ingest modules; this one only persists it.
+
+`insert_statute` used to live in `cli.py`, which meant `data/source_ingest.py`
+imported from the interactive command-line tool: the data layer depending on the
+presentation layer, and anyone importing the ingest path dragging argparse and a
+prompt loop along with it. Same SQL, correct home.
 """
 from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
+
+from legal_agent.data.models import Statute
 
 # schema.sql lives next to this module.
 SCHEMA_PATH = Path(__file__).with_name("schema.sql")
@@ -57,3 +63,21 @@ def init_db(db_path: str | Path) -> None:
 #   - the judgment importer lives in data/judicial_json.py (裁判書開放API
 #     JSON -> judgments rows; cited_articles via the verifier's grammar).
 # (no open TODOs — every importer in the spec's data layer is built)
+
+def insert_statute(conn: sqlite3.Connection, statute: Statute) -> None:
+    """Insert one statute time-slice. Raises sqlite3.IntegrityError on a
+    duplicate (statute_id, article_no, effective_from) or an unknown level."""
+    conn.execute(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            statute.statute_id,
+            statute.article_no,
+            statute.content,
+            statute.effective_from,
+            statute.effective_to,
+            statute.hierarchy_level,
+            statute.source_url,
+        ),
+    )
+    conn.commit()

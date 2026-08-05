@@ -929,6 +929,20 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   differing baselines; `flagged` is the one column measured identically on both
   rows, so it is the one the published figure quotes.
 
+- **The audit's deletion half, and what it did NOT buy.** 2026-08-05, recorded
+  here because a file about measurement should say when there is nothing to
+  measure. `noise_seed.py` (177 lines) went to `tests/fixtures/noise_corpus.json`
+  — its only remaining callers were test fixtures, the shipped corpus having come
+  from bulk XML since v2 — and `insert_statute` moved from `cli.py` into
+  `data/database.py`, which ended `data/source_ingest.py` importing from the
+  interactive CLI: the data layer depending on the presentation layer, and any
+  importer of the ingest path dragging argparse and a prompt loop with it.
+  Line count: **9,701 → 9,524 → 9,542.** The move ADDED eighteen lines, all of
+  them the comment explaining why the function belongs where it now is. Neither
+  change moves a published number and neither buys a user a better answer; they
+  buy the next reader not having to work out which of two corpus loaders is live,
+  and not having to explain why the data layer imports a CLI.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
