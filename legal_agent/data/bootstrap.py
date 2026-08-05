@@ -18,7 +18,16 @@ from legal_agent.data.source_ingest import load_proposals
 # Source of truth for the shipped corpus. The old hand-typed noise seed is
 # superseded by the official-XML proposal — loading both would create duplicate
 # current slices for the same article.
-PROPOSALS = ("moj_bulk_v1_proposal.json", "noise_routing_proposal.json")
+PROPOSALS = (
+    "moj_bulk_v1_proposal.json",
+    # The gap batch. Triage classifies traffic and labor cases, and the ladder
+    # tells a hurt rider to claim 強制險 first — while the statute that says they
+    # may ("不論加害人有無過失" — 強制汽車責任保險法§7) was not in the corpus at
+    # all, so that rung carried no legal basis. Labor had the same hole: 勞基法
+    # alone, with 勞保條例 / 就服法 / 性平法 absent.
+    "moj_gap_v1_proposal.json",
+    "noise_routing_proposal.json",
+)
 
 # Reference judgments, redacted to the two slices a page renders (see
 # data/judgment_ingest.py). Shipped because the harvester cannot practically
