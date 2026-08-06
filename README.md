@@ -120,7 +120,11 @@ Each is self-contained, with no Taiwan-specific logic worth speaking of:
   Multi-turn re-retrieval is the documented cause of RAG degradation; here it is
   enforced by a test, not a convention.
 - **The model sits behind a `str -> str` seam** with three swappable backends —
-  `manual` (paste into any chat), `ollama` (local), `anthropic` (paid).
+  `manual` (paste into any chat), `ollama` (local, the default), `anthropic`
+  (paid). Pick one with `LEGAL_AGENT_PROVIDER=manual`, no source edit: measured
+  on a clean venv, that was the only step in the documented path that left a
+  first-time reader stuck, because `pip install` puts `config.py` in
+  site-packages.
 - **Judgments are reference tier**, never retrieval candidates and never citable
   law. They reach a page only through a deterministic join on articles the
   pipeline already retrieved, with the award figure read verbatim from the 主文.
@@ -128,6 +132,7 @@ Each is self-contained, with no Taiwan-specific logic worth speaking of:
 [SPEC.md](SPEC.md) design · [RESULTS.md](evals/RESULTS.md) every number, the
 method behind it, and the ones that went down ·
 [CONTRIBUTING.md](CONTRIBUTING.md) the bar a change has to clear ·
+[AGENTS.md](AGENTS.md) the same bar plus the measurement traps, for coding agents ·
 [DEPLOY_SPACES.md](docs/DEPLOY_SPACES.md) hosting
 
 **Found a wrong answer?** That is the most useful thing you can send — the

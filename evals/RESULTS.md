@@ -1291,6 +1291,36 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   shipped. (`query=` for the coverage veto WAS wired into that tab, because the
   veto is this change.)
 
+- **The install was measured instead of assumed, and it was stuck in one place.**
+  2026-08-06. Fresh clone from GitHub, clean venv, `LEGAL_AGENT_HOME` pointed at
+  an empty directory to simulate a machine that has never run this. Timed:
+  clone 1.3s (5.1 MB, 110 tracked files), `pip install .` 29s (3 dependencies, no
+  GPU), and the README's five-line snippet run VERBATIM from a directory with no
+  checkout — first call 5.0s while the database builds itself, 0.00s after, and
+  the corpus comes out complete (2,923 rows, 17 statute_ids, 386 judgments).
+  `pip install .[dev] && pytest` is 438 passed in 17s. The library path is two
+  commands and needs no model, no key and no network.
+  **What was stuck:** `LLM_PROVIDER` was a source constant, and `pip install`
+  puts `config.py` in site-packages — so someone without Ollama who ran the CLI
+  had a clear error telling them to edit an INSTALLED file. It reads
+  `LEGAL_AGENT_PROVIDER` now (same for `OLLAMA_MODEL` and `OLLAMA_HOST`), so the
+  free 「manual」 backend is one env var away. Verified end to end on the clean
+  venv: `LEGAL_AGENT_PROVIDER=manual legal-agent` starts and runs.
+  **What the fresh install proved was already right:** without Ollama the
+  harnesses refuse to be misread. `real_recall` reports 320/356 — exactly the
+  figure the README advertises for a plain install — with 「168/168 個查詢的
+  dense 半邊失敗」 printed beside it, and `honesty_probe` reports 35/35 the same
+  way. The guard that four bad rulers bought is doing its job on a machine that
+  has never seen this project.
+  **What it caught:** the CLI greeting still said 「11 部民生法規」 and the demo
+  said 「11 部…2,560 條」 — the first sentence a new user reads, stale since the
+  corpus reached 16 statutes and 2,922 articles. Also `SPEC.md`'s scope
+  paragraph. Fixed; no measured number moves, which is why this is recorded here.
+  Added `AGENTS.md`, because the traps in this file (the corpus living outside
+  the repo, dense degrading in silence, the grader's temperature, `DEFAULT_K`
+  binding at definition time, the ablation's double-meaning column) are spread
+  across 1,300 lines and a coding agent reads none of them before its first run.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:

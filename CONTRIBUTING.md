@@ -3,6 +3,10 @@
 The bar here is unusual and worth reading before you spend time: **a change
 ships when a number moves, and the number is published either way.**
 
+Working through a coding agent? [`AGENTS.md`](AGENTS.md) is the same rules in one
+screen, plus the seven measurement traps that have each produced a wrong number
+here — an agent that skips it will publish one too.
+
 ## The rule
 
 Every published figure in [`evals/RESULTS.md`](evals/RESULTS.md) has a harness
@@ -12,6 +16,7 @@ behind it that you can run:
 python -m legal_agent.evaluation.mutation                          # verifier recall
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # statute coverage
 python -m legal_agent.evaluation.real_recall                       # 168 real sessions
+python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
 ```
 
 If your change moves one of those, say which and by how much. If it moves none,
