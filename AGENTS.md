@@ -72,10 +72,12 @@ python -m legal_agent.evaluation.mutation                          # verifier re
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # statute coverage (needs a model)
 python -m legal_agent.evaluation.real_recall                       # 168 real sessions
 python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
+python -m legal_agent.evaluation.judgment_relevance                # reference tier
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold sweep
 ```
 
-`mutation`, `real_recall` and `honesty_probe` need no LLM and are deterministic.
+`mutation`, `real_recall`, `honesty_probe` and `judgment_relevance` need no LLM
+and are deterministic.
 `golden_set` and `ablation` call a real model and are not.
 
 ## Before you propose a change

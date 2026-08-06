@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-443%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-464%20passing-brightgreen)
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
@@ -73,6 +73,7 @@ must be right are not left to it.</sub>
 | out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
 | first reference judgment states an awarded sum | **50/60 sessions** |
+| that judgment is the same KIND of dispute as the question | **51/88**, and 58/146 carry a 案由 too generic to tell |
 | first action names the reader's own documents | **83/168 sessions** |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** |
 | articles on the page the model skipped | **8 → 18 of 21 expected** |
@@ -81,6 +82,7 @@ must be right are not left to it.</sub>
 python -m legal_agent.evaluation.mutation                          # catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
 python -m legal_agent.evaluation.real_recall                       # lived sessions
+python -m legal_agent.evaluation.judgment_relevance                # reference tier
 ```
 
 **Two of those rows need a second half a plain install does not have.** The

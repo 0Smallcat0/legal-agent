@@ -56,7 +56,8 @@ system makes — it never means "this statute does not exist."
 | out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** | `evaluation/honesty_probe.py`, 35 cases, retrieval only |
 | wrong-premise detection | **32/32 (100%)** | same run |
 | retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems, k=8 |
-| reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
+| reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted |
+| that judgment is the reader's KIND of dispute | **51/88 scorable (58%)**, 146/168 sessions carry one, 58/146 案由 too generic to score | `evaluation/judgment_relevance.py`, 168 lived problems, both sides derived |
 | bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190) | `evaluation/ablation.py`, llama3.1 over golden_v2, corpus v2 |
 
 ```bash
@@ -1404,9 +1405,85 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   (mutation, golden, the tier pair) are NOT pinned here: a test that has to run
   llama3.1 to check a README line is worse than the rot.
 
+- **The reference judgment was never asked whether it is about the reader's
+  problem — it is, 51/88 times.** 2026-08-06. `related_judgments` JOINs on
+  articles the pipeline already retrieved, so a case cannot appear unless it
+  cites the same law: relevance to an ARTICLE, guaranteed by code. Relevance to
+  the reader's DISPUTE had one favourable anecdote and no number, and this table
+  said so — 「counted, never scored」.
+  `evaluation/judgment_relevance.py` scores it over the same 168 lived problems,
+  with `focus` set to the session's own expected articles that reached the
+  window, i.e. the path stage3 takes when the model cites the right law and
+  verification clears it. Measuring under a CORRECT answer is what isolates this
+  layer from model quality.
+  **Why 案由.** `judgments.full_text` holds the header and the 主文 only — no
+  facts, no reasoning. So the block a reader sees offers four things: the 案由,
+  the court and case number, the sum ordered paid, and the shared article. The
+  案由 is the only one that says what the case was ABOUT. Grading it is not a
+  proxy of convenience; it grades the one field the reader has to judge by.
+  **No hand labels, on purpose.** Both sides are derived — the session's family
+  from its own `expected_statutes` through 民法's 編/章/節 ranges (a legal fact),
+  the judgment's from keywords in the court's own 案由. The author of the system
+  grading his own system on labels he wrote would be worth nothing; anyone can
+  re-derive both tables.
+  **146/168** sessions carry a judgment. The other 22 are honest silence: 18 have
+  one available and lose it to `focus`, because no harvested judgment cites the
+  article the answer actually stands on — the layer would rather show nothing
+  than something adjacent.
+  **51/88 (58%)** of the scorable ones are the same kind of dispute.
+  **58/146 are unscorable** because the 案由 is 「損害賠償」 or 「損害賠償等」, which
+  names no dispute at all. Those are reported, not scored: counting them as hits
+  would flatter the number and counting them as misses would blame the layer for
+  the courts' filing vocabulary. Same-family is also a NECESSARY, not sufficient,
+  condition — two 租賃 cases can still be different situations — so 58% is a
+  CEILING on usefulness, the way `real_recall.precision` is a floor.
+  **The split by family says the cause is the corpus, not the ranking.** Perfect
+  where the harvest is dense — 監護 6/6, 家暴 5/5, 侵權 5/5, 婚姻 4/4, 僱傭 3/3,
+  租賃 3/3 — and bad where it is thin: 繼承 3/10, 委任 4/8, 共有 2/6, 寄託 1/4,
+  扶養 2/5, and 0/2 each for 保證, 買賣, 贈與, 消費. This is the same finding as
+  「judgment coverage is thin exactly where it matters」 above, now per family.
+  One mechanism is worth naming because it is systematic rather than random:
+  **three of the five 扶養 sessions are shown a car crash.** Taiwanese traffic
+  judgments compute dependants' support and therefore cite 民法§1114/§1115/§1117
+  heavily, so any 扶養 question joins straight onto them. (An earlier claim in
+  this file that a 押金 session pulled three car-crash judgments was wrong and
+  was retracted — it was an artifact of a stub LLM. The mechanism is real; the
+  session it was pinned to was not.)
+  **What the taxonomy cannot settle.** A 保證 question shown 清償借款 counts as a
+  miss, but suing a guarantor IS filed as 清償借款; likewise 繼承 → 不動產所有權
+  移轉登記等. Both are defensible either way, and both were left as measured
+  rather than reclassified, because tuning the map until the number improves is
+  the thing CONTRIBUTING forbids. The map was corrected exactly twice, for rule
+  bugs rather than outcomes: cross-cutting articles (民法§273 連帶債務 and the
+  like) are rules that apply inside a loan, a sale or a repair job alike, so they
+  identify no dispute and are excluded on both sides — grading by them scored
+  清償借款, the right case, as a miss; and the EARLIEST keyword in a 案由 wins
+  rather than the first in the table, because a court writes the claim it decided
+  first and appends the rest after 「等(含…)」, so 「離婚等(含未成年子女親權酌定、
+  扶養費等)」 is a 婚姻 case that also settled support.
+  464 tests. The published `50/60 first judgments state an award` is unaffected;
+  on all 168 it reads 93/146.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
+
+- **ranking reference judgments by 案由 family** — derivable at runtime from the
+  articles already retrieved, no LLM, and it would obviously raise the 51/88.
+  That is exactly why it is not shipped: the harness scores by the same map, so
+  the ranker would be graded on its own target and the number would rise without
+  anything getting better. Shipping it needs a relevance signal the ranker does
+  not consult.
+- **making the award sort a tiebreak instead of the primary key.**
+  `related_judgments` sorts by shared-article count and then re-sorts the whole
+  candidate list by 「states an award」, so a case sharing one article with a sum
+  outranks a case sharing three without one. Sorting award WITHIN each overlap
+  group instead changes the first judgment in **10/146** sessions; all ten gain
+  an article of overlap and all ten lose their award figure (93/146 → 83/146
+  first judgments stating a sum). Inspecting the ten, the swaps are mixed —
+  `inheritance-share` improves (不動產所有權移轉登記等 → 分割遺產),
+  `money-left-with-friend` gets worse (返還不當得利 → 分割遺產). A published
+  number down, an unpublished one up, on ten cases of mixed quality: not a win.
 
 - **per-statute cap on the retrieval window** — one statute really does flood it
   (7 of 8 seats), but capping loses on both harnesses, because real answers

@@ -17,6 +17,7 @@ python -m legal_agent.evaluation.mutation                          # verifier re
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # statute coverage
 python -m legal_agent.evaluation.real_recall                       # 168 real sessions
 python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
+python -m legal_agent.evaluation.judgment_relevance                # reference tier
 ```
 
 If your change moves one of those, say which and by how much. If it moves none,
