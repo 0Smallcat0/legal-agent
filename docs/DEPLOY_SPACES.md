@@ -82,6 +82,11 @@ git rm --cached docs/demo_web.png && rm -f docs/demo_web.png
 Re-apply the three differences above where `git checkout main -- .` overwrote
 them, then:
 
+> The frontmatter's `short_description` and the README's tests badge both carry
+> NUMBERS, so they go stale on their own schedule — check them against
+> `evals/RESULTS.md` during the sync rather than copying the old block forward.
+> Both were stale on 2026-08-06 (10,437/10,437 and 433 tests).
+>
 > **Do not guard the shim re-apply on the string `spaces.GPU`.** That phrase now
 > appears in `main`'s own `app.py` docstring describing this requirement, so a
 > "skip if already present" check written that way matches the docstring, skips
