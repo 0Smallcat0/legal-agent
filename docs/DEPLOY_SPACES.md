@@ -3,7 +3,7 @@
 **Live**: https://huggingface.co/spaces/NoirOAO/legal-agent-demo
 
 The Gradio demo (`app.py`) needs no GPU, no API key, and no Ollama. The corpus
-is built at startup from the JSON files in `corpus/`, the 引用查核 and 檢索 tabs
+is built at startup from the JSON files in `legal_agent/corpus/`, the 引用查核 and 檢索 tabs
 are pure Python, and the 完整流程 tab falls back to a scripted checklist when no
 model is reachable. (The one-click Ollama button reports "not available" there;
 it works when running `python app.py` locally.)
@@ -106,6 +106,21 @@ the one cheap check that this file is right:
 ```bash
 diff <(git show main:README.md) README.md   # must show ONLY the frontmatter + the img src
 ```
+
+**And check the whole tree, not just that file.** `git checkout main -- .` copies
+what main HAS; it never removes what main deleted, so the branch accumulates
+files forever. On 2026-08-06 it was still publicly shipping a stale duplicate of
+the corpus at the pre-`pip install` path (`corpus/`, ~30k lines, relocated to
+`legal_agent/corpus` long before) and `legal_agent/data/noise_seed.py`, which
+main had deleted for having no caller. Nothing flagged it, because an extra file
+is invisible to a procedure that only ever adds. After every sync:
+
+```bash
+git diff --stat main hf-space   # exactly README.md, app.py, docs/demo_web.png
+```
+
+Anything else in that list is either a difference nobody decided on, or a
+deletion that never crossed. `git rm` it.
 
 Then:
 
