@@ -63,6 +63,24 @@ OLLAMA_HOST = os.environ.get("LEGAL_AGENT_OLLAMA_HOST", "http://localhost:11434"
 # 要更好的繁中可換 qwen3:latest 等 — same reason as above, no source edit needed.
 OLLAMA_MODEL = os.environ.get("LEGAL_AGENT_OLLAMA_MODEL", "llama3.1:latest")
 
+
+def _tri_state(name: str) -> bool | None:
+    """Env flag with a real third state: unset means 「do not send the key」,
+    which is not the same as sending false."""
+    raw = os.environ.get(name)
+    if raw is None or not raw.strip():
+        return None
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+# Reasoning models can spend the whole generation budget inside <think> and
+# return an empty answer (measured on qwen3:4b — see ollama_llm). The backend
+# detects that and retries, but the retry costs a wasted generation on EVERY
+# call, so a user who knows their model thinks can turn it off up front with
+# LEGAL_AGENT_OLLAMA_THINK=false. Unset keeps the key out of the payload
+# entirely, so servers and models that never heard of it are unaffected.
+OLLAMA_THINK = _tri_state("LEGAL_AGENT_OLLAMA_THINK")
+
 # Hybrid retrieval (retrieval/dense.py): "auto" fuses BM25 with local-Ollama
 # bge-m3 embeddings via RRF when the index/daemon is available, and silently
 # falls back to pure BM25 on ANY failure; "off" = pure BM25 always.
