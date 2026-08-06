@@ -86,6 +86,7 @@ must be right are not left to it.</sub>
 | out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
 | first reference judgment states an awarded sum | **50/60 sessions** |
+| that judgment is the same KIND of dispute as the question | **51/88**, and 58/146 carry a 案由 too generic to tell |
 | first action names the reader's own documents | **83/168 sessions** |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** |
 | articles on the page the model skipped | **8 → 18 of 21 expected** |
@@ -94,6 +95,7 @@ must be right are not left to it.</sub>
 python -m legal_agent.evaluation.mutation                          # catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
 python -m legal_agent.evaluation.real_recall                       # lived sessions
+python -m legal_agent.evaluation.judgment_relevance                # reference tier
 ```
 
 **Two of those rows need a second half a plain install does not have.** The
@@ -137,7 +139,10 @@ Each is self-contained, with no Taiwan-specific logic worth speaking of:
   (paid). Pick one with `LEGAL_AGENT_PROVIDER=manual`, no source edit: measured
   on a clean venv, that was the only step in the documented path that left a
   first-time reader stuck, because `pip install` puts `config.py` in
-  site-packages.
+  site-packages. **Swapping the model is measured, not assumed**: llama3.1:8B
+  and qwen3:4b score identically on the golden set — pass 19 / partial 7 /
+  miss 0, tier 29/32, premise 32/32 — because those are decided by retrieval and
+  by code. The model changes the prose and nothing that is scored.
 - **Judgments are reference tier**, never retrieval candidates and never citable
   law. They reach a page only through a deterministic join on articles the
   pipeline already retrieved, with the award figure read verbatim from the 主文.
