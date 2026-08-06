@@ -1382,6 +1382,28 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   440 tests. No published number moves: the fixes fire only when the model
   returns nothing or ignores the headings, and llama3.1 does neither.
 
+- **The numbers in prose got a harness, after rotting four times in one day.**
+  2026-08-06. Every measured figure here has a runnable harness; the copies of
+  those figures pasted into a README badge, the demo's hero line, the CLI
+  greeting and the Spaces `short_description` had nothing behind them. In a
+  single day that cost four separate rounds: the greeting said 「11 部民生法規」
+  and the demo footer 「2,560 條」 long after the corpus reached 16 statutes and
+  2,922 articles; the Space advertised 10,437/10,437 after the mutation
+  denominators were re-measured; the tests badge and the hero each lagged a
+  commit twice. Three of those four were caught by reading the deployed page, not
+  by any check.
+  `tests/test_published_numbers.py` derives the counts from the live corpus and
+  fails when a sentence disagrees. It found its own commit immediately: 443
+  collected against prose still saying 440.
+  Deliberately narrow. The corpus counts are DERIVED (statutes and articles
+  excluding the 行政實務見解 routing note, which the prose describes separately),
+  so 「16 部 / 2,922 條」 is checked rather than hardcoded. The test count is
+  checked in one direction only — the stated number may not fall behind what
+  pytest collected — because a subset run collects fewer and failing then would
+  punish `pytest tests/test_one.py`. Figures whose harness needs a model
+  (mutation, golden, the tier pair) are NOT pinned here: a test that has to run
+  llama3.1 to check a README line is worse than the rot.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
