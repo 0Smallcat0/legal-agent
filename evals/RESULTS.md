@@ -51,6 +51,7 @@ system makes — it never means "this statute does not exist."
 | what | number | harness |
 |---|---|---|
 | seeded defects caught, every article | **11,904/11,904 (100%), 0/2,921 false positives** | `evaluation/mutation.py` |
+| semantic 4th axis — the only thing that catches a subject swap | catches **9/9**, and flags **1,259/2,921 (43%)** of CORRECT citations, so it stays off | `evaluation/mutation.py --semantic`, llama3.1, `semantic_unreached` 0 |
 | statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py`, grader at temperature 0, k=8 |
 | honesty tier | **29/32 (91%)** | same run (decided from retrieval scores, so model-independent) |
 | out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** | `evaluation/honesty_probe.py`, 35 cases, retrieval only |
@@ -1539,9 +1540,49 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   4th-axis measurement was taken with no way to prove the model participated,
   and that is now checkable. 474 tests.
 
+  **Then the widened exam ran on a live model, and it settles the §7 debt.**
+  `mutation --semantic`, llama3.1, `semantic_unreached` 0 — so the model
+  rendered every verdict in this number:
+
+  | | |
+  |---|---|
+  | catch, all classes | 11,913/11,913 (100%) |
+  | of which `subject_swap` | **9/9** |
+  | false positives on correct citations | **1,259/2,921 (43%)** |
+
+  So the axis is not weak — it catches every planted swap including the §7
+  object-of-a-cap shape. It is unusable: it calls **43% of correct citations
+  wrong**, against 0/2,921 for the pure-code verifier. The published 「10–30%」
+  was optimistic and is superseded.
+  **The false positives are not a scoping problem.** Concentrating the axis on
+  the everyday statutes would not rescue it — 民法 alone accounts for 544, and
+  every statute in the corpus contributes: 勞基法 50, 家暴法 36, 個資法 27,
+  租賃住宅條例 24, 公寓大廈 22, 消保法 21. Reading them, the model objects to
+  controls that quote the article's own figure back at it (「主張把罰金金額改為
+  700000元,與條文明顯不同」 — the article says 七十萬元) and treats a sentencing
+  range as a period (「相關期間為10年」 out of 「十年以下有期徒刑」). The
+  structural amount axis handles both correctly, at 2,921/2,921.
+  **So §7 closes as a measured limit rather than a fix.** The error class is
+  catchable, by exactly one mechanism, and that mechanism costs 43% false
+  alarms. Both cheaper routes were measured and lost: a second inverted question
+  requiring both to agree moved a 120-control sample from 38% to 31% (the two
+  framings agree on the false alarms, so it is not noise), and the model swap
+  measured earlier the same day scores identically on every graded axis. The
+  honest statement of what this system does for a reader is unchanged and now
+  fully bounded: reliable about **which article governs**, with the prose about
+  that article carrying one failure mode that nothing in the pipeline can catch
+  without making two of every five correct citations look wrong.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
+
+- **asking the semantic axis a second, inverted question and flagging only when
+  both agree.** The theory was that the false positives are the model being
+  jumpy rather than genuinely reading a contradiction. On a 120-control sample
+  it moved 38% → 31% while catch stayed 9/9 — the two framings AGREE on the
+  false alarms, so there is no noise to cancel. A 31% false-positive rate is not
+  a shippable checker either way.
 
 - **ranking reference judgments by 案由 family** — derivable at runtime from the
   articles already retrieved, no LLM, and it would obviously raise the 51/88.
