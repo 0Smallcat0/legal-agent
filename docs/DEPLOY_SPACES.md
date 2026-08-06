@@ -95,8 +95,16 @@ from pathlib import Path
 p = Path("README.md"); t = p.read_text(encoding="utf-8")
 t = t.replace('src="docs/demo_web.png"',
               'src="https://raw.githubusercontent.com/0Smallcat0/legal-agent/main/docs/demo_web.png"')
-p.write_text(FRONTMATTER + "\n" + t, encoding="utf-8")   # FRONTMATTER = the block above
-PY
+p.write_text(FRONTMATTER + "\n" + t, encoding="utf-8", newline="\n")
+PY                                                       # FRONTMATTER = the block above
+```
+
+`newline="\n"` is not cosmetic. On Windows `write_text` translates every `\n` to
+`\r\n`, and the result diffs as 160 changed lines instead of 2 — which destroys
+the one cheap check that this file is right:
+
+```bash
+diff <(git show main:README.md) README.md   # must show ONLY the frontmatter + the img src
 ```
 
 Then:
