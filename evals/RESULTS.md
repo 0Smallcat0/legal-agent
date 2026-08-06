@@ -8,9 +8,9 @@
 >    model's accuracy — the *verifier's* recall, measured by planting errors in
 >    otherwise-correct answers over every article in the corpus. A guardrail
 >    with no number on it is a wish.
-> 2. **351/356 retrieval recall** on 168 real problems, in the wording people
+> 2. **348/356 retrieval recall** on 168 real problems, in the wording people
 >    actually use rather than in legal vocabulary.
-> 3. **100% pass+partial, 0 miss (81% strict)** statute coverage on a fixed 32-case
+> 3. **100% pass+partial, 0 miss (73% strict)** statute coverage on a fixed 32-case
 >    golden set, re-run after every change.
 >
 > **Three things that looked obviously right and lost.** These are the reason to
@@ -48,10 +48,10 @@ system makes — it never means "this statute does not exist."
 | what | number | harness |
 |---|---|---|
 | seeded defects caught, every article | **10,437/10,437 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
-| statute coverage, 32-case golden set | **pass 21 / partial 5 / miss 0** of 26 scorable — 100% pass+partial, 81% strict | `evaluation/golden_set.py`, grader at temperature 0, k=12 |
+| statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py`, grader at temperature 0, k=8 |
 | honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **32/32 (100%)** | same run |
-| retrieval recall, real user wording | **351/356 (99%)** | `evaluation/real_recall.py`, 168 lived problems, k=12 |
+| retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems, k=8 |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
 | bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190) | `evaluation/ablation.py`, llama3.1 over golden_v2, corpus v2 |
 
@@ -1139,6 +1139,32 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   construction. That is the trade, stated rather than hidden, and it is the
   strongest argument in this file for building a precision harness before the
   next window change.
+
+- **The precision harness I said should come first was built second, and it
+  reversed the decision it was built to price.** 2026-08-05, last measurement of
+  the day. `k=12` shipped earlier on two axes — recall 348→351, strict coverage
+  73.1→80.8% — with the cost 「stated rather than hidden」 because nothing in this
+  project measured it. `real_recall` now reports the window cost too.
+
+  | | k=8 | k=12 |
+  |---|---|---|
+  | recall | 348/356 | 351/356 |
+  | articles delivered per session | 8.0 | 12.0 |
+  | **outside the expectation, per session** | **5.9** | **9.9** |
+  | precision floor | 25.9% | 17.4% |
+
+  Expected articles delivered per session barely moves: **2.07 → 2.09**. Across
+  168 sessions the wider window recovered **3** expected articles and added
+  **672** unexpected ones — about 1:224. Whatever fraction of those are secretly
+  relevant (the expectation list is not exhaustive, so this is a floor), k=12 is
+  buying bulk, not substance, and a layperson reading verbatim statutes pays for
+  every extra row.
+  **Reverted to k=8.** README and the tables go back to 348/356 and 73% strict.
+  The uncomfortable part is the ordering: I wrote 「a precision harness should come
+  before the next window change」 into this file, then made the window change, then
+  built the harness, and the harness said no. The rule was right and I applied it
+  in the wrong order. It exists now, so the next seat or window change can be
+  judged on all three axes instead of the two that flatter it.
 
 ## Measured, then NOT shipped
 

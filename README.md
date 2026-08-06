@@ -67,8 +67,8 @@ must be right are not left to it.</sub>
 | | |
 |---|---|
 | seeded defects caught (whole corpus) | **10,437/10,437, 0 false positives** |
-| statute coverage, 32-case golden set | **100% pass+partial, 0 miss** (81% strict) |
-| retrieval recall, real user wording | **351/356** |
+| statute coverage, 32-case golden set | **100% pass+partial, 0 miss** (73% strict) |
+| retrieval recall, real user wording | **348/356**, 5.9 unexpected articles per session |
 | honesty tier / wrong-premise detection | **84% / 100%** |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
 | first reference judgment states an awarded sum | **50/60 sessions** |
@@ -87,7 +87,7 @@ retriever is BM25 plus a hand-written vocabulary table plus optional bge-m3
 embeddings, and the embeddings need a local index that is built rather than
 shipped — it is derived from your corpus and it is ~12 MB of floats. Straight
 after `pip install .` the retrieval half is lexical only: **recall 320/356
-rather than 351/356**, measured. To reach the published figure:
+rather than 348/356**, measured. To reach the published figure:
 
 ```bash
 ollama pull bge-m3                        # ~1.2 GB, once

@@ -59,6 +59,33 @@ class RecallReport:
     def rate(self) -> float:
         return (self.hit_total / self.expected_total) if self.expected_total else 0.0
 
+    # ── the other half of the trade ──────────────────────────────────────────
+    # Every figure in this project asked whether the right article REACHED the
+    # window; none asked what the reader had to wade through to find it. So a
+    # wider window could only ever look free. It is not: k=8 -> 12 puts 50% more
+    # articles in front of a person and into the model's prompt.
+    #
+    # Honest about what this can and cannot say. `expected_statutes` is not an
+    # exhaustive relevance label — an article outside it is not proven noise — so
+    # the ABSOLUTE precision below is a floor, not a verdict on quality. What IS
+    # valid is comparing settings on a fixed case set: if the window grows and
+    # the hit count does not, those seats went to something nobody asked for.
+    @property
+    def window_total(self) -> int:
+        return sum(len(c.window) for c in self.cases)
+
+    @property
+    def precision(self) -> float:
+        """Share of delivered articles that were expected. A FLOOR (see above)."""
+        return (self.hit_total / self.window_total) if self.window_total else 0.0
+
+    @property
+    def unexpected_per_session(self) -> float:
+        """Articles per session outside the expectation — the wading cost."""
+        if not self.cases:
+            return 0.0
+        return (self.window_total - self.hit_total) / len(self.cases)
+
     def render(self) -> str:
         lines = ["═══════ 真實情境檢索召回(以使用者原話為輸入) ═══════"]
         for c in self.cases:
@@ -71,6 +98,12 @@ class RecallReport:
         lines.append(
             f"hit@k 總計:{self.hit_total}/{self.expected_total}({self.rate:.0%})"
             "——量的是「該出現的條文有沒有進入模型可引用的窗口」,不是法律判斷正確性"
+        )
+        lines.append(
+            f"視窗成本:每次諮詢送出 {self.window_total / max(len(self.cases), 1):.1f} 條,"
+            f"其中 {self.unexpected_per_session:.1f} 條不在期待清單內"
+            f"(precision 下限 {self.precision:.0%})"
+            "——期待清單不是完整的相關性標註,故此為下限;跨設定比較才有意義。"
         )
         if self.dense_fallbacks:
             lines.append(
