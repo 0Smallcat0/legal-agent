@@ -64,6 +64,12 @@ class MutationOutcome:
 @dataclass
 class MutationReport:
     outcomes: list[MutationOutcome]
+    # Semantic-axis verdicts that were never rendered by a model (server down,
+    # unparseable reply). The axis answers 「consistent」 on every failure path,
+    # so an outage looks exactly like a clean run — and on 2026-08-06 it did:
+    # 0 flags on 9 planted swaps read as a perfect false-positive record until
+    # the connection error surfaced. Reported, never silently absorbed.
+    semantic_unreached: int = 0
 
     def _bucket(self, kind: str) -> list[MutationOutcome]:
         return [o for o in self.outcomes if o.kind == kind]
@@ -116,6 +122,12 @@ class MutationReport:
             f"({self.catch_rate:.0%})｜false-positive rate: "
             f"{self.false_positives}/{self.control_total}({self.false_positive_rate:.0%})"
         )
+        if self.semantic_unreached:
+            lines.append(
+                f"⚠ 這個數字不是完整的四軸結果:語意軸有 {self.semantic_unreached} 次"
+                "沒有拿到模型判讀(伺服器未啟動或回覆無法解析)。該軸在每一條失敗路徑上"
+                "都回答「一致」,所以斷線看起來就像零誤報。重跑前先確認 Ollama。"
+            )
         misses = [o for o in self.outcomes if not o.ok]
         if misses:
             lines.append("")
@@ -169,6 +181,9 @@ def run_mutation_test(
 ) -> MutationReport:
     """Run the seeded-error suite. With `semantic_llm` set, the 4th axis is on
     and the subject_swap cases are planted (grading the LLM checker itself)."""
+    from legal_agent.anti_hallucination.semantic_check import reset_semantic_unreached
+
+    reset_semantic_unreached()
     outcomes: list[MutationOutcome] = []
     # Earliest slice per article: out_of_force must date the citation before
     # the FIRST version ever took effect. The day before the CURRENT slice is
@@ -332,7 +347,9 @@ def run_mutation_test(
                     "subject_swap", f"{sid}{ano}", answer,
                     expect_flag=True, conn=conn, semantic_llm=semantic_llm,
                 ))
-    return MutationReport(outcomes)
+    from legal_agent.anti_hallucination.semantic_check import semantic_unreached_count
+
+    return MutationReport(outcomes, semantic_unreached=semantic_unreached_count())
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation [--semantic]

@@ -1508,6 +1508,37 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   a fully-retrieved, fully-verified page with nothing written on it, and now gets
   32/32 complete three-section answers. 468 tests.
 
+- **The semantic axis's exam had three questions, and the axis could fail
+  invisibly.** 2026-08-06, working the §7 `subject_swap` debt. Two things turned
+  up before any checker could be improved.
+  **The exam.** `mutation.py` grades the 4th axis on `_SUBJECT_SWAPS` — **three**
+  hand-written sentences, against ~2,921 controls. All three are ACTOR swaps
+  (承租人/土地所有人, 房東/住戶, 環境主管機關). None is the shape that actually
+  reached a reader: a numeric cap attached to the wrong OBJECT. Tuning the
+  checker against n=3 would have been tuning against noise, so the exam was
+  widened first — six new cases covering both shapes, starting with the real §7
+  failure (租賃住宅條例§7 caps the 押金; the answer said it caps the deduction),
+  plus 民法§432, 消保法§19, 勞基法§24, 公寓大廈§10 and 家暴法§14.
+  Every one was run through `verify_answer` with the semantic axis OFF first and
+  had to come back `flagged=False`. All six do — which is itself the finding
+  worth stating: **six plainly wrong statements of who owes what, and the
+  pure-code verifier passes every one.** A case the structural axes already
+  catch would have credited the semantic axis with work it never did.
+  **The instrument.** The first run of the widened exam returned 0/9 caught and
+  0/120 false positives — a perfect false-positive record. Ollama was down. Not
+  one of the 129 calls reached a model: `semantic_consistent` returns
+  `(True, "")` on every failure path, which is the right call (a checker that
+  cries wolf over its own infrastructure gets switched off) with a sharp edge —
+  **the failure direction is the flattering one.** This is trap 2 (dense
+  retrieval fails silently) in a second component, and trap 7 (a harness reading
+  a field that is not there) in a second form.
+  `semantic_unreached_count()` now counts every verdict the model did not
+  render, `mutation --semantic` refuses to present a clean scorecard when it is
+  non-zero, and six tests pin the distinction between an outage and a verdict.
+  No published number moves — the axis is still off by default — but any past
+  4th-axis measurement was taken with no way to prove the model participated,
+  and that is now checkable. 474 tests.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
