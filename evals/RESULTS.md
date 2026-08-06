@@ -1404,6 +1404,16 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   punish `pytest tests/test_one.py`. Figures whose harness needs a model
   (mutation, golden, the tier pair) are NOT pinned here: a test that has to run
   llama3.1 to check a README line is worse than the rot.
+  **Then the guard turned out to be half-applied.** It pinned the README badge
+  and the demo hero and missed the two lines a newcomer reads FIRST: the setup
+  blocks in `AGENTS.md` and `CONTRIBUTING.md` still said 438 and 433 tests
+  against a suite of 468. Both now go through the same check, matched on the
+  `python -m pytest -q` command rather than on the digits — `DEPLOY_SPACES.md`
+  records 「Both were stale on 2026-08-06 (10,437/10,437 and 433 tests)」 as
+  HISTORY, and a looser pattern would have quietly rewritten the record of the
+  mistake. Verified by breaking it: setting the AGENTS.md count to 999 fails
+  `test_the_stated_test_counts_agree`, which is trap 7 in AGENTS.md applied to
+  the guard itself.
 
 - **The reference judgment was never asked whether it is about the reader's
   problem — it is, 51/88 times.** 2026-08-06. `related_judgments` JOINs on

@@ -86,18 +86,35 @@ def test_every_prose_corpus_count_matches_the_corpus():
 
 _BADGE = re.compile(r"tests-(\d+)%20passing")
 _HERO = re.compile(r"(\d+) 項測試通過")
+# The setup blocks in AGENTS.md and CONTRIBUTING.md. Anchored to the COMMAND
+# rather than to the digits, because `docs/DEPLOY_SPACES.md` records 「Both were
+# stale on 2026-08-06 (10,437/10,437 and 433 tests)」 as history — a sentence
+# about a number that WAS wrong must stay wrong, and a looser pattern would
+# rewrite the record of the mistake.
+_SETUP = re.compile(r"python -m pytest -q\s+#\s*(\d+) tests")
 
 
 def _stated_test_counts() -> dict[str, int]:
-    badge = _BADGE.search(_read("README.md"))
-    hero = _HERO.search(_read("app.py"))
-    assert badge and hero, "the tests badge or the demo hero line moved"
-    return {"README.md badge": int(badge.group(1)), "app.py hero": int(hero.group(1))}
+    """Every place the suite size is written down by hand.
+
+    Started as two (badge, hero) and missed the two a newcomer reads FIRST: the
+    setup blocks said 438 and 433 while the suite was at 468. The check that
+    exists to stop this rot was itself only half-applied.
+    """
+    found = {
+        "README.md badge": _BADGE.search(_read("README.md")),
+        "app.py hero": _HERO.search(_read("app.py")),
+        "AGENTS.md setup": _SETUP.search(_read("AGENTS.md")),
+        "CONTRIBUTING.md setup": _SETUP.search(_read("CONTRIBUTING.md")),
+    }
+    missing = [name for name, m in found.items() if m is None]
+    assert not missing, f"these stated test counts moved or vanished: {missing}"
+    return {name: int(m.group(1)) for name, m in found.items()}
 
 
-def test_the_two_stated_test_counts_agree():
-    """Cheap half of the check, and it runs even on a partial suite: the badge
-    and the hero are updated by hand in two files, so they drift apart first."""
+def test_the_stated_test_counts_agree():
+    """Cheap half of the check, and it runs even on a partial suite: four files
+    are updated by hand, so they drift apart before they drift from reality."""
     stated = _stated_test_counts()
     assert len(set(stated.values())) == 1, f"stated test counts disagree: {stated}"
 
