@@ -38,6 +38,7 @@ from legal_agent.dialogue.flow import (
     handle_turn_smart,
 )
 from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
+from legal_agent.retrieval.lexicon import expansions
 from legal_agent.retrieval.retriever import retrieve_scored
 
 # ── content ──────────────────────────────────────────────────────────────────
@@ -536,13 +537,18 @@ def explore_retrieval(query: str, as_of: str) -> str:
         return f'<div class="note">{escape(str(exc))}</div>'
     finally:
         conn.close()
-    # `query=` carries the coverage veto: a question naming a body of law the
-    # corpus does not hold is refused whatever BM25 scored. (This tab still
-    # differs from the CLI in one way — it does not compute `lexicon_hit`. That
-    # gap moves no measured number, so it is recorded in evals/RESULTS.md rather
-    # than fixed blind.)
+    # Graded exactly as Stage 3 grades it, and it took three tries to be true.
+    # `query=` carries the coverage veto — a question naming a body of law the
+    # corpus does not hold is refused whatever BM25 scored. `lexicon_hit` is the
+    # other half: a curated 口語→法條 phrase landing on a retrieved article is
+    # coverage evidence that a length-sensitive BM25 score cannot express, and
+    # without it this tab refused short questions the CLI answers.
+    retrieved = [s for s, _ in scored]
+    phrases = expansions(query or "")
+    lexicon_hit = any(p in (s.content or "") for s in retrieved for p in phrases)
     tier = grade_honesty(
-        [s for s, _ in scored], [sc for _, sc in scored], query=query or "",
+        retrieved, [sc for _, sc in scored],
+        lexicon_hit=lexicon_hit, query=query or "",
     )
     return _tier_bar(tier) + _retr_cards(scored)
 
