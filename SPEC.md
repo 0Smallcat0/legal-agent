@@ -266,7 +266,7 @@ model: no network, no key. **Retrieval fires exactly once per consultation**, on
 the complete fact set after intake (multi-turn re-retrieval is the documented
 cause of RAG degradation) — enforced by a test, not a convention.
 
-**Scope today.** One jurisdiction (Taiwan). 2,560 articles across 11 everyday
+**Scope today.** One jurisdiction (Taiwan). 2,922 articles across 16 everyday
 statutes plus a police routing note and the corpus's first capped historical
 slice, imported from the official 全國法規資料庫 bulk XML with the original
 hand-verified 11 articles kept as a character-for-character golden sample. One

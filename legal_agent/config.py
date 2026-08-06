@@ -49,11 +49,19 @@ MODEL = MODEL_PLACEHOLDER
 #                 at zero cost. Your RTX 4060 (8GB) runs a 7-8B model well.
 #   "anthropic" — the real Claude API (needs MODEL set above + ANTHROPIC_API_KEY).
 # (gemini can be added later as its own builder.)
-LLM_PROVIDER = "ollama"
+#
+# Environment first, because the default assumes a machine with Ollama on it and
+# `pip install` puts this file in site-packages. Measured on a clean venv: the
+# library path (verify + retrieval) needs no model and works in two commands, but
+# someone who then runs the CLI without Ollama had to edit an INSTALLED file to
+# reach the free 「manual」 backend. That was the one place the documented path
+# left the reader stuck, so it is an env var now.
+LLM_PROVIDER = os.environ.get("LEGAL_AGENT_PROVIDER", "ollama")
 
 # Local Ollama backend (used when LLM_PROVIDER = "ollama").
-OLLAMA_HOST = "http://localhost:11434"
-OLLAMA_MODEL = "llama3.1:latest"   # 你本機已有;要更好的繁中可換 qwen3:latest 等
+OLLAMA_HOST = os.environ.get("LEGAL_AGENT_OLLAMA_HOST", "http://localhost:11434")
+# 要更好的繁中可換 qwen3:latest 等 — same reason as above, no source edit needed.
+OLLAMA_MODEL = os.environ.get("LEGAL_AGENT_OLLAMA_MODEL", "llama3.1:latest")
 
 # Hybrid retrieval (retrieval/dense.py): "auto" fuses BM25 with local-Ollama
 # bge-m3 embeddings via RRF when the index/daemon is available, and silently
