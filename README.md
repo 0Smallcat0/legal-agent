@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-464%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-468%20passing-brightgreen)
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
@@ -126,7 +126,10 @@ Each is self-contained, with no Taiwan-specific logic worth speaking of:
   (paid). Pick one with `LEGAL_AGENT_PROVIDER=manual`, no source edit: measured
   on a clean venv, that was the only step in the documented path that left a
   first-time reader stuck, because `pip install` puts `config.py` in
-  site-packages.
+  site-packages. **Swapping the model is measured, not assumed**: llama3.1:8B
+  and qwen3:4b score identically on the golden set — pass 19 / partial 7 /
+  miss 0, tier 29/32, premise 32/32 — because those are decided by retrieval and
+  by code. The model changes the prose and nothing that is scored.
 - **Judgments are reference tier**, never retrieval candidates and never citable
   law. They reach a page only through a deterministic join on articles the
   pipeline already retrieved, with the award figure read verbatim from the 主文.

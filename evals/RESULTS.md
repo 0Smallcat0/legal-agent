@@ -1464,6 +1464,40 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   464 tests. The published `50/60 first judgments state an award` is unaffected;
   on all 168 it reads 93/146.
 
+- **A reasoning model was losing its whole answer inside `<think>`, and the fix
+  proves the Tier-1 numbers are model-independent.** 2026-08-06. This file
+  carried qwen3 as blocked: 「needs either a larger generation budget or Ollama's
+  `think: false`, neither of which is wired up」. Measured, that was too
+  generous — it needs BOTH. qwen3:4b at the shipped 2 048 cap returns
+  `response` 0 chars, `thinking` 2 564 chars, `done_reason` 「length」; setting
+  `think: false` alone still ends at 「length」, truncated, opening with monologue
+  instead of the 法律明文 heading. `think: false` AND 4 096 finishes at 「stop」 in
+  44 s with all three sections.
+  Wired as a retry keyed on the SYMPTOM, not on a list of model names — the next
+  thinking model will not be on that list. An empty answer WITH thinking text is
+  the signature; the retry disables thinking and doubles the cap. A server or
+  model that rejects `think` leaves the empty answer alone, which stage3 now
+  reports loudly rather than rendering blank. `LEGAL_AGENT_OLLAMA_THINK=false`
+  skips the wasted first generation for anyone who knows their model thinks.
+  **Then the comparison, both models on the same code, same golden_v2, k=8,
+  temperature 0.** qwen3:4b: 法條涵蓋 pass 19 / partial 7 / miss 0, 73% strict,
+  誠實分級 29/32, 前提偵測 32/32. llama3.1:8B: **identical, every figure**. That
+  is not a coincidence to be explained away — statute coverage, the tier and the
+  premise flag are decided by retrieval and by code, so the model cannot move
+  them, and swapping an 8B for a 4B reasoning model is the empirical version of
+  the claim this project has been making in prose.
+  What did differ is unscored. qwen3 emits **154,854 characters against 31,626**
+  — five times the text for the same 32 cases — and its extra named citations
+  pull twice as many reference judgments (**20/32 with 15 stating an award,
+  against 10/32 with 6**). That is the model citing more, not the judgment layer
+  improving: `focus` deliberately attaches judgments to what the answer STANDS
+  on, so a model that names more articles widens the join. Whether that helps a
+  reader is exactly what 51/88 above says it cannot be assumed.
+  Default stays llama3.1. The wiring ships anyway, because what moved is a
+  user-facing failure rather than a score: a reader running a reasoning model got
+  a fully-retrieved, fully-verified page with nothing written on it, and now gets
+  32/32 complete three-section answers. 468 tests.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
