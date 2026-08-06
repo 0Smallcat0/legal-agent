@@ -231,7 +231,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">433 項測試通過 · 植入錯誤抓取率 10,437/10,437(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">438 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -573,11 +573,12 @@ def compare_timeslice(query: str) -> str:
 # ── 評測結果 ─────────────────────────────────────────────────────────────────
 STATS = """
 <div class="statgrid">
-  <div class="stat"><div class="num">10,437/10,437</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
-  <div class="stat"><div class="num">96%</div><div class="lbl">法條涵蓋率(含部分命中)</div></div>
+  <div class="stat"><div class="num">11,904/11,904</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
+  <div class="stat"><div class="num">100%</div><div class="lbl">法條涵蓋率(含部分命中;嚴格 73%)</div></div>
   <div class="stat"><div class="num">386</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
-  <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(25/25)</div></div>
-  <div class="stat"><div class="num">0–5%</div><div class="lbl">裸模型引用可回溯率(對照組)</div></div>
+  <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(32/32)</div></div>
+  <div class="stat"><div class="num">18/20 · 2/15</div><div class="lbl">範圍外拒答 / 語料內誤拒(兩個方向都量)</div></div>
+  <div class="stat"><div class="num">67% → 5%</div><div class="lbl">使用者只能盲信的引用比例(裸模型 vs 五閘門)</div></div>
 </div>
 """
 
