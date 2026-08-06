@@ -82,6 +82,22 @@ python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
 python -m legal_agent.evaluation.real_recall                       # lived sessions
 ```
 
+**Two of those rows need a second half a plain install does not have.** The
+retriever is BM25 plus a hand-written vocabulary table plus optional bge-m3
+embeddings, and the embeddings need a local index that is built rather than
+shipped — it is derived from your corpus and it is ~12 MB of floats. Straight
+after `pip install .` the retrieval half is lexical only: **recall 320/356
+rather than 351/356**, measured. To reach the published figure:
+
+```bash
+ollama pull bge-m3                        # ~1.2 GB, once
+python -m legal_agent.retrieval.dense     # builds the index beside your corpus
+```
+
+The verifier, the corpus, the honesty tier, the ladder and the 存證信函 template
+never touch it and are unaffected. `real_recall` now prints whether the dense
+half actually participated, so a number measured without it says so.
+
 ## Three things you can lift
 
 Each is self-contained, with no Taiwan-specific logic worth speaking of:
