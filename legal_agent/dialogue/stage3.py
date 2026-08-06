@@ -61,6 +61,25 @@ SYSTEM_PROMPT = (
 )
 
 
+# Shown INSTEAD of a blank page when the model returns nothing usable. Names the
+# two things a reader can act on; the retrieved articles are still attached, so
+# the deterministic half of the answer survives a model failure.
+MODEL_EMPTY_TEXT = (
+    "⚠ 模型沒有產生可用的回答(輸出為空),所以這裡沒有分析。"
+    "下方檢索到的條文仍然有效,可以直接讀原文;"
+    "若要重試,請換一個模型(設 LEGAL_AGENT_OLLAMA_MODEL)或改用 LEGAL_AGENT_PROVIDER=manual。"
+)
+
+# Prepended when the model answered but did NOT produce the three headings. The
+# text is kept — throwing away a real answer because it is shaped wrong serves
+# nobody — but the section guarantees (verbatim law separated from model prose,
+# the 實務見解 disclaimer) do not hold for it, and the reader is told so.
+UNSEGMENTED_NOTICE = (
+    "⚠ 這則回答沒有依「法律明文/實務見解/分析研判」分段,"
+    "所以無法保證下文中哪些是條文原文、哪些是模型推論。請對照下方檢索到的條文原文閱讀。"
+)
+
+
 @dataclass
 class Stage3Result:
     answer: str
@@ -77,6 +96,10 @@ class Stage3Result:
     practice_section: str | None = None     # 實務見解 (rank 4-5)
     analysis_section: str | None = None     # 分析研判
     sections_ok: bool = True                # False if any of the three headings is missing
+    # False when the model returned nothing usable. Distinct from sections_ok:
+    # that one says 「shaped wrong」, this one says 「there is no answer」, and only
+    # the second must never be presented as a graded, confident result.
+    model_output_ok: bool = True
     practice_disclaimer_ok: bool = True     # False if 實務見解 present without the 非法律明文 label
     # Mechanism 5 — anti-sycophancy.
     premise_flag: bool = False
@@ -320,6 +343,24 @@ def run_stage3(
     answer = _drop_insufficient_boilerplate(llm(build_model_input(retrieved, collected_facts)))
     answer = _move_model_prose_out_of_statute_section(answer, retrieved)
 
+    # The model produced nothing. Measured 2026-08-06 swapping in qwen3:4b, which
+    # config.py's own comment invites: a thinking model spends the whole
+    # `num_predict` budget inside <think> and returns an empty string. Every gate
+    # then passed it — tier 「normal」, 0 flagged citations, sections_ok False and
+    # nobody reading it — so the reader got a GREEN 「充分」 bar over a blank page.
+    # A blank answer is a failure, not a confident one; say so instead of grading it.
+    if not answer.strip():
+        return Stage3Result(
+            answer=MODEL_EMPTY_TEXT,
+            retrieved=retrieved, verifications=[],
+            retrieval_count=len(retrieved), retrieval_scores=scores, flagged_count=0,
+            honesty_tier=tier, honesty_label=MODEL_EMPTY_TEXT,
+            law_section=None, practice_section=None, analysis_section=None,
+            sections_ok=False, practice_disclaimer_ok=False,
+            model_output_ok=False,
+            premise_flag=premise_flag,
+        )
+
     honesty_label = None
     if tier == "marginal":
         honesty_label = MARGINAL_PREFIX
@@ -335,6 +376,19 @@ def run_stage3(
 
     law_section, practice_section, analysis_section = split_sections(answer)
     sections_ok = all(s is not None for s in (law_section, practice_section, analysis_section))
+    # Tolerate the shape, label the gap. A model that answers well but ignores the
+    # three headings used to have its work silently un-guaranteed: `sections_ok`
+    # was computed and then read by nobody, so the reader could not tell verbatim
+    # law from model prose. Keep the answer, say what is not guaranteed about it.
+    if not sections_ok:
+        # The tier label owns the first line when there is one — it is the
+        # 僅供參考 warning and must not be pushed below anything.
+        if honesty_label and answer.startswith(honesty_label):
+            answer = answer.replace(
+                honesty_label, honesty_label + "\n" + UNSEGMENTED_NOTICE, 1,
+            )
+        else:
+            answer = UNSEGMENTED_NOTICE + "\n\n" + answer
     # An 實務見解 section that says 「(無)」 has nothing to disclaim — warning about
     # a missing disclaimer there trains the user to ignore the warnings that matter.
     practice_disclaimer_ok = practice_section is not None and (

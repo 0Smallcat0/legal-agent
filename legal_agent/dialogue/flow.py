@@ -80,6 +80,9 @@ class PipelineResult:
     solution_text: str             # Stage 4: rendered escalation ladder
     solution_ladder: SolutionLadder
     stage3: Stage3Result         # full Stage 3 result, for deeper access
+    # False when the model returned nothing. A blank answer must never be shown
+    # under a confident tier — see stage3.MODEL_EMPTY_TEXT.
+    model_output_ok: bool = True
 
 
 def _render_batch(batch: list[intake.IntakeField]) -> str:
@@ -265,6 +268,7 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         analysis_section=s3.analysis_section,
         sections_ok=s3.sections_ok,
         practice_disclaimer_ok=s3.practice_disclaimer_ok,
+        model_output_ok=s3.model_output_ok,
         verifications=s3.verifications,
         flagged_count=s3.flagged_count,
         premise_flag=s3.premise_flag,
