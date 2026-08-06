@@ -107,6 +107,21 @@ the one cheap check that this file is right:
 diff <(git show main:README.md) README.md   # must show ONLY the frontmatter + the img src
 ```
 
+**And check the whole tree, not just that file.** `git checkout main -- .` copies
+what main HAS; it never removes what main deleted, so the branch accumulates
+files forever. On 2026-08-06 it was still publicly shipping a stale duplicate of
+the corpus at the pre-`pip install` path (`corpus/`, ~30k lines, relocated to
+`legal_agent/corpus` long before) and `legal_agent/data/noise_seed.py`, which
+main had deleted for having no caller. Nothing flagged it, because an extra file
+is invisible to a procedure that only ever adds. After every sync:
+
+```bash
+git diff --stat main hf-space   # exactly README.md, app.py, docs/demo_web.png
+```
+
+Anything else in that list is either a difference nobody decided on, or a
+deletion that never crossed. `git rm` it.
+
 Then:
 
 > The frontmatter's `short_description` and the README's tests badge both carry
