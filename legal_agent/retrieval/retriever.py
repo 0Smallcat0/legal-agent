@@ -45,7 +45,7 @@ jieba.setLogLevel(logging.WARNING)  # silence the one-time dict-build chatter
 # problems legitimately span several statutes (社維 + 公寓大廈 + 民法侵權), so
 # a 5-slot window truncates correct answers. Honesty tier is unaffected (it
 # reads the TOP score, not the window size).
-DEFAULT_K = 12
+DEFAULT_K = 8
 
 _COLUMNS = "statute_id, article_no, content, effective_from, effective_to, hierarchy_level, source_url"
 _MEANINGFUL = re.compile(r"[0-9A-Za-z一-鿿]")
