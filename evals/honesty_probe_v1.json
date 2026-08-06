@@ -1,0 +1,437 @@
+[
+  {
+    "id": "oos-06-trademark",
+    "question": "我的品牌名稱被別人搶先註冊商標,可以要回來嗎?",
+    "facts": {
+      "problem": "自己使用多年的品牌名稱被他人搶先註冊商標",
+      "timeline": "已使用三年,上個月才發現對方去年完成註冊",
+      "goal": "想知道能不能撤銷對方的商標或要回來"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "商標法",
+    "notes": "沿用 golden_v2 同 id。商標異議/評定要件全在商標法,語料 17 部皆無。"
+  },
+  {
+    "id": "oos-07-company",
+    "question": "跟朋友合夥開公司,股權和出資要怎麼約定比較保險?",
+    "facts": {
+      "problem": "與朋友合夥設立公司,不知股權與出資如何約定",
+      "timeline": "還沒設立,正在談",
+      "goal": "想知道股權怎麼分才有保障"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "公司法",
+    "notes": "沿用 golden_v2 同 id。民法合夥(§667 以下)在語料內但問的是公司股權,主管法規為公司法。"
+  },
+  {
+    "id": "oos-08-tax",
+    "question": "綜合所得稅列舉扣除額,租屋跟房貸可以擇一報嗎?",
+    "facts": {
+      "problem": "綜所稅列舉扣除額,租金支出與購屋借款利息能否同時申報",
+      "timeline": "五月報稅前",
+      "goal": "想知道可不可以兩項都列"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "所得稅法",
+    "notes": "沿用 golden_v2 同 id。"
+  },
+  {
+    "id": "oos-09-promissory-note",
+    "question": "我朋友拿法院來的本票裁定說我要付六十萬,可是我根本沒簽過那張本票,現在該怎麼辦?還來得及嗎?",
+    "facts": {
+      "problem": "收到本票裁定但否認曾簽發該本票",
+      "timeline": "裁定送達後第五天",
+      "goal": "想知道還能不能救濟"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "票據法/非訟事件法",
+    "notes": "沿用 golden_v2 同 id。本票裁定救濟(確認本票債權不存在之訴)出於票據法與非訟事件法。"
+  },
+  {
+    "id": "oos-10-debt-relief",
+    "question": "我卡債加信貸欠了八十萬,每個月薪水三萬五還不出來,聽說可以向法院聲請更生,要怎麼弄?",
+    "facts": {
+      "problem": "卡債八十萬無力清償,想聲請更生",
+      "timeline": "兩家銀行催收中,尚未被訴",
+      "goal": "想知道更生要準備什麼"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "消費者債務清理條例",
+    "notes": "沿用 golden_v2 同 id。本輪要修的最壞實例:top BM25 105.13 判 marginal,模型用勞基法§28 積欠工資墊償基金回答卡債問題。"
+  },
+  {
+    "id": "oos-11-patent",
+    "question": "我做出一個機構設計想申請發明專利,聽說有人先送件了,我還有機會嗎?",
+    "facts": {
+      "problem": "自行研發的機構設計,發現他人可能先提出發明專利申請",
+      "timeline": "尚未提出申請,兩個月前曾在展場公開過",
+      "goal": "想知道還能不能取得專利"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "專利法",
+    "notes": "先申請主義、優惠期要件全在專利法。語料無任何智慧財產權法規。"
+  },
+  {
+    "id": "oos-12-labor-mediation",
+    "question": "跟公司談不攏想申請勞資爭議調解,要去哪裡聲請?調解不成立之後呢?",
+    "facts": {
+      "problem": "與雇主爭議談不攏,想聲請勞資爭議調解",
+      "timeline": "已與公司協商兩次未果",
+      "goal": "想知道調解程序怎麼跑、不成立怎麼辦"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "勞資爭議處理法",
+    "notes": "問程序不問實體。勞基法在語料內但調解/仲裁/裁決程序全在勞資爭議處理法;RESULTS.md 2026-08-05 已記載該法不在語料(當時誤把就服法§5 當依據)。"
+  },
+  {
+    "id": "oos-13-compulsory-execution",
+    "question": "官司打贏拿到判決了,對方還是不付錢,要怎麼查他的財產去查封?",
+    "facts": {
+      "problem": "已取得勝訴確定判決,債務人仍不履行",
+      "timeline": "判決確定滿一個月",
+      "goal": "想知道怎麼聲請強制執行、怎麼查對方財產"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "強制執行法",
+    "notes": "執行名義、查封拍賣、債務人財產調查程序全在強制執行法。"
+  },
+  {
+    "id": "oos-14-payment-order",
+    "question": "聽說欠錢可以聲請支付命令比較快,要怎麼聲請?對方如果提異議會怎樣?",
+    "facts": {
+      "problem": "想用支付命令向債務人請求還款",
+      "timeline": "催討三個月無回應",
+      "goal": "想知道支付命令怎麼聲請、對方異議後的效果"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "民事訴訟法",
+    "notes": "督促程序在民訴§508 以下。借貸實體關係(民法§474 以下)在語料內,但問的是程序。"
+  },
+  {
+    "id": "oos-15-small-claim",
+    "question": "我要告的金額只有八萬,聽說有小額訴訟,裁判費要多少?自己可以打嗎?",
+    "facts": {
+      "problem": "求償金額八萬元,想走小額訴訟",
+      "timeline": "尚未起訴",
+      "goal": "想知道小額訴訟程序與裁判費"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "民事訴訟法",
+    "notes": "小額程序(民訴§436-8 以下)與裁判費(民訴§77-13 以下)。"
+  },
+  {
+    "id": "oos-16-health-insurance",
+    "question": "我兼職的獎金也被扣二代健保補充保費,這樣算對嗎?",
+    "facts": {
+      "problem": "兼職獎金遭扣取二代健保補充保費",
+      "timeline": "上個月薪資單發現",
+      "goal": "想知道扣取是否正確、怎麼申訴"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "全民健康保險法",
+    "notes": "鄰接風險已知:語料有勞工保險條例,BM25 會命中保險費條文,但健保補充保費出於全民健康保險法§31。"
+  },
+  {
+    "id": "oos-17-unemployment-benefit",
+    "question": "公司資遣我之後可以領失業給付嗎?要投保多久才有?",
+    "facts": {
+      "problem": "遭資遣後想請領失業給付",
+      "timeline": "上週離職,已拿到非自願離職證明",
+      "goal": "想知道失業給付的請領條件與期間"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "就業保險法",
+    "notes": "鄰接風險已知且刻意保留:語料有勞工保險條例與勞基法(資遣),但失業給付自 2003 年起專由就業保險法規定,勞保條例已無該給付。對抗性案例——分數會很高。"
+  },
+  {
+    "id": "oos-18-life-insurance",
+    "question": "爸爸的壽險理賠被保險公司以帶病投保為由拒賠,可以爭嗎?",
+    "facts": {
+      "problem": "壽險理賠遭保險公司以未據實告知為由拒絕給付",
+      "timeline": "被保險人上月身故,保險公司兩週前拒賠",
+      "goal": "想知道能不能爭取理賠"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "保險法",
+    "notes": "鄰接風險已知:語料的強制汽車責任保險法僅限強制車險。據實說明義務在保險法§64。"
+  },
+  {
+    "id": "oos-19-animal-cruelty",
+    "question": "隔壁鄰居養的狗長期關在陽台沒水沒飼料,身上都是傷,可以檢舉嗎?",
+    "facts": {
+      "problem": "鄰居飼養之犬隻疑似遭不當飼養與虐待",
+      "timeline": "觀察兩個月,情況持續",
+      "goal": "想知道向誰檢舉、對方會受什麼處罰"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "動物保護法",
+    "notes": "刻意避開狗吠噪音面向(社維法§72/噪音管制法在語料內),只問不當飼養與虐待,主管法規為動物保護法§5、§30。"
+  },
+  {
+    "id": "oos-20-medical-record",
+    "question": "醫院不肯給我病歷影本,說要院長核可,他們可以這樣嗎?",
+    "facts": {
+      "problem": "向醫院申請病歷複本遭拒",
+      "timeline": "申請兩次,均被要求等待核可",
+      "goal": "想知道醫院能不能拒絕、要怎麼要到病歷"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "醫療法",
+    "notes": "鄰接風險已知:個資法§10 有當事人查閱權,但病歷複本交付義務明文在醫療法§71,問題指向醫療機構的法定交付義務。"
+  },
+  {
+    "id": "oos-21-estate-tax",
+    "question": "媽媽過世留下一間房子,遺產稅怎麼算?有免稅額嗎?",
+    "facts": {
+      "problem": "繼承一間不動產,不知遺產稅計算方式",
+      "timeline": "被繼承人上個月過世",
+      "goal": "想知道遺產稅免稅額與申報期限"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "遺產及贈與稅法",
+    "notes": "民法繼承編在語料內,但本題只問稅額與申報,主管法規為遺產及贈與稅法§17、§23。"
+  },
+  {
+    "id": "oos-22-underground-remittance",
+    "question": "朋友請我幫他收大陸客戶的貨款再換成台幣給他,這樣有沒有問題?",
+    "facts": {
+      "problem": "受託代收境外款項後兌換為新臺幣轉交",
+      "timeline": "已做過三次,每次數十萬",
+      "goal": "想知道會不會觸法"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "銀行法/洗錢防制法",
+    "notes": "非法辦理國內外匯兌業務在銀行法§29、§125。刑法在語料內但無對應罪名。"
+  },
+  {
+    "id": "oos-23-insider-trading",
+    "question": "朋友在上市公司上班,跟我說公司要發布好消息,我照著買股票會不會有事?",
+    "facts": {
+      "problem": "依據上市公司內部人士所述未公開訊息買進股票",
+      "timeline": "尚未下單",
+      "goal": "想知道會不會構成內線交易"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "證券交易法",
+    "notes": "內線交易在證交法§157-1。"
+  },
+  {
+    "id": "oos-24-farmland-house",
+    "question": "我在自己的農地上蓋了一間房子被檢舉,公所說要拆,有救嗎?",
+    "facts": {
+      "problem": "於自有農地興建建物遭檢舉,主管機關要求拆除",
+      "timeline": "上週收到通知",
+      "goal": "想知道能不能保留或補辦"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "農業發展條例/區域計畫法/建築法",
+    "notes": "刻意避開公寓大廈頂樓加蓋(公寓大廈條例§8 在語料內)。農舍興建要件在農業發展條例§18。"
+  },
+  {
+    "id": "oos-25-procurement",
+    "question": "公司投標政府案子被機關列為不良廠商停權三年,可以救濟嗎?",
+    "facts": {
+      "problem": "遭招標機關刊登政府採購公報並停權",
+      "timeline": "上個月收到通知",
+      "goal": "想知道異議申訴的期限與方式"
+    },
+    "expected_tier": "insufficient",
+    "absent_statute": "政府採購法",
+    "notes": "停權處分與異議申訴在政府採購法§101、§102。"
+  },
+  {
+    "id": "weak-01-upstairs-kids",
+    "question": "樓上小孩每天晚上跑跳到十一二點,還會拖椅子,已經受不了了",
+    "facts": {
+      "problem": "樓上住戶小孩夜間跑跳、拖拉家具製造聲響",
+      "timeline": "每晚十一點至十二點,持續數月",
+      "goal": "想讓對方停止"
+    },
+    "expected_tier": "marginal",
+    "must_not_refuse": true,
+    "expected_statutes": ["社會秩序維護法第72條"],
+    "notes": "honesty.py docstring 記載的實例:top BM25 僅 28.8,靠 lexicon_hit 才守住 marginal。誤拒成本的代表案。"
+  },
+  {
+    "id": "weak-02-severance",
+    "question": "公司說要資遣我,資遣費怎麼算?他們算的好像比我少",
+    "facts": {
+      "problem": "遭資遣,雇主計算之資遣費金額有疑義",
+      "timeline": "年資六年三個月,下週生效",
+      "goal": "想知道資遣費正確算法"
+    },
+    "expected_tier": "marginal",
+    "must_not_refuse": true,
+    "expected_statutes": ["勞動基準法第17條"],
+    "notes": "RESULTS.md 記載此類查詢 top 分數僅 97.8,落在 marginal 帶。"
+  },
+  {
+    "id": "weak-03-prescription",
+    "question": "五年前借朋友的錢,他一直沒還,現在還能要回來嗎?",
+    "facts": {
+      "problem": "五年前之借款迄未清償,擔心時效已過",
+      "timeline": "最後一次催討是三年前",
+      "goal": "想知道還能不能請求"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["民法第125條", "民法第129條"],
+    "notes": "RESULTS.md 記載:此案未經詞表擴充時 BM25 僅 16.1,低於 oos-09 的 50.2——原始分數方向是反的。"
+  },
+  {
+    "id": "weak-04-deposit",
+    "question": "房子退租了,房東拖著不退押金,說牆壁有污損要扣",
+    "facts": {
+      "problem": "租約屆滿遷出後,出租人以牆面污損為由不返還押金",
+      "timeline": "遷出滿一個月",
+      "goal": "想拿回押金"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["民法第455條"],
+    "notes": "租賃住宅市場發展及管理條例與民法租賃節皆在語料內。"
+  },
+  {
+    "id": "weak-05-broken-phone",
+    "question": "買的手機一個月就壞了,店家只肯送修不肯換新的",
+    "facts": {
+      "problem": "購買未滿一月之手機故障,出賣人僅同意維修",
+      "timeline": "購買後 30 日內",
+      "goal": "想解約或換新機"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["民法第359條"],
+    "notes": "物之瑕疵擔保。消保法亦在語料內。"
+  },
+  {
+    "id": "weak-06-car-accident",
+    "question": "車禍對方全責,可是他一直拖著不賠,我的醫藥費跟不能上班的損失怎麼辦?",
+    "facts": {
+      "problem": "交通事故對方應負全責,迄未賠償醫療費與工作損失",
+      "timeline": "事故後兩個月",
+      "goal": "想請求賠償"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["民法第193條", "民法第195條"],
+    "notes": "強制汽車責任保險法亦在語料內。"
+  },
+  {
+    "id": "weak-07-domestic-violence",
+    "question": "老公一吵架就摔東西、堵在門口不讓我走,還說要讓我好看",
+    "facts": {
+      "problem": "配偶於爭執時毀損物品、限制行動並出言恐嚇",
+      "timeline": "近三個月數次,昨晚最嚴重",
+      "goal": "想知道能不能聲請保護令"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["家庭暴力防治法第2條", "家庭暴力防治法第14條"],
+    "notes": "精神上不法侵害亦屬家暴。"
+  },
+  {
+    "id": "weak-08-forced-resignation",
+    "question": "主管一直要我簽自願離職書,說不簽考績會很難看,我不想簽",
+    "facts": {
+      "problem": "雇主要求勞工簽署自願離職書,附帶考績不利之暗示",
+      "timeline": "本週內被要求兩次",
+      "goal": "想知道不簽會怎樣、簽了差在哪"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["勞動基準法第11條"],
+    "notes": "自願離職與資遣的法律效果差異(資遣費、非自願離職證明)。"
+  },
+  {
+    "id": "weak-09-personal-data",
+    "question": "前公司拿我的身分證影本去辦門號,我根本沒答應",
+    "facts": {
+      "problem": "前雇主未經同意以個人身分證件資料申辦電信門號",
+      "timeline": "上週接到帳單才發現",
+      "goal": "想知道可以主張什麼"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["個人資料保護法第29條"],
+    "notes": "非公務機關違法利用個資之損害賠償。"
+  },
+  {
+    "id": "weak-10-pregnancy-transfer",
+    "question": "我跟公司說懷孕之後就被調去別的部門,薪水也少了",
+    "facts": {
+      "problem": "告知懷孕後遭調職且薪資減少",
+      "timeline": "告知後兩週內發生",
+      "goal": "想知道公司這樣做可不可以"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["性別平等工作法第11條"],
+    "notes": "性別平等工作法在語料內。"
+  },
+  {
+    "id": "weak-11-committee-accounts",
+    "question": "管委會怎麼問都不給看社區的帳,主委說住戶沒資格看",
+    "facts": {
+      "problem": "管理委員會拒絕區分所有權人查閱財務帳冊",
+      "timeline": "已口頭要求三次",
+      "goal": "想知道住戶有沒有查閱權"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["公寓大廈管理條例第35條"],
+    "notes": "規約、會議紀錄、財務帳冊之查閱權。"
+  },
+  {
+    "id": "weak-12-low-frequency-noise",
+    "question": "隔壁工廠的機器整天嗡嗡低頻,不大聲但一直在,睡不好",
+    "facts": {
+      "problem": "鄰近工廠機具產生持續性低頻噪音",
+      "timeline": "全日運轉,持續半年",
+      "goal": "想讓噪音停止或降低"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["噪音管制法第9條"],
+    "notes": "噪音管制法在語料內(37 條)。"
+  },
+  {
+    "id": "weak-13-interview-question",
+    "question": "面試被問結婚了沒、什麼時候要生小孩,這樣可以問嗎?",
+    "facts": {
+      "problem": "求職面試遭詢問婚育計畫",
+      "timeline": "上週面試",
+      "goal": "想知道雇主能不能這樣問、可以怎麼申訴"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["就業服務法第5條"],
+    "notes": "就業歧視禁止;性別平等工作法§7 亦相關,兩部皆在語料內。"
+  },
+  {
+    "id": "weak-14-towed-scooter",
+    "question": "機車停在路邊被拖吊,我覺得那裡根本沒有標線,可以申訴嗎?",
+    "facts": {
+      "problem": "機車遭拖吊,對違規停車之認定有爭議",
+      "timeline": "三日前遭拖吊,已繳費領車",
+      "goal": "想知道能不能申訴或提起救濟"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["道路交通管理處罰條例第56條"],
+    "notes": "道交條例在語料內(134 條)。"
+  },
+  {
+    "id": "weak-15-dementia-savings",
+    "question": "爸爸失智了,哥哥把他戶頭的錢都領走,說是他要照顧爸爸用的",
+    "facts": {
+      "problem": "失智父親之存款遭同住兄長提領,用途不明",
+      "timeline": "近半年陸續提領",
+      "goal": "想知道能不能要求交代或返還"
+    },
+    "expected_tier": "normal",
+    "must_not_refuse": true,
+    "expected_statutes": ["民法第14條", "民法第1113條"],
+    "notes": "監護/輔助宣告與不當得利。RESULTS.md 記載過同型案例(在世失智父親)的檢索窗口曾 8/8 全是繼承編。"
+  }
+]

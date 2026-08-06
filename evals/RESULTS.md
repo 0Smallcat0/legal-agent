@@ -4,7 +4,7 @@
 > screen, read this one.
 >
 > **Three numbers that matter.**
-> 1. **10,437/10,437 seeded defects caught, 0/2,560 false positives.** Not the
+> 1. **11,904/11,904 seeded defects caught, 0/2,921 false positives.** Not the
 >    model's accuracy — the *verifier's* recall, measured by planting errors in
 >    otherwise-correct answers over every article in the corpus. A guardrail
 >    with no number on it is a wish.
@@ -28,12 +28,15 @@
 >    article governs. Reverted, and the helper deleted rather than left behind a
 >    flag.
 >
-> **The two limits worth knowing before trusting any of it.** The honesty tier
-> reads a BM25 score that the project's own vocabulary table inflates, so it
-> measures how much of my lexicon fired rather than how well the corpus covers
-> the question. And **precision has no harness at all**: every measure here asks
-> whether the right article reached the window, never what else the reader had
-> to wade through.
+> **The two limits worth knowing before trusting any of it.** The honesty tier's
+> 「is this in scope」 half is now a list of the statutes we know we lack, so it
+> refuses **18 of 20** named absences and nothing outside that list — a question
+> that describes an out-of-scope problem without naming its law still gets
+> answered. What is left of the score-based tier separates 「相關」 from
+> 「邊緣相關」, and it cannot: BM25 magnitude is inflated by the project's own
+> vocabulary table. And **precision's harness only prices window changes**: every
+> other measure here asks whether the right article reached the window, never what
+> else the reader had to wade through.
 
 Local, zero paid API. Models via Ollama on an RTX 4060 (8 GB). Corpus: 2,922
 articles across 16 everyday-law statutes + 1,367 harvested judgments (386 of
@@ -47,9 +50,10 @@ system makes — it never means "this statute does not exist."
 
 | what | number | harness |
 |---|---|---|
-| seeded defects caught, every article | **10,437/10,437 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
+| seeded defects caught, every article | **11,904/11,904 (100%), 0/2,921 false positives** | `evaluation/mutation.py` |
 | statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py`, grader at temperature 0, k=8 |
-| honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
+| honesty tier | **29/32 (91%)** | same run (decided from retrieval scores, so model-independent) |
+| out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** | `evaluation/honesty_probe.py`, 35 cases, retrieval only |
 | wrong-premise detection | **32/32 (100%)** | same run |
 | retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems, k=8 |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
@@ -59,6 +63,7 @@ system makes — it never means "this statute does not exist."
 python -m legal_agent.evaluation.mutation                          # catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
 python -m legal_agent.evaluation.real_recall                       # lived sessions
+python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold sweep
 ```
 
@@ -105,6 +110,10 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   threshold separates them: `oos-09-promissory-note` and `oos-10-debt-relief`
   are in the golden set failing, and the number moved from 27/30 to 27/32 to
   say so.
+  **Both now pass, and not because the score got better.** 2026-08-06 stopped
+  asking a score whether 票據法 exists and asked the corpus instead — see the
+  coverage veto below. The inflation is unchanged and still governs everything
+  the veto's list does not name.
 - **The golden set's strict/partial split moves with model sampling, and the
   published number does not chase it.** Two runs over the SAME 32 cases, the
   same corpus and identical retrieval (verified: not one of the round's new
@@ -1165,6 +1174,122 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   built the harness, and the harness said no. The rule was right and I applied it
   in the wrong order. It exists now, so the next seat or window change can be
   judged on all three axes instead of the two that flatter it.
+
+- **The honesty tier was wrong in BOTH directions at once, and a 5-case sample
+  had been hiding half of it.** 2026-08-06. The known defect was over-confidence:
+  five tier misses on the golden set, all leaning the same way, worst of them
+  oos-10 (卡債更生) answered out of 勞基法§28. The fix was supposed to be a better
+  out-of-scope signal. The first thing measured was the ruler, and the ruler
+  changed the diagnosis.
+
+  **Step 0 — build the ruler, because five cases cannot carry a decision.**
+  The golden set has 5 out-of-scope cases. Anything tuned to separate 5 cases is
+  fitted, and this file retracted a number the day before for exactly that. New
+  probe, `evals/honesty_probe_v1.json`, 35 cases in two groups: 20 out-of-scope
+  (each governed by a statute verified absent from the corpus's 17 `statute_id`s)
+  and 15 in-scope but lexically thin (each expecting an article verified verbatim
+  in the corpus). Retrieval-only, no LLM — the tier is decided from scores, so the
+  probe is deterministic and reproduces exactly.
+
+  | | before | after |
+  |---|---|---|
+  | out-of-scope refused (n=20) | **5/20** | **18/20** |
+  | in-scope falsely refused (n=15) | 2/15 | 2/15 |
+  | honesty tier, golden set | 27/32 | **29/32** |
+  | wrong-premise, golden set | 32/32 | 32/32 |
+  | strict statute coverage | 73.1% (pass 19 / partial 7 / miss 0) | 73.1% (pass 19 / partial 7 / miss 0) |
+  | retrieval recall | 348/356, 5.9 unexpected/session | 348/356, 5.9 unexpected/session |
+
+  All three remaining tier misses are mg-01/02/03 — the marginal-vs-normal axis
+  this file already records as not separable by BM25. Nothing was attempted there
+  and nothing moved there.
+
+  **What the wider ruler showed that the narrow one could not.** The floor at 70
+  was failing to refuse 15 of 20 out-of-scope questions *and* refusing two
+  questions the corpus answers — 勞基法§11 資遣 at 39.19 and 個資法§29 at 44.65. A
+  false refusal is the worse half: the article was there and the reader was turned
+  away. Nobody had measured that direction, because no harness contained a case
+  for it. The score ranges are not merely overlapping, they are interchangeable —
+  out-of-scope 35.7–503.5 against in-scope 39.2–417.4 — and the single highest
+  score in the whole probe is an out-of-scope one (oos-09 本票裁定 at 503.5,
+  answered from 民法§473 消費借貸). No constant sits between those.
+
+  **Measured and NOT shipped: the shape of the window instead of its height.**
+  Four signals had already lost, and all four read the same thing — how HIGH the
+  scores are. The untried idea was the distribution: in-scope retrieval should
+  concentrate, out-of-scope should be flat lexical noise. Swept top/mean,
+  top/median, top/2nd, top/last, normalised entropy, coefficient of variation,
+  score sum, and the k-th score. Best split **25/35**, and that is an in-sample
+  optimum against a 20/35 majority baseline. Every range overlaps. Shape is no
+  better than height; recorded so the next person does not spend the afternoon.
+
+  **Shipped: a coverage veto, which is not a score at all.**
+  `anti_hallucination/coverage.py`. 「Is 票據法 in the corpus」 is a set question,
+  and 19 rows answer it: a question naming a body of law we do not carry is
+  insufficient no matter what BM25 ran. It only ever refuses — it cannot raise a
+  tier, so the change is auditable in one direction. The refusal now names the
+  missing statute (「這個問題屬於消費者債務清理條例…」), which golden's own
+  expected_action for oos-10 had been asking for.
+  Two invariants are tested. Every statute named must be ABSENT from the corpus,
+  so importing 消債條例 turns the test red and forces the row out — that is the
+  property the absolute floor lacked when it went stale in silence for a week.
+  And no trigger may fire on an in-scope question.
+
+  **What it does not do, stated before anyone finds out the hard way.** It refuses
+  the absences someone enumerated. It is a closed list, not an out-of-scope
+  detector. The 2 probe cases it misses are the ones where the user never names
+  the domain — a starved dog, an informal remittance — and describing facts
+  without legal vocabulary is exactly how laypeople write. The list will be
+  incomplete forever; the honest claim is 「refuses 18 of 20 named absences」, not
+  「detects out-of-scope」.
+
+  **How much of the 0-false-fire number is real.** Triggers were PRUNED against
+  210 in-scope queries (168 real sessions + 27 golden + 15 probe), so 0/210 is a
+  fit, not an estimate. 「本票」「卡債」「健保」「非自願離職」「遺產稅」「農地」
+  「停權」 each fired on a genuine in-scope session where the word appeared in
+  passing — a 借款 dispute that merely used a 本票 as evidence, a 債權讓與 case
+  that opened with 卡債 — and were dropped or narrowed to 「本票裁定」. The
+  held-out check is the 386 harvested judgments: 11 fire (2.8%), and all 11 are
+  genuinely disputes of the named absent law (裁判費核定 6, 商業事件 2, 執行異議 2,
+  消債更生 1), i.e. correct refusals, checked case by case. A fifth bad ruler was
+  caught while building that check: the first held-out run scored 0/386 against
+  the judgments' `issues` column, which is empty in all 386 rows. It was measuring
+  nothing.
+
+  **The floor sweep, measured and NOT shipped.** With the veto carrying
+  out-of-scope detection, `INSUFFICIENT_SCORE_THRESHOLD` has almost nothing left
+  to do — in the probe it catches exactly one case the veto misses. Sweeping it:
+  at 70 (shipped) 18/20 refused and 2/15 falsely refused; at 35, 17/20 and 0/15.
+  And any value in 36.51–39.19 gives 18/20 AND 0/15 — a strictly dominant point,
+  which is precisely the thing this round exists to stop building. That is a
+  constant wedged into a 2.7-point gap between two individual probe cases; it
+  would look free and would not survive the next corpus import. The floor stays at
+  70 and the two false refusals stay on the books.
+
+  **The ablation was re-run and its delta is NOT publishable, which is itself the
+  finding.** Second sample of the same 32 cases: bare **16/24 flagged (67%)**,
+  gated **4/208 (2%)**, tier distribution insufficient 5 / marginal 1 / normal 26.
+  Published was bare 34/51 (67%), gated 9/190 (5%). The bare arm runs with no
+  gates at all, so this change cannot touch it — and it moved from 51 citations
+  to 24 on identical code. That is the harness's own spread, never measured
+  before, and it is larger than the gated 5%→2% move I would otherwise have
+  claimed. What survives: the bare FLAGGED RATE is 67% in both samples, and the
+  tier distribution's insufficient 3→5 is this change, since the coverage veto
+  short-circuits two more cases before the model runs. The published row stays as
+  it is; a second single sample is not an improvement on a first single sample.
+
+- **Two numbers in the table above were stale, and re-running them was the only
+  way to know.** Same day, while proving this change moved nothing it should not.
+  `mutation` re-runs to **11,904/11,904 caught, 0/2,921 false positives** — the
+  published 10,437 / 2,560 was measured before the corpus reached 2,922 articles
+  and was never re-run. Same 100% and same 0%, larger denominators. Nothing to do
+  with the tier change; it just had not been looked at.
+  Also recorded rather than fixed: `app.py`'s retrieval tab grades the tier
+  WITHOUT `lexicon_hit`, which the CLI passes — so the Spaces demo refuses some
+  questions the CLI marks 「僅供參考」. Two lines and clearly right, and it moves no
+  measured number, so by this project's own rule it is written here instead of
+  shipped. (`query=` for the coverage veto WAS wired into that tab, because the
+  veto is this change.)
 
 ## Measured, then NOT shipped
 

@@ -536,7 +536,14 @@ def explore_retrieval(query: str, as_of: str) -> str:
         return f'<div class="note">{escape(str(exc))}</div>'
     finally:
         conn.close()
-    tier = grade_honesty([s for s, _ in scored], [sc for _, sc in scored])
+    # `query=` carries the coverage veto: a question naming a body of law the
+    # corpus does not hold is refused whatever BM25 scored. (This tab still
+    # differs from the CLI in one way — it does not compute `lexicon_hit`. That
+    # gap moves no measured number, so it is recorded in evals/RESULTS.md rather
+    # than fixed blind.)
+    tier = grade_honesty(
+        [s for s, _ in scored], [sc for _, sc in scored], query=query or "",
+    )
     return _tier_bar(tier) + _retr_cards(scored)
 
 
