@@ -103,6 +103,35 @@ def test_marginal_tier_prepends_prefix(monkeypatch):
     assert res.answer.startswith(MARGINAL_PREFIX)
 
 
+def test_empty_model_output_is_a_failure_not_a_confident_answer(monkeypatch):
+    """A blank answer used to pass every gate. Measured 2026-08-06 swapping in
+    qwen3:4b, a thinking model that spends the whole `num_predict` budget inside
+    <think>: tier 「normal」, 0 flagged citations, and the reader got a green
+    「充分」 bar over an empty page. The retrieved articles must survive — the
+    deterministic half of the answer is still good — but nothing may claim the
+    model said something."""
+    monkeypatch.setattr(retriever, "retrieve_scored", lambda *a, **k: [(_STUB, 500.0)])
+    res = run_stage3({"noise_type": "深夜"}, llm=lambda p: "   \n  ", conn=None)
+    assert res.model_output_ok is False
+    assert res.answer == stage3.MODEL_EMPTY_TEXT
+    assert res.sections_ok is False
+    assert res.retrieved == [_STUB]          # the law is still there to read
+    assert res.flagged_count == 0
+
+
+def test_unsegmented_answer_is_kept_and_labelled(monkeypatch):
+    """Tolerate the shape, label the gap. `sections_ok` was computed and read by
+    nobody, so an answer that ignored the three headings lost its guarantees
+    silently — the reader could not tell verbatim law from model prose."""
+    monkeypatch.setattr(retriever, "retrieve_scored", lambda *a, **k: [(_STUB, 500.0)])
+    prose = "房東扣押金要有依據,請對照條文。"
+    res = run_stage3({"noise_type": "深夜"}, llm=lambda p: prose, conn=None)
+    assert res.model_output_ok is True       # it DID answer
+    assert res.sections_ok is False          # just not in three sections
+    assert stage3.UNSEGMENTED_NOTICE in res.answer
+    assert prose in res.answer               # nothing thrown away
+
+
 def test_lexical_noise_score_short_circuits_as_insufficient(monkeypatch):
     # a hit below the calibrated floor (6.0) is noise, not an answer: the
     # LLM must not run, the fixed 資料不足 text goes out (oos-01 leak fix)

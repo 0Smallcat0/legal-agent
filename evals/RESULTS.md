@@ -1333,6 +1333,55 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   binding at definition time, the ablation's double-meaning column) are spread
   across 1,300 lines and a coding agent reads none of them before its first run.
 
+- **Two silent failures found by using the thing, not by running a harness.**
+  2026-08-06. Every number in this file says the pipeline is trustworthy; none
+  of them asks what a person with a legal problem actually receives. So one real
+  consultation was walked end to end — a deposit dispute, 「房東說牆壁有污損,要
+  扣我兩個月押金四萬八」 — and read as the reader rather than as the author.
+
+  **A blank answer passed every gate.** `config.py`'s own comment invites
+  swapping in a better 繁中 model (「要更好的繁中可換 qwen3:latest 等」). Doing it:
+  `qwen3:4b` is a thinking model, spends the entire `num_predict` budget of 2,048
+  inside `<think>`, and returns an empty string. The pipeline then reported tier
+  **normal**, **0 flagged citations**, `sections_ok=False` — and nothing read
+  that last flag outside the CLI. The demo would render a green 「充分」 bar over
+  an empty page. Fixed: an empty model output is now a failure with its own text
+  (`stage3.MODEL_EMPTY_TEXT`), carries `model_output_ok=False` through
+  `PipelineResult`, and takes the tier bar in `app.py`. The retrieved articles
+  stay attached — the deterministic half of the answer survives a model failure
+  and is still worth reading.
+  Worth naming as its own class: the flag EXISTED and was correct. Computing a
+  signal and never reading it is indistinguishable from not having it.
+
+  **An unsegmented answer lost its guarantees quietly.** A model that answers
+  well but ignores the 法律明文/實務見解/分析研判 headings produced
+  `sections_ok=False`, which only `run.py` acted on. Everywhere else the reader
+  got prose with no way to tell verbatim law from model inference — the exact
+  separation Mechanism 4 exists to provide. Fixed by tolerating the shape and
+  labelling the gap: the text is kept (throwing away a real answer for being
+  shaped wrong serves nobody) with `stage3.UNSEGMENTED_NOTICE` above it, and the
+  notice travels with the answer so every caller shows it.
+
+  **What that consultation ALSO showed, and this round did not fix.** The answer
+  cited 租賃住宅條例§7 correctly and then said 「押金扣除的部分應與兩個月租金總額
+  相等,不得超過」. §7 caps the DEPOSIT at two months' rent; it says nothing about
+  how much may be deducted. Every gate passed it, correctly: the article exists,
+  and the amount and the direction word both match the article's own 「不得逾二個
+  月之租金總額」. The error is which object the cap attaches to — the
+  `subject_swap` class that `mutation.py` already documents as provably beyond
+  the structural axes, catchable only by the semantic 4th axis, which is off
+  because it false-positives 10–30%. So the honest statement of what this system
+  does for a real user is narrower than the numbers suggest: it is reliable about
+  **which article governs**, and the prose explaining that article is an 8B
+  model's, with one measured failure mode nothing in the pipeline can catch.
+  The third route to that problem — a better model — is what surfaced the blank
+  page above. It is now loud rather than silent, but still blocked: `qwen3` needs
+  either a larger generation budget or Ollama's `think: false`, neither of which
+  is wired up. Recorded rather than guessed at.
+
+  440 tests. No published number moves: the fixes fire only when the model
+  returns nothing or ignores the headings, and llama3.1 does neither.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
