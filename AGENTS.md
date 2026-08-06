@@ -26,7 +26,7 @@ number moves**.
 ```bash
 pip install .          # library: verify + retrieval. 3 deps, no GPU, ~30s
 pip install .[dev]     # + pytest and ruff
-python -m pytest -q    # 468 tests, ~45s
+python -m pytest -q    # 474 tests, ~45s
 ```
 
 The corpus ships inside the package and the database builds itself on first
@@ -64,6 +64,12 @@ Every one of these produced a wrong number that was believed for a while.
 7. **Check that a harness is reading a populated field.** A held-out check once
    scored a clean 0/386 against a column that is empty in all 386 rows. It was
    measuring nothing.
+8. **The semantic 4th axis fails in the FLATTERING direction.** It answers
+   「consistent」 on every failure path — including an Ollama that is not running
+   — so an outage renders as 0 false positives, not as an error. A measurement
+   of 9 planted subject swaps and 120 controls came back 0/0 that way.
+   `semantic_unreached_count()` now counts those and `mutation --semantic`
+   prints a warning; **confirm it is 0 before believing any 4th-axis number.**
 
 ## The harnesses
 

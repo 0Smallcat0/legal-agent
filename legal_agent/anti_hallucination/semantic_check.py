@@ -41,6 +41,35 @@ _PROMPT_TEMPLATE = (
 
 _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
+# Constraint 2 (conservative on every failure path) has a sharp edge: a checker
+# that answers 「consistent」 when it never reached a model is indistinguishable,
+# from the outside, from one that ran and approved. On 2026-08-06 a measurement
+# of this axis returned a clean 0 flags on 9 planted swaps and 120 controls
+# because Ollama was down — and the failure direction is the FLATTERING one, so
+# it reads as 「0 false positives」 rather than as an outage.
+# `real_recall` already prints `dense_fallbacks` for exactly this reason. Same
+# fix here: count the verdicts that were never actually rendered, so a harness
+# can refuse to publish a number the model had no part in.
+_UNREACHED = 0
+
+
+def semantic_unreached_count() -> int:
+    """How many calls returned 「consistent」 WITHOUT a verdict from the model —
+    unreachable server, unparseable reply, missing field. Non-zero means the
+    axis was partly or wholly absent from whatever number you are looking at."""
+    return _UNREACHED
+
+
+def reset_semantic_unreached() -> None:
+    global _UNREACHED
+    _UNREACHED = 0
+
+
+def _unreached() -> tuple[bool, str]:
+    global _UNREACHED
+    _UNREACHED += 1
+    return True, ""
+
 
 def semantic_consistent(
     claim_scope: str,
@@ -50,21 +79,24 @@ def semantic_consistent(
     """Ask the injected model whether the claim matches the verbatim article.
 
     Returns (consistent, reason). EVERY failure path returns (True, "") —
-    only an explicit, well-formed "consistent": false flags anything.
+    only an explicit, well-formed "consistent": false flags anything — and every
+    one of those paths is counted (see `semantic_unreached_count`).
     """
     prompt = _PROMPT_TEMPLATE.format(verbatim=verbatim, claim=claim_scope)
     try:
         raw = llm(prompt)
     except Exception:
-        return True, ""                      # infrastructure error ≠ bad citation
+        return _unreached()                  # infrastructure error ≠ bad citation
 
     match = _JSON_RE.search(raw or "")
     if not match:
-        return True, ""
+        return _unreached()
     try:
         parsed = json.loads(match.group(0))
     except (json.JSONDecodeError, ValueError):
-        return True, ""
+        return _unreached()
+    if "consistent" not in parsed:           # well-formed JSON, wrong shape
+        return _unreached()
 
     if parsed.get("consistent") is False:    # strict: only literal false flags
         reason = str(parsed.get("reason") or "主張與條文語意不符")
