@@ -64,6 +64,12 @@ class MutationOutcome:
 @dataclass
 class MutationReport:
     outcomes: list[MutationOutcome]
+    # Semantic-axis verdicts that were never rendered by a model (server down,
+    # unparseable reply). The axis answers 「consistent」 on every failure path,
+    # so an outage looks exactly like a clean run — and on 2026-08-06 it did:
+    # 0 flags on 9 planted swaps read as a perfect false-positive record until
+    # the connection error surfaced. Reported, never silently absorbed.
+    semantic_unreached: int = 0
 
     def _bucket(self, kind: str) -> list[MutationOutcome]:
         return [o for o in self.outcomes if o.kind == kind]
@@ -116,6 +122,12 @@ class MutationReport:
             f"({self.catch_rate:.0%})｜false-positive rate: "
             f"{self.false_positives}/{self.control_total}({self.false_positive_rate:.0%})"
         )
+        if self.semantic_unreached:
+            lines.append(
+                f"⚠ 這個數字不是完整的四軸結果:語意軸有 {self.semantic_unreached} 次"
+                "沒有拿到模型判讀(伺服器未啟動或回覆無法解析)。該軸在每一條失敗路徑上"
+                "都回答「一致」,所以斷線看起來就像零誤報。重跑前先確認 Ollama。"
+            )
         misses = [o for o in self.outcomes if not o.ok]
         if misses:
             lines.append("")
@@ -152,14 +164,37 @@ def _judge(kind: str, ref: str, answer: str, expect_flag: bool,
 
 
 # Subject swaps: the cited article is REAL and every structural axis passes —
-# only the 行為主體 is wrong. Hand-written against hand-verified corpus rows.
+# only the 主體 is wrong. Hand-written against hand-verified corpus rows.
+#
+# Widened 2026-08-06. It had THREE cases, all of them ACTOR swaps, and the
+# error that actually reached a reader was a different shape: a numeric cap
+# attached to the wrong OBJECT (租賃住宅條例§7 caps the 押金; the answer said it
+# caps the deduction, with the article's own 「二個月租金總額」 quoted correctly,
+# so every structural axis passed it). Six cases were added covering both
+# shapes. Each was run through `verify_answer` with the semantic axis OFF and
+# had to return flagged=False before being written down — a case the structural
+# axes already catch would credit this axis with work it never did.
 _SUBJECT_SWAPS = [
+    # ── actor swaps ──
     ("民法", "第793條",
      "依民法第793條,承租人於他人土地之喧囂侵入時,得禁止之。"),      # 條文主體:土地所有人
     ("公寓大廈管理條例", "第16條",
      "依公寓大廈管理條例第16條,房東不得任意發生喧囂、振動行為。"),   # 條文主體:住戶
     ("噪音管制法", "第6條",
      "依噪音管制法第6條,不具持續性之噪音由環境主管機關依法處理之。"),  # 條文主體:警察機關
+    ("民法", "第432條",
+     "依民法第432條,出租人應以善良管理人之注意,保管租賃物。"),      # 條文主體:承租人
+    ("消費者保護法", "第19條",
+     "依消費者保護法第19條,企業經營者得於交付商品後七日內解除契約。"),  # 七日解約權屬消費者
+    ("家庭暴力防治法", "第14條",
+     "依家庭暴力防治法第14條,警察機關於審理終結後,應核發通常保護令。"),  # 核發者:法院
+    # ── object swaps: the number is right, what it attaches to is not ──
+    ("租賃住宅市場發展及管理條例", "第7條",
+     "依租賃住宅市場發展及管理條例第7條,出租人自押金扣除之金額,不得逾二個月之租金總額。"),
+    ("勞動基準法", "第24條",
+     "依勞動基準法第24條,休息日工作在二小時以內者,按平日每小時工資額加給三分之一以上。"),
+    ("公寓大廈管理條例", "第10條",
+     "依公寓大廈管理條例第10條,專有部分之修繕費用,由公共基金支付。"),
 ]
 
 
@@ -169,6 +204,9 @@ def run_mutation_test(
 ) -> MutationReport:
     """Run the seeded-error suite. With `semantic_llm` set, the 4th axis is on
     and the subject_swap cases are planted (grading the LLM checker itself)."""
+    from legal_agent.anti_hallucination.semantic_check import reset_semantic_unreached
+
+    reset_semantic_unreached()
     outcomes: list[MutationOutcome] = []
     # Earliest slice per article: out_of_force must date the citation before
     # the FIRST version ever took effect. The day before the CURRENT slice is
@@ -332,7 +370,9 @@ def run_mutation_test(
                     "subject_swap", f"{sid}{ano}", answer,
                     expect_flag=True, conn=conn, semantic_llm=semantic_llm,
                 ))
-    return MutationReport(outcomes)
+    from legal_agent.anti_hallucination.semantic_check import semantic_unreached_count
+
+    return MutationReport(outcomes, semantic_unreached=semantic_unreached_count())
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation [--semantic]
