@@ -247,7 +247,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">438 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">440 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -451,7 +451,13 @@ def _consult_result_html(result) -> str:
             + '<h4 class="blockhead">一般性處理順序(不涉法條)</h4>'
             + f'<div class="ladder">{escape(_clean_ladder(result.solution_text))}</div>'
         )
-    parts = [_tier_bar(result.honesty_tier)]
+    # A tier grades the RETRIEVAL. When the model returned nothing there is no
+    # answer to be confident about, and a green 「充分」 bar over a blank page is
+    # the worst thing this demo can show — so the failure takes the bar instead.
+    parts = [
+        _tier_bar(result.honesty_tier) if getattr(result, "model_output_ok", True)
+        else '<div class="verdict insufficient">模型未產生回答——下方條文仍可直接閱讀</div>'
+    ]
     if result.premise_flag:
         parts.append(
             '<div class="note">前提提醒:你的描述含法律結論斷言;以下以法規實際規定為準,而非附和。</div>'
