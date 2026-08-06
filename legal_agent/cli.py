@@ -23,7 +23,10 @@ import unicodedata
 from datetime import date
 
 from legal_agent.config import DB_PATH
-from legal_agent.data.database import connect, init_db
+
+# The shared write path now lives in the data layer; re-exported so the
+# interactive commands below (and their tests) keep calling it unchanged.
+from legal_agent.data.database import connect, init_db, insert_statute
 from legal_agent.data.models import Statute
 from legal_agent.data.roc_date import RocDateError, convert_roc_to_iso
 from legal_agent.data.seed import seed_source_hierarchy
@@ -134,23 +137,6 @@ def _confirm(prompt: str) -> bool:
 
 
 # ── core DB operations (pure, unit-testable) ─────────────────────────────────
-def insert_statute(conn: sqlite3.Connection, statute: Statute) -> None:
-    """Insert one statute time-slice. Raises sqlite3.IntegrityError on a
-    duplicate (statute_id, article_no, effective_from) or an unknown level."""
-    conn.execute(
-        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
-        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (
-            statute.statute_id,
-            statute.article_no,
-            statute.content,
-            statute.effective_from,
-            statute.effective_to,
-            statute.hierarchy_level,
-            statute.source_url,
-        ),
-    )
-    conn.commit()
 
 
 def _row_flags(row, valid_levels: set[str]) -> list[str]:

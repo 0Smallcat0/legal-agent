@@ -4,13 +4,13 @@
 > screen, read this one.
 >
 > **Three numbers that matter.**
-> 1. **10,437/10,437 seeded defects caught, 0/2,560 false positives.** Not the
+> 1. **11,904/11,904 seeded defects caught, 0/2,921 false positives.** Not the
 >    model's accuracy — the *verifier's* recall, measured by planting errors in
 >    otherwise-correct answers over every article in the corpus. A guardrail
 >    with no number on it is a wish.
-> 2. **349/356 retrieval recall** on 168 real problems, in the wording people
+> 2. **348/356 retrieval recall** on 168 real problems, in the wording people
 >    actually use rather than in legal vocabulary.
-> 3. **100% pass+partial (73% strict)** statute coverage on a fixed 30-case
+> 3. **100% pass+partial, 0 miss (73% strict)** statute coverage on a fixed 32-case
 >    golden set, re-run after every change.
 >
 > **Three things that looked obviously right and lost.** These are the reason to
@@ -28,15 +28,18 @@
 >    article governs. Reverted, and the helper deleted rather than left behind a
 >    flag.
 >
-> **The two limits worth knowing before trusting any of it.** The honesty tier
-> reads a BM25 score that the project's own vocabulary table inflates, so it
-> measures how much of my lexicon fired rather than how well the corpus covers
-> the question. And **precision has no harness at all**: every measure here asks
-> whether the right article reached the window, never what else the reader had
-> to wade through.
+> **The two limits worth knowing before trusting any of it.** The honesty tier's
+> 「is this in scope」 half is now a list of the statutes we know we lack, so it
+> refuses **18 of 20** named absences and nothing outside that list — a question
+> that describes an out-of-scope problem without naming its law still gets
+> answered. What is left of the score-based tier separates 「相關」 from
+> 「邊緣相關」, and it cannot: BM25 magnitude is inflated by the project's own
+> vocabulary table. And **precision's harness only prices window changes**: every
+> other measure here asks whether the right article reached the window, never what
+> else the reader had to wade through.
 
-Local, zero paid API. Models via Ollama on an RTX 4060 (8 GB). Corpus: 2,560
-articles across 11 everyday-law statutes + 1,367 harvested judgments (386 of
+Local, zero paid API. Models via Ollama on an RTX 4060 (8 GB). Corpus: 2,922
+articles across 16 everyday-law statutes + 1,367 harvested judgments (386 of
 them shipped in the repo — see `corpus/README.md`).
 Last full run: 2026-07-25.
 
@@ -47,18 +50,20 @@ system makes — it never means "this statute does not exist."
 
 | what | number | harness |
 |---|---|---|
-| seeded defects caught, every article | **10,437/10,437 (100%), 0/2,560 false positives** | `evaluation/mutation.py` |
-| statute coverage, 30-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py` |
-| honesty tier | **27/32 (84%)** | same run (decided from retrieval scores, so model-independent) |
+| seeded defects caught, every article | **11,904/11,904 (100%), 0/2,921 false positives** | `evaluation/mutation.py` |
+| statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py`, grader at temperature 0, k=8 |
+| honesty tier | **29/32 (91%)** | same run (decided from retrieval scores, so model-independent) |
+| out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** | `evaluation/honesty_probe.py`, 35 cases, retrieval only |
 | wrong-premise detection | **32/32 (100%)** | same run |
-| retrieval recall, real user wording | **349/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems |
+| retrieval recall, real user wording | **348/356 (98%)** | `evaluation/real_recall.py`, 168 lived problems, k=8 |
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted, never scored |
-| bare model vs gated, memory-cited statutes traceable | 0–5% → 30–40% flagged | **STALE** — measured on the 11-article corpus, not re-run at v2 scale |
+| bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190) | `evaluation/ablation.py`, llama3.1 over golden_v2, corpus v2 |
 
 ```bash
 python -m legal_agent.evaluation.mutation                          # catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
 python -m legal_agent.evaluation.real_recall                       # lived sessions
+python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold sweep
 ```
 
@@ -105,6 +110,10 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   threshold separates them: `oos-09-promissory-note` and `oos-10-debt-relief`
   are in the golden set failing, and the number moved from 27/30 to 27/32 to
   say so.
+  **Both now pass, and not because the score got better.** 2026-08-06 stopped
+  asking a score whether 票據法 exists and asked the corpus instead — see the
+  coverage veto below. The inflation is unchanged and still governs everything
+  the veto's list does not name.
 - **The golden set's strict/partial split moves with model sampling, and the
   published number does not chase it.** Two runs over the SAME 32 cases, the
   same corpus and identical retrieval (verified: not one of the round's new
@@ -852,7 +861,477 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   mutation; this one was found by reading the product page and checking whether
   it did what it said. The mutation suite had no case for it because I wrote
   both the guard and the exam from the same wrong assumption.
-- **The ablation row is stale** (see the table).
+- **The corpus grew to close a hole the product had just admitted to, and my
+  first measurement of it was worthless.** 2026-08-05. The action ladder had
+  started telling a hurt rider to claim 強制汽車責任保險 before anything else —
+  correct advice, and the statute saying they may claim *regardless of fault*
+  (強制汽車責任保險法§7) was not in the corpus at all, so that rung shipped with
+  an empty `legal_basis`. Triage was classifying traffic and labor cases the
+  corpus could not answer.
+  Imported from the official bulk XML: 強制汽車責任保險法 56, 勞工保險條例 104,
+  就業服務法 85, 性別平等工作法 50, 個人資料保護法 66 — **361 articles,
+  2,561 → 2,922, 12 → 17 statutes.** §7 and §25 (payment within ten working days
+  of complete documents) now back the insurance rung.
+  **The first re-measurement said recall fell 349/356 → 320/356, and it was a lie
+  of my own making.** Moving `DB_PATH` to a per-user directory in the packaging
+  commit had orphaned the dense index, which lives beside the database: the old
+  2,561-key index stayed in the repo's `db/`, the new location had none, and
+  `DENSE_RETRIEVAL="auto"` degraded to pure BM25 without a word. A hybrid number
+  was being compared against a BM25-only run. Rebuilt at the new location
+  (2,922 slices) and re-measured: **348/356 (98%)**. The corpus expansion cost
+  exactly ONE case; the other 28 were the missing index.
+  The silent degradation is a real regression for anyone who upgrades, not only a
+  measurement artefact — the index must be rebuilt after the move, and nothing
+  says so at runtime.
+  Second self-inflicted error, recorded because the first draft shipped it: the
+  labor rung was briefly given 「就業服務法第5條」 as its basis. That article
+  prohibits employment discrimination; it is not authority for 勞資爭議調解, and
+  勞資爭議處理法 is not in the corpus. Reverted to an empty basis with the reason
+  in a comment. A rung naming no article is honest; a rung naming the wrong one
+  is the exact failure this project exists to catch.
+  **RETRACTED 2026-08-05 — the golden-set half of this entry was noise.** It
+  originally read 「strict coverage 73% → 81%, the batch bought 2 cases of strict
+  coverage for 1 case of recall」. That 81% was a SINGLE run of a grader sampling
+  at temperature 0.2; five runs of identical code span 73.1–80.8%. The corpus
+  import cannot be credited with a coverage change at this noise level. What
+  survives from the measurement is the recall figure (348/356, deterministic
+  retrieval) and tier 27/32 / premise 32/32, which held on every run.
+  The five tier misses all lean one way — three said `normal` where `marginal`
+  was right, two claimed more confidence than the retrieval had earned. That is
+  the BM25-inflation limit named at the top of this file, and more corpus did not
+  touch it. Worst single reading is oos-10 (卡債更生): 消費者債務清理條例 is not
+  in the corpus, the honesty gate should have refused, and instead top BM25
+  105.13 read as `marginal` and the 8B model answered a credit-card debt question
+  out of 勞基法§28 積欠工資墊償基金. More articles raise every BM25 score, so an
+  ABSOLUTE floor detects out-of-scope worse as the corpus grows — the argument
+  for a relative or semantic signal, recorded again with a fresh example.
+- **A ten-minute evaluation finished and then threw its own result away.** Same
+  day. `python -m legal_agent.evaluation.golden_set` — the command both README
+  and CONTRIBUTING tell people to run — completed every case and died in the
+  final `print` with `UnicodeEncodeError: 'cp950' codec can't encode character
+  '⚠'`. The scorecard carries 「⚠」 and a Windows console is cp950.
+  `cli.py` and `run.py` have guarded stdout since the first CLI; none of the five
+  eval entry points did. One shared `enable_utf8_stdout()` in
+  `evaluation/__init__.py`, wired into all five. Worth naming as its own class of
+  incompleteness: the feature worked, the measurement ran, and the user still got
+  nothing — a harness that cannot report is not a harness.
+
+- **The ablation was re-run instead of deleted, and the gap turned out WIDER at
+  v2 scale.** 2026-08-05. The row had been marked STALE since the corpus grew
+  from 11 articles to 2,560; the audit question was whether 278 lines earn their
+  place. They do — this is the only measurement that answers 「what does the
+  pipeline buy over just asking the model?」. Mutation grades the verifier
+  against planted errors; ablation grades the gates against a real model's real
+  behaviour.
+  llama3.1 over the 32-case golden set, corpus v2 (2,922 articles):
+  **bare 34/51 citations flagged (67%), gated 9/190 (5%).** The prediction going
+  in was that the gap would NARROW — a bigger corpus should make more of the
+  model's memory-cited articles traceable. It widened instead. Retrieval-first
+  hands the model verbatim text, so it cites nearly four times as much
+  (51 → 190) while the untraceable count barely moves (34 → 9 flagged). The
+  honesty tier over the same run: insufficient 3, marginal 2, normal 27.
+- **Reading that table exposed a defect in the table itself.** The 「corpus查無」
+  column claimed one meaning and carried two. `_run_bare` verifies with `conn=`
+  and an empty window, so its baseline is the whole corpus. `gated` inherits
+  `run_stage3`'s call — `verify_answer(answer, retrieved, as_of_date,
+  corpus_conn=conn)`, no `conn=` — so its baseline is the RETRIEVED WINDOW. That
+  is why gated shows 39 「missing」 against only 9 flagged: thirty of them are
+  articles that exist in the corpus and simply were not retrieved, which is
+  correctly not a hallucination. The two numbers were never comparable and the
+  header said they were. Renamed to 「未回溯*」 with the asterisk spelling out the
+  differing baselines; `flagged` is the one column measured identically on both
+  rows, so it is the one the published figure quotes.
+
+- **The audit's deletion half, and what it did NOT buy.** 2026-08-05, recorded
+  here because a file about measurement should say when there is nothing to
+  measure. `noise_seed.py` (177 lines) went to `tests/fixtures/noise_corpus.json`
+  — its only remaining callers were test fixtures, the shipped corpus having come
+  from bulk XML since v2 — and `insert_statute` moved from `cli.py` into
+  `data/database.py`, which ended `data/source_ingest.py` importing from the
+  interactive CLI: the data layer depending on the presentation layer, and any
+  importer of the ingest path dragging argparse and a prompt loop with it.
+  Line count: **9,701 → 9,524 → 9,542.** The move ADDED eighteen lines, all of
+  them the comment explaining why the function belongs where it now is. Neither
+  change moves a published number and neither buys a user a better answer; they
+  buy the next reader not having to work out which of two corpus loaders is live,
+  and not having to explain why the data layer imports a CLI.
+
+- **The 1,843-line hand-written lexicon is not redundant with the embeddings —
+  it is carrying the system, and I had it backwards.** 2026-08-05, the last item
+  of the audit. I had called `retrieval/lexicon.py` the most suspicious thing in
+  the codebase: 19% of production code doing a job (bridging the everyday →
+  statutory vocabulary gap) that dense retrieval with bge-m3 exists to do. The
+  instruction was to measure rather than cut, so: four runs over the 168 lived
+  sessions, expansion × dense.
+
+  | 口語→法條 expansion | dense (bge-m3) | hit@k |
+  |---|---|---|
+  | on | on | **348/356 (98%)** |
+  | on | off | 320/356 (90%) |
+  | off | on | **110/356 (31%)** |
+  | off | off | 55/356 (15%) |
+
+  Removing the lexicon costs **238 cases**. Dense alone reaches 110; the lexicon
+  alone reaches 320; dense adds 28 on top of it. They are not two implementations
+  of one job — the table does the heavy lifting and the embeddings supply a
+  margin, and the intuition that they overlap was wrong by a factor of three.
+  Two reasons it beats the embedder here, both visible in the code: the table is
+  not only a ranking signal, it opens an exact-phrase channel and holds reserved
+  seats (`LEXICON_RESERVED_SEATS`), so a matched everyday phrase can pull its
+  article into the window outright rather than nudging a score. And Taiwanese
+  legal register is far from the everyday phrasing people type — 「加班費」 vs
+  「延長工作時間之工資」 — which is exactly the distance a general-purpose
+  embedder does not close reliably.
+  Kept in full. The line count is the price of the single largest measured
+  contribution in the retrieval stack, and this entry exists because the audit
+  that was supposed to delete it produced the number that saved it.
+
+- **Expanding the lexicon: two rows shipped, seven measured and reverted.**
+  2026-08-05, after the A/B above showed the table is the dominant retrieval
+  component. Growing it is the obvious next move, and the obvious next move is
+  where this project has repeatedly been wrong, so every row was written against
+  a measured miss.
+  **The real gap was structural**: the corpus had gained 361 articles
+  (強制險 / 勞保 / 就服 / 性平 / 個資) and the table had gained nothing, so five
+  statutes had no everyday-phrase route into them at all. Probed first —
+  「面試被問結婚生小孩的打算,還說女生不方便」 returned eight 民法 rows and no
+  性平法; 「仲介收我服務費還扣護照」 returned 民法 and 消保法, because 扣護照,
+  the entire complaint for a migrant worker, matched nothing and 服務費 alone
+  reads as an ordinary consumer charge. Two rows fixed both. Recall held at
+  **348/356** and the already-working 「懷孕被公司調職減薪」 kept its hit.
+  **The other seven rows moved nothing and were reverted.** Written against the
+  seven remaining real_recall misses (民法§227 不完全給付, §1166 胎兒繼承,
+  §205 利率上限, §514-7 旅遊, §821+§179 共有物, §354 瑕疵擔保, §478 借貸返還),
+  they left recall at exactly 348/356. Two were worse than useless: they pulled
+  the targeted article in and pushed a DIFFERENT expected article out of the same
+  eight-seat window — `unborn-child-inheritance` traded a miss on §1166 for a
+  miss on §7, `tour-hotel-downgraded` traded §514-7 for §514-5. Seat
+  displacement, net zero, more table to maintain. Not shipped.
+  Two process notes, both mine, both caught by the project's own guards. The
+  script written to revert those seven rows matched an earlier occurrence of its
+  anchor string and deleted **97 rows, 1,150 lines**; recall fell 348 → 177 and
+  `git checkout` restored it. And the first draft of the two surviving rows
+  paraphrased the statutory side — 「不得以性別或性傾向為由」 for the article's
+  「不得因性別或性傾向而有差別待遇」 — which
+  `test_every_statutory_term_appears_verbatim_in_the_corpus` rejected. That rule
+  is enforced by a test precisely because the person adding a row is the person
+  most tempted to approximate.
+
+- **The recall harness could report a BM25-only number and call it hybrid.**
+  2026-08-05. Chasing the seven remaining misses, the same command produced
+  **348, then 334, then 320** on one machine inside an hour — and 320 is exactly
+  the pure-BM25 figure from the lexicon A/B. Ollama was up, the index loaded, a
+  test embedding succeeded. The cause is one line: `retriever._dense_fuse` wraps
+  the whole dense path in `except Exception: return None`. Graceful degradation
+  is CORRECT for the product — a demo with no Ollama must still answer — and
+  wrong for a measurement, because it fires PER QUERY when Ollama unloads bge-m3
+  under memory pressure, and the harness then publishes a number without saying
+  which retriever produced it.
+  Fixed by counting, not by changing behaviour: `dense_fallback_count()` /
+  `reset_dense_fallbacks()`, and `RecallReport` carries `dense_fallbacks` and
+  either says 「dense 全程參與(0 次退回),此數可與已發布數字相比」 or refuses the
+  comparison outright. The first run after the fix printed **recall 320/356,
+  dense_fallbacks 168/168** — every query had been degrading, invisibly, for the
+  whole session.
+  What this does and does not invalidate: the published **348/356** was measured
+  with dense working, and the four-way A/B separates cleanly (348 hybrid vs 320
+  BM25-only, a 28-case delta that matches the fallback story exactly), so those
+  figures stand. What was missing is the DISCLOSURE that reproducing them needs a
+  live bge-m3 — a reader running the command without one gets 320 and no warning.
+  Third instance in this file of bad-ruler-before-wrong-conclusion, and the first
+  where the ruler was lying about which system it measured.
+  Left undone on purpose: the k-sweep that prompted this (k=8/10/12/16) ran
+  through the broken ruler and is discarded, not published. Whether a wider
+  window beats k=8 in HYBRID mode remains unmeasured.
+
+- **k=12 beats k=8 by three cases, and is not shipped.** 2026-08-05, re-run
+  after `ollama pull bge-m3` (the model had vanished in an Ollama 0.31.1 restart,
+  which is what the fallback counter above caught). All four runs verified
+  `dense_fallbacks 0/168`, and **k=8 reproduced 348/356 exactly** — the published
+  figure holds under the fixed ruler.
+
+  | window | recall | misses |
+  |---|---|---|
+  | k=8 | 348/356 | 7 |
+  | k=10 | 349/356 | 6 |
+  | k=12 | **351/356** | **5** |
+  | k=16 | 350/356 | 6 |
+
+  Not shipped, for two reasons that are about the measurement, not the result.
+  **It trades a measured axis for an unmeasured one.** Precision still has no
+  harness here — every number in this file asks whether the right article reached
+  the window, never what the reader had to wade through — and k=8→12 puts 50%
+  more articles in front of them and into the model's prompt. Buying +3 recall
+  with an unpriced precision cost is optimising the metric that exists.
+  **And the other published numbers cannot be re-measured right now.** `DEFAULT_K`
+  feeds the honesty tier (which reads retrieval scores) and statute coverage;
+  re-running the golden set needs llama3.1, which is also gone from this machine.
+  A golden-set score from a different model is not comparable to the published
+  one, so shipping would mean changing a retrieval parameter while three of the
+  five headline numbers go unchecked.
+  The finding stands and is reproducible: `k=12` is worth revisiting once
+  llama3.1 is back and precision has any harness at all.
+  Worth noting for the record: the earlier k-sweep run through the broken ruler
+  produced the same SHAPE (320→349→351→350, k=12 best) with a wrong baseline.
+  The ordering happened to survive; that is luck, not method, and it is why the
+  discarded run stayed discarded.
+
+- **The Tier-1 grader was rolling dice, and I published one roll as a result.**
+  2026-08-05. Chasing whether `k=12` should ship, the golden-set baseline would
+  not reproduce: identical code, dense verified live (`dense_fallbacks 0/12` on a
+  probe before every run), llama3.1 restored — and strict coverage came back 73%
+  where 81% was published. Five runs, all listed, none dropped:
+
+  | grader temperature | strict coverage | tier | premise |
+  |---|---|---|---|
+  | 0.2 | 76.9% (pass 20 / partial 6) | 27/32 | 32/32 |
+  | 0.2 | 76.9% (pass 20 / partial 6) | 27/32 | 32/32 |
+  | 0.2 | 73.1% (pass 19 / partial 7) | 27/32 | 32/32 |
+  | **0.0** | **73.1% (pass 19 / partial 7)** | 27/32 | 32/32 |
+  | **0.0** | **73.1% (pass 19 / partial 7)** | 27/32 | 32/32 |
+
+  With the earlier run of the day (73.1%) and the published figure (80.8%), the
+  observed spread at temperature 0.2 is **73.1–80.8%, 7.7 points** — larger than
+  any effect being chased. At 0.0 the runs are identical.
+  The cause is one default. `run_golden_set` takes an injected llm, and the entry
+  point built it with `build_runtime_llm()`, whose ollama path defaults to
+  temperature 0.2. Coverage is scored as 「expected refs ∈ retrieved ∪ the model's
+  own citations」, so the model's sampling lands directly in the score. Meanwhile
+  `ollama_llm`'s docstring has read 「graders/checkers pass 0.0 so repeated runs
+  measure the model, not the dice」 since the parameter was added. The project
+  knew, and applied it everywhere except its Tier-1 grader. Fixed: that entry
+  point now builds the grader at 0.0.
+  **Two published numbers were wrong and are corrected here and in the README.**
+  Strict coverage is **73%**, not 81%. And the corpus-import entry above claimed
+  「strict coverage 73% → 81%, the batch bought 2 cases of coverage for 1 case of
+  recall」 — retracted, because both endpoints were single samples from a
+  7.7-point distribution. That entry's recall figure survives: retrieval is
+  deterministic and 348/356 reproduced exactly under the verified ruler.
+  What this does NOT touch: tier 27/32 and premise 32/32 were identical on all
+  five runs, so those two axes were never sampling-dependent.
+  Fourth bad ruler in this file in one day — orphaned dense index, the ablation's
+  double-meaning column, dense degrading in silence, and now a grader at
+  temperature 0.2. This is the only one that reached the README, and the lesson
+  is narrower than 「measure twice」: **before publishing a delta, measure the
+  instrument's own spread.** A single run is a sample; I reported one as an
+  effect.
+  `k=12` remains unresolved and unshipped. It needs a rerun against the now
+  deterministic grader — cheap to do, and deliberately not folded into this entry,
+  whose subject is the instrument rather than the window.
+
+- **k=12 shipped, decided against a deterministic grader.** 2026-08-05, the
+  question the previous three entries were clearing the ground for. With the
+  grader pinned at temperature 0 the comparison finally means something, and
+  every run was preceded by a probe confirming `dense_fallbacks 0`:
+
+  | | k=8 | k=12 |
+  |---|---|---|
+  | strict coverage | 73.1% (pass 19 / partial 5+2) | **80.8% (pass 21 / partial 5)** |
+  | miss | 0 | 0 |
+  | honesty tier | 27/32 | 27/32 |
+  | wrong premise | 32/32 | 32/32 |
+  | retrieval recall | 348/356 | **351/356** |
+
+  Two golden cases move partial → pass and three recall cases are recovered;
+  the two axes that could have gone the wrong way did not move at all. The rule
+  set before the run was: coverage up or flat AND tier not down, or it does not
+  ship. It cleared both. `DEFAULT_K = 12`.
+  **A coincidence worth stating so it does not read as a reversal.** 80.8% is
+  the same figure retracted earlier the same day. That one was k=8 winning a
+  temperature-0.2 dice roll; this one is k=12 measured deterministically and
+  reproducible. Same number, unrelated provenance.
+  **The cost that is still unmeasured, and is being accepted knowingly.** The
+  window is 50% wider, so the reader — and the model's prompt — receive 50% more
+  articles. Precision has no harness in this project; every figure above asks
+  whether the right article arrived, never what had to be waded through to reach
+  it. Three measured axes improved or held and one unmeasured axis got worse by
+  construction. That is the trade, stated rather than hidden, and it is the
+  strongest argument in this file for building a precision harness before the
+  next window change.
+
+- **The precision harness I said should come first was built second, and it
+  reversed the decision it was built to price.** 2026-08-05, last measurement of
+  the day. `k=12` shipped earlier on two axes — recall 348→351, strict coverage
+  73.1→80.8% — with the cost 「stated rather than hidden」 because nothing in this
+  project measured it. `real_recall` now reports the window cost too.
+
+  | | k=8 | k=12 |
+  |---|---|---|
+  | recall | 348/356 | 351/356 |
+  | articles delivered per session | 8.0 | 12.0 |
+  | **outside the expectation, per session** | **5.9** | **9.9** |
+  | precision floor | 25.9% | 17.4% |
+
+  Expected articles delivered per session barely moves: **2.07 → 2.09**. Across
+  168 sessions the wider window recovered **3** expected articles and added
+  **672** unexpected ones — about 1:224. Whatever fraction of those are secretly
+  relevant (the expectation list is not exhaustive, so this is a floor), k=12 is
+  buying bulk, not substance, and a layperson reading verbatim statutes pays for
+  every extra row.
+  **Reverted to k=8.** README and the tables go back to 348/356 and 73% strict.
+  The uncomfortable part is the ordering: I wrote 「a precision harness should come
+  before the next window change」 into this file, then made the window change, then
+  built the harness, and the harness said no. The rule was right and I applied it
+  in the wrong order. It exists now, so the next seat or window change can be
+  judged on all three axes instead of the two that flatter it.
+
+- **The honesty tier was wrong in BOTH directions at once, and a 5-case sample
+  had been hiding half of it.** 2026-08-06. The known defect was over-confidence:
+  five tier misses on the golden set, all leaning the same way, worst of them
+  oos-10 (卡債更生) answered out of 勞基法§28. The fix was supposed to be a better
+  out-of-scope signal. The first thing measured was the ruler, and the ruler
+  changed the diagnosis.
+
+  **Step 0 — build the ruler, because five cases cannot carry a decision.**
+  The golden set has 5 out-of-scope cases. Anything tuned to separate 5 cases is
+  fitted, and this file retracted a number the day before for exactly that. New
+  probe, `evals/honesty_probe_v1.json`, 35 cases in two groups: 20 out-of-scope
+  (each governed by a statute verified absent from the corpus's 17 `statute_id`s)
+  and 15 in-scope but lexically thin (each expecting an article verified verbatim
+  in the corpus). Retrieval-only, no LLM — the tier is decided from scores, so the
+  probe is deterministic and reproduces exactly.
+
+  | | before | after |
+  |---|---|---|
+  | out-of-scope refused (n=20) | **5/20** | **18/20** |
+  | in-scope falsely refused (n=15) | 2/15 | 2/15 |
+  | honesty tier, golden set | 27/32 | **29/32** |
+  | wrong-premise, golden set | 32/32 | 32/32 |
+  | strict statute coverage | 73.1% (pass 19 / partial 7 / miss 0) | 73.1% (pass 19 / partial 7 / miss 0) |
+  | retrieval recall | 348/356, 5.9 unexpected/session | 348/356, 5.9 unexpected/session |
+
+  All three remaining tier misses are mg-01/02/03 — the marginal-vs-normal axis
+  this file already records as not separable by BM25. Nothing was attempted there
+  and nothing moved there.
+
+  **What the wider ruler showed that the narrow one could not.** The floor at 70
+  was failing to refuse 15 of 20 out-of-scope questions *and* refusing two
+  questions the corpus answers — 勞基法§11 資遣 at 39.19 and 個資法§29 at 44.65. A
+  false refusal is the worse half: the article was there and the reader was turned
+  away. Nobody had measured that direction, because no harness contained a case
+  for it. The score ranges are not merely overlapping, they are interchangeable —
+  out-of-scope 35.7–503.5 against in-scope 39.2–417.4 — and the single highest
+  score in the whole probe is an out-of-scope one (oos-09 本票裁定 at 503.5,
+  answered from 民法§473 消費借貸). No constant sits between those.
+
+  **Measured and NOT shipped: the shape of the window instead of its height.**
+  Four signals had already lost, and all four read the same thing — how HIGH the
+  scores are. The untried idea was the distribution: in-scope retrieval should
+  concentrate, out-of-scope should be flat lexical noise. Swept top/mean,
+  top/median, top/2nd, top/last, normalised entropy, coefficient of variation,
+  score sum, and the k-th score. Best split **25/35**, and that is an in-sample
+  optimum against a 20/35 majority baseline. Every range overlaps. Shape is no
+  better than height; recorded so the next person does not spend the afternoon.
+
+  **Shipped: a coverage veto, which is not a score at all.**
+  `anti_hallucination/coverage.py`. 「Is 票據法 in the corpus」 is a set question,
+  and 19 rows answer it: a question naming a body of law we do not carry is
+  insufficient no matter what BM25 ran. It only ever refuses — it cannot raise a
+  tier, so the change is auditable in one direction. The refusal now names the
+  missing statute (「這個問題屬於消費者債務清理條例…」), which golden's own
+  expected_action for oos-10 had been asking for.
+  Two invariants are tested. Every statute named must be ABSENT from the corpus,
+  so importing 消債條例 turns the test red and forces the row out — that is the
+  property the absolute floor lacked when it went stale in silence for a week.
+  And no trigger may fire on an in-scope question.
+
+  **What it does not do, stated before anyone finds out the hard way.** It refuses
+  the absences someone enumerated. It is a closed list, not an out-of-scope
+  detector. The 2 probe cases it misses are the ones where the user never names
+  the domain — a starved dog, an informal remittance — and describing facts
+  without legal vocabulary is exactly how laypeople write. The list will be
+  incomplete forever; the honest claim is 「refuses 18 of 20 named absences」, not
+  「detects out-of-scope」.
+
+  **How much of the 0-false-fire number is real.** Triggers were PRUNED against
+  210 in-scope queries (168 real sessions + 27 golden + 15 probe), so 0/210 is a
+  fit, not an estimate. 「本票」「卡債」「健保」「非自願離職」「遺產稅」「農地」
+  「停權」 each fired on a genuine in-scope session where the word appeared in
+  passing — a 借款 dispute that merely used a 本票 as evidence, a 債權讓與 case
+  that opened with 卡債 — and were dropped or narrowed to 「本票裁定」. The
+  held-out check is the 386 harvested judgments: 11 fire (2.8%), and all 11 are
+  genuinely disputes of the named absent law (裁判費核定 6, 商業事件 2, 執行異議 2,
+  消債更生 1), i.e. correct refusals, checked case by case. A fifth bad ruler was
+  caught while building that check: the first held-out run scored 0/386 against
+  the judgments' `issues` column, which is empty in all 386 rows. It was measuring
+  nothing.
+
+  **The floor sweep, measured and NOT shipped.** With the veto carrying
+  out-of-scope detection, `INSUFFICIENT_SCORE_THRESHOLD` has almost nothing left
+  to do — in the probe it catches exactly one case the veto misses. Sweeping it:
+  at 70 (shipped) 18/20 refused and 2/15 falsely refused; at 35, 17/20 and 0/15.
+  And any value in 36.51–39.19 gives 18/20 AND 0/15 — a strictly dominant point,
+  which is precisely the thing this round exists to stop building. That is a
+  constant wedged into a 2.7-point gap between two individual probe cases; it
+  would look free and would not survive the next corpus import. The floor stays at
+  70 and the two false refusals stay on the books.
+
+  **The ablation was re-run and its delta is NOT publishable, which is itself the
+  finding.** Second sample of the same 32 cases: bare **16/24 flagged (67%)**,
+  gated **4/208 (2%)**, tier distribution insufficient 5 / marginal 1 / normal 26.
+  Published was bare 34/51 (67%), gated 9/190 (5%). The bare arm runs with no
+  gates at all, so this change cannot touch it — and it moved from 51 citations
+  to 24 on identical code. That is the harness's own spread, never measured
+  before, and it is larger than the gated 5%→2% move I would otherwise have
+  claimed. What survives: the bare FLAGGED RATE is 67% in both samples, and the
+  tier distribution's insufficient 3→5 is this change, since the coverage veto
+  short-circuits two more cases before the model runs. The published row stays as
+  it is; a second single sample is not an improvement on a first single sample.
+
+- **Two numbers in the table above were stale, and re-running them was the only
+  way to know.** Same day, while proving this change moved nothing it should not.
+  `mutation` re-runs to **11,904/11,904 caught, 0/2,921 false positives** — the
+  published 10,437 / 2,560 was measured before the corpus reached 2,922 articles
+  and was never re-run. Same 100% and same 0%, larger denominators. Nothing to do
+  with the tier change; it just had not been looked at.
+  Also found: `app.py`'s retrieval tab grades the tier WITHOUT `lexicon_hit`,
+  which the CLI passes — so the Spaces demo refuses questions the CLI marks
+  「僅供參考」. It was written up here as 「two lines and clearly right, moves no
+  measured number, so not shipped」. **That was the wrong call, and measuring it
+  is what showed why.** The 35 probe questions through the demo's own path (raw
+  question text, no intake facts, so BM25 runs on less and scores lower):
+
+  | demo retrieval tab | before | after |
+  |---|---|---|
+  | out-of-scope refused (n=20) | 20/20 | 18/20 |
+  | in-scope falsely refused (n=15) | **8/15** | **3/15** |
+
+  The demo was turning away eight of fifteen questions the corpus answers — four
+  times the CLI's rate — and 「moves no measured number」 was only true because
+  nobody had pointed a harness at that path. The two out-of-scope cases it stops
+  refusing (oos-19 動物虐待, oos-22 地下匯兌) are exactly the two the coverage
+  table does not name: they had been refused by the accident of a low score, not
+  by knowing anything. Shipped; the demo now grades identically to the CLI.
+
+- **The install was measured instead of assumed, and it was stuck in one place.**
+  2026-08-06. Fresh clone from GitHub, clean venv, `LEGAL_AGENT_HOME` pointed at
+  an empty directory to simulate a machine that has never run this. Timed:
+  clone 1.3s (5.1 MB, 110 tracked files), `pip install .` 29s (3 dependencies, no
+  GPU), and the README's five-line snippet run VERBATIM from a directory with no
+  checkout — first call 5.0s while the database builds itself, 0.00s after, and
+  the corpus comes out complete (2,923 rows, 17 statute_ids, 386 judgments).
+  `pip install .[dev] && pytest` is 438 passed in 17s. The library path is two
+  commands and needs no model, no key and no network.
+  **What was stuck:** `LLM_PROVIDER` was a source constant, and `pip install`
+  puts `config.py` in site-packages — so someone without Ollama who ran the CLI
+  had a clear error telling them to edit an INSTALLED file. It reads
+  `LEGAL_AGENT_PROVIDER` now (same for `OLLAMA_MODEL` and `OLLAMA_HOST`), so the
+  free 「manual」 backend is one env var away. Verified end to end on the clean
+  venv: `LEGAL_AGENT_PROVIDER=manual legal-agent` starts and runs.
+  **What the fresh install proved was already right:** without Ollama the
+  harnesses refuse to be misread. `real_recall` reports 320/356 — exactly the
+  figure the README advertises for a plain install — with 「168/168 個查詢的
+  dense 半邊失敗」 printed beside it, and `honesty_probe` reports 35/35 the same
+  way. The guard that four bad rulers bought is doing its job on a machine that
+  has never seen this project.
+  **What it caught:** the CLI greeting still said 「11 部民生法規」 and the demo
+  said 「11 部…2,560 條」 — the first sentence a new user reads, stale since the
+  corpus reached 16 statutes and 2,922 articles. Also `SPEC.md`'s scope
+  paragraph. Fixed; no measured number moves, which is why this is recorded here.
+  Added `AGENTS.md`, because the traps in this file (the corpus living outside
+  the repo, dense degrading in silence, the grader's temperature, `DEFAULT_K`
+  binding at definition time, the ablation's double-meaning column) are spread
+  across 1,300 lines and a coding agent reads none of them before its first run.
 
 ## Measured, then NOT shipped
 

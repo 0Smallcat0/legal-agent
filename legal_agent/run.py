@@ -22,7 +22,7 @@ from legal_agent.dialogue import flow
 
 _COVERAGE = (
     "可談:租屋、勞資、消費/網購、車禍、鄰里噪音、公寓大廈、家事等民生法律問題\n"
-    "(語料為 11 部民生法規逐字匯入;超出範圍我會直接說「資料不足」,不會硬掰)。"
+    "(語料為 16 部民生法規逐字匯入;超出範圍我會直接說「資料不足」,不會硬掰)。"
 )
 
 _WELCOME = (
@@ -70,7 +70,8 @@ def build_runtime_llm():
                 "  1) 安裝 Ollama:https://ollama.com/download\n"
                 f"  2) 下載模型:ollama pull {model}\n"
                 "  3) 確認服務在跑(安裝後通常自動啟動;或執行 `ollama serve`),再重跑本程式。\n"
-                "  (或把 legal_agent/config.py 的 LLM_PROVIDER 改回 'manual'。)"
+                "  (不想裝模型也可以:設 LEGAL_AGENT_PROVIDER=manual 改用免費的手動模式——"
+                "程式印出組好的提示詞,你貼到任何聊天視窗再把答案貼回來。)"
             )
         return ollama_llm()
 
@@ -80,12 +81,12 @@ def build_runtime_llm():
                 "⚠ 尚未設定模型。請編輯 legal_agent/config.py,將 MODEL 從占位符 "
                 f"'{config.MODEL_PLACEHOLDER}' 改成真正的模型 id"
                 "(例如 claude-sonnet-5 / claude-opus-4-8 / claude-haiku-4-5-20251001);"
-                "或把 LLM_PROVIDER 改成 'manual' 用免費的手動模式。"
+                "或設 LEGAL_AGENT_PROVIDER=manual 用免費的手動模式。"
             )
         if not config.get_anthropic_api_key():
             _die(
                 "⚠ 找不到 API 金鑰。請在環境變數或(被 gitignore 的).env 設定 "
-                f"{config.ANTHROPIC_API_KEY_ENV}=你的金鑰;或把 LLM_PROVIDER 改成 'manual'。"
+                f"{config.ANTHROPIC_API_KEY_ENV}=你的金鑰;或設 LEGAL_AGENT_PROVIDER=manual。"
             )
         from legal_agent.dialogue.stage3 import default_anthropic_llm
 
@@ -96,7 +97,7 @@ def build_runtime_llm():
 
     _die(
         f"⚠ 未知的 LLM_PROVIDER:{provider!r}。目前支援:'manual' / 'ollama' / 'anthropic'。"
-        "請改 legal_agent/config.py。"
+        "請設 LEGAL_AGENT_PROVIDER,或改 legal_agent/config.py。"
     )
 
 

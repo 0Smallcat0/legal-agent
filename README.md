@@ -8,7 +8,7 @@ sdk_version: 6.20.0
 app_file: app.py
 pinned: false
 license: mit
-short_description: Legal RAG with a citation verifier graded at 10,437/10,437.
+short_description: Legal RAG with a citation verifier graded at 11,904/11,904.
 ---
 
 # Legal Agent
@@ -16,11 +16,11 @@ short_description: Legal RAG with a citation verifier graded at 10,437/10,437.
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-433%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-438%20passing-brightgreen)
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
-itself graded by planting errors in correct answers: 10,437/10,437 caught,
+itself graded by planting errors in correct answers: 11,904/11,904 caught,
 0 false positives.**
 
 The usual defence against a hallucinated citation is a better prompt. This one
@@ -40,11 +40,29 @@ the 引用查核 tab ships a pre-filled broken answer, so the whole story takes 
 thirty seconds to check for yourself.
 
 ```bash
-pip install -r requirements.txt   # no torch, no GPU
-python app.py                     # web demo — builds the corpus on first run
+pip install .                     # no torch, no GPU; the corpus ships inside
 ```
 
-The worked example is Taiwan law: 2,560 articles across 11 everyday statutes and
+```python
+import legal_agent
+
+for r in legal_agent.verify("依社會秩序維護法第72條,深夜喧嘩可處新臺幣六萬元以下罰鍰。"):
+    print(r.flagged, r.reason)
+# True  主張金額 [60000] 元未見於條文(條文金額 [10000])
+```
+
+That is the whole setup. The database builds itself from the corpus inside the
+package on first call — no clone, no key, no model, no network. `verify` is pure
+Python, so it cannot be argued out of a verdict. Pass `as_of="2024-06-01"` to
+check the law as it stood on a date rather than today.
+
+To run the demo from a clone instead:
+
+```bash
+pip install .[demo] && python app.py
+```
+
+The worked example is Taiwan law: 2,922 articles across 16 everyday statutes and
 386 real court judgments, all shipped in the repo, so a fresh clone reproduces
 every number below.
 
@@ -61,10 +79,11 @@ must be right are not left to it.</sub>
 
 | | |
 |---|---|
-| seeded defects caught (whole corpus) | **10,437/10,437, 0 false positives** |
-| statute coverage, 30-case golden set | **100% pass+partial** (73% strict) |
-| retrieval recall, real user wording | **349/356** |
-| honesty tier / wrong-premise detection | **84% / 100%** |
+| seeded defects caught (whole corpus) | **11,904/11,904, 0 false positives** |
+| statute coverage, 32-case golden set | **100% pass+partial, 0 miss** (73% strict) |
+| retrieval recall, real user wording | **348/356**, 5.9 unexpected articles per session |
+| honesty tier / wrong-premise detection | **91% / 100%** |
+| out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
 | first reference judgment states an awarded sum | **50/60 sessions** |
 | first action names the reader's own documents | **83/168 sessions** |
@@ -76,6 +95,22 @@ python -m legal_agent.evaluation.mutation                          # catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
 python -m legal_agent.evaluation.real_recall                       # lived sessions
 ```
+
+**Two of those rows need a second half a plain install does not have.** The
+retriever is BM25 plus a hand-written vocabulary table plus optional bge-m3
+embeddings, and the embeddings need a local index that is built rather than
+shipped — it is derived from your corpus and it is ~12 MB of floats. Straight
+after `pip install .` the retrieval half is lexical only: **recall 320/356
+rather than 348/356**, measured. To reach the published figure:
+
+```bash
+ollama pull bge-m3                        # ~1.2 GB, once
+python -m legal_agent.retrieval.dense     # builds the index beside your corpus
+```
+
+The verifier, the corpus, the honesty tier, the ladder and the 存證信函 template
+never touch it and are unaffected. `real_recall` now prints whether the dense
+half actually participated, so a number measured without it says so.
 
 ## Three things you can lift
 
@@ -98,7 +133,11 @@ Each is self-contained, with no Taiwan-specific logic worth speaking of:
   Multi-turn re-retrieval is the documented cause of RAG degradation; here it is
   enforced by a test, not a convention.
 - **The model sits behind a `str -> str` seam** with three swappable backends —
-  `manual` (paste into any chat), `ollama` (local), `anthropic` (paid).
+  `manual` (paste into any chat), `ollama` (local, the default), `anthropic`
+  (paid). Pick one with `LEGAL_AGENT_PROVIDER=manual`, no source edit: measured
+  on a clean venv, that was the only step in the documented path that left a
+  first-time reader stuck, because `pip install` puts `config.py` in
+  site-packages.
 - **Judgments are reference tier**, never retrieval candidates and never citable
   law. They reach a page only through a deterministic join on articles the
   pipeline already retrieved, with the award figure read verbatim from the 主文.
@@ -106,6 +145,7 @@ Each is self-contained, with no Taiwan-specific logic worth speaking of:
 [SPEC.md](SPEC.md) design · [RESULTS.md](evals/RESULTS.md) every number, the
 method behind it, and the ones that went down ·
 [CONTRIBUTING.md](CONTRIBUTING.md) the bar a change has to clear ·
+[AGENTS.md](AGENTS.md) the same bar plus the measurement traps, for coding agents ·
 [DEPLOY_SPACES.md](docs/DEPLOY_SPACES.md) hosting
 
 **Found a wrong answer?** That is the most useful thing you can send — the

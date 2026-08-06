@@ -54,6 +54,7 @@ from legal_agent.dialogue.flow import (
     handle_turn_smart,
 )
 from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
+from legal_agent.retrieval.lexicon import expansions
 from legal_agent.retrieval.retriever import retrieve_scored
 
 # ── content ──────────────────────────────────────────────────────────────────
@@ -252,7 +253,7 @@ HERO = """
 
 FOOTER = """
 <p class="disclaimer">工程實驗,非法律意見,不能取代律師。法源為全國法規資料庫官方
-公開資料逐字匯入(11 部民生法規 2,560 條+警察分工實務指引);「住宅噪音」有專屬問診流程,
+公開資料逐字匯入(16 部民生法規 2,922 條+警察分工實務指引);「住宅噪音」有專屬問診流程,
 其他問題走通用流程。資料庫未涵蓋的領域,系統會直接說不知道。</p>
 """
 
@@ -552,7 +553,19 @@ def explore_retrieval(query: str, as_of: str) -> str:
         return f'<div class="note">{escape(str(exc))}</div>'
     finally:
         conn.close()
-    tier = grade_honesty([s for s, _ in scored], [sc for _, sc in scored])
+    # Graded exactly as Stage 3 grades it, and it took three tries to be true.
+    # `query=` carries the coverage veto — a question naming a body of law the
+    # corpus does not hold is refused whatever BM25 scored. `lexicon_hit` is the
+    # other half: a curated 口語→法條 phrase landing on a retrieved article is
+    # coverage evidence that a length-sensitive BM25 score cannot express, and
+    # without it this tab refused short questions the CLI answers.
+    retrieved = [s for s, _ in scored]
+    phrases = expansions(query or "")
+    lexicon_hit = any(p in (s.content or "") for s in retrieved for p in phrases)
+    tier = grade_honesty(
+        retrieved, [sc for _, sc in scored],
+        lexicon_hit=lexicon_hit, query=query or "",
+    )
     return _tier_bar(tier) + _retr_cards(scored)
 
 
@@ -660,8 +673,9 @@ with gr.Blocks(title="Legal Agent") as demo:
 
     with gr.Tab("法規檢索"):
         gr.Markdown(
-            "資料庫收錄 11 部民生法規、2,560 條條文(民法、刑法、消保法、勞基法、"
-            "道交條例、公寓大廈、租賃住宅、家暴法、噪音管制、社維法)。\n\n"
+            "資料庫收錄 16 部民生法規、2,922 條條文(民法、刑法、消保法、勞基法、"
+            "勞保條例、就服法、性平工作法、個資法、道交條例、強制車險法、公寓大廈、"
+            "租賃住宅、家暴法、噪音管制、社維法及其處理辦法)。\n\n"
             "同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。"
         )
         q_in = gr.Textbox(value=DEFAULT_QUERY, label="事實描述")

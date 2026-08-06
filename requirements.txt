@@ -1,31 +1,33 @@
 # ─────────────────────────────────────────────────────────────────────────────
-# Legal Agent — Python dependencies
+# Legal Agent — what the DEMO needs. Not the library.
 #
-# The data layer itself uses only the built-in `sqlite3` module. The deps below
-# are all IN USE by the current build (retrieval + runtime model + tests) —
-# install them with `pip install -r requirements.txt`. Versions are pinned where
-# the code relies on specific behavior.
+# To use the library, install the package instead and ignore this file:
 #
-# Python 3.10+ required (uses `X | None` type hints and dataclasses).
-# Versions are indicative minimums — pin them when you actually install.
+#     pip install .              # verifier + retrieval; the corpus ships inside
+#     pip install .[demo]        # + the Gradio app
+#     pip install .[dev]         # + pytest and ruff
+#     pip install .[anthropic]   # + the paid model backend
+#
+# pyproject.toml is the authoritative dependency list. This file stays because
+# Hugging Face Spaces builds from it, and pinning the demo's runtime set
+# explicitly is worth the small duplication: a broken build on the Space is
+# invisible until somebody opens the page.
+#
+# Python 3.10+ (uses `X | None` type hints and dataclasses).
 # ─────────────────────────────────────────────────────────────────────────────
 
-# ── Runtime reasoning model (spec §0.4) ── [used from the reasoning/dialogue step]
-anthropic==0.116.0       # Claude API client — the runtime reasoning model (spec §0.4); dependency-injected in Stage 3.
-python-dotenv>=1.0.0     # Load the Anthropic API key from a local .env, keeping the key out of source.
-
-# ── Retrieval (spec §2.2 Mechanism 1) ── [IN USE as of step 3a; pinned]
-rank-bm25==0.2.2         # Lexical BM25 over the corpus; strong for exact legal terms / article numbers. No GPU, no model download.
+# ── Retrieval (spec §2.2 Mechanism 1) ── [pinned; behaviour-sensitive]
+rank-bm25==0.2.2         # Lexical BM25 over the corpus; strong on exact legal terms and article numbers. No GPU, no model download.
 jieba==0.42.1            # Chinese word segmentation; BM25 needs tokenized Chinese text.
-# numpy is pulled in transitively by rank-bm25 (developed/tested against numpy 2.4.4).
+numpy>=1.24              # Dense-index arithmetic; also arrives transitively with rank-bm25.
 
-# ── Web demo (app.py) ──
-gradio>=4.0.0            # Zero-key demo UI (verifier playground / retrieval explorer / five-gate flow); also the HF Spaces entrypoint.
+# ── Web demo (app.py, and the Hugging Face Space) ──
+gradio>=4.0.0            # Zero-key demo UI (verifier playground / retrieval explorer / five-gate flow); the Spaces entry point.
 
-# ── Evaluation & tests (spec §4) ──
-pytest>=8.0.0            # Golden-set + hallucination-check harness (Tiers 1 & 2), and the schema smoke test.
-ruff>=0.15.0             # Lint; rules are chosen in pyproject.toml and enforced in CI.
-
-# ── Data import / parsing (spec §1.2) ──
-# (no dependency) The 全國法規資料庫 bulk-XML importer (legal_agent/data/moj_xml.py)
-# streams with the stdlib xml.etree.ElementTree — lxml turned out to be unnecessary.
+# ── Deliberately absent ──
+# The model backends: `manual` needs nothing, `ollama` talks over stdlib urllib,
+# and the paid client is an extra (`pip install .[anthropic]`). The demo runs
+# with no model at all, which is the point.
+#
+# The 全國法規資料庫 bulk-XML importer streams with stdlib xml.etree — lxml
+# turned out to be unnecessary.

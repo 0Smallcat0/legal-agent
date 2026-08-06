@@ -4,12 +4,28 @@ tiny: the spec calls for a minimal personal-use build, not a config framework.
 import os
 from pathlib import Path
 
-# Repo root = one level above this package directory.
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PACKAGE_ROOT = Path(__file__).resolve().parent
+# Repo root. Valid only in a git checkout — an installed copy lives in
+# site-packages, where this points at site-packages itself. Nothing needed at
+# runtime may hang off it; shipped data hangs off PACKAGE_ROOT.
+PROJECT_ROOT = PACKAGE_ROOT.parent
 
-DB_PATH = PROJECT_ROOT / "db" / "legal_agent.db"   # local SQLite file (gitignored)
-CORPUS_DIR = PROJECT_ROOT / "corpus"               # human-verified source material (§1.5)
-PROMPTS_DIR = PROJECT_ROOT / "prompts"             # system-prompt text files (§2)
+# Shipped WITH the package (see [tool.setuptools.package-data] in pyproject), so
+# `pip install` carries its own corpus and a fresh install can build the
+# database without a git clone.
+CORPUS_DIR = PACKAGE_ROOT / "corpus"               # human-verified source material (§1.5)
+PROMPTS_DIR = PACKAGE_ROOT / "prompts"             # system-prompt text files (§2)
+
+# Written at runtime, so it may NOT live inside the installed package:
+# site-packages is read-only on many systems and shared across projects.
+# Order: explicit override, then the platform's per-user data directory.
+_DEFAULT_DATA_DIR = Path(
+    os.environ.get("LOCALAPPDATA")             # Windows
+    or os.environ.get("XDG_DATA_HOME")         # Linux, when set
+    or (Path.home() / ".local" / "share")      # POSIX default
+) / "legal-agent"
+DATA_DIR = Path(os.environ.get("LEGAL_AGENT_HOME", _DEFAULT_DATA_DIR))
+DB_PATH = Path(os.environ.get("LEGAL_AGENT_DB", DATA_DIR / "legal_agent.db"))
 
 # ── Runtime reasoning model (spec §0.4) ──────────────────────────────────────
 # NOIR: set MODEL to a real model id before running the agent live. It ships as a
@@ -33,11 +49,19 @@ MODEL = MODEL_PLACEHOLDER
 #                 at zero cost. Your RTX 4060 (8GB) runs a 7-8B model well.
 #   "anthropic" — the real Claude API (needs MODEL set above + ANTHROPIC_API_KEY).
 # (gemini can be added later as its own builder.)
-LLM_PROVIDER = "ollama"
+#
+# Environment first, because the default assumes a machine with Ollama on it and
+# `pip install` puts this file in site-packages. Measured on a clean venv: the
+# library path (verify + retrieval) needs no model and works in two commands, but
+# someone who then runs the CLI without Ollama had to edit an INSTALLED file to
+# reach the free 「manual」 backend. That was the one place the documented path
+# left the reader stuck, so it is an env var now.
+LLM_PROVIDER = os.environ.get("LEGAL_AGENT_PROVIDER", "ollama")
 
 # Local Ollama backend (used when LLM_PROVIDER = "ollama").
-OLLAMA_HOST = "http://localhost:11434"
-OLLAMA_MODEL = "llama3.1:latest"   # 你本機已有;要更好的繁中可換 qwen3:latest 等
+OLLAMA_HOST = os.environ.get("LEGAL_AGENT_OLLAMA_HOST", "http://localhost:11434")
+# 要更好的繁中可換 qwen3:latest 等 — same reason as above, no source edit needed.
+OLLAMA_MODEL = os.environ.get("LEGAL_AGENT_OLLAMA_MODEL", "llama3.1:latest")
 
 # Hybrid retrieval (retrieval/dense.py): "auto" fuses BM25 with local-Ollama
 # bge-m3 embeddings via RRF when the index/daemon is available, and silently

@@ -21,9 +21,9 @@ from legal_agent.anti_hallucination.answer_structure import (
     split_sections,
 )
 from legal_agent.anti_hallucination.honesty import (
-    INSUFFICIENT_TEXT,
     MARGINAL_PREFIX,
     grade_honesty,
+    insufficient_text,
 )
 from legal_agent.anti_hallucination.sycophancy import check_premise
 from legal_agent.anti_hallucination.verifier import VerificationResult
@@ -300,14 +300,15 @@ def run_stage3(
         for statute in retrieved
         for phrase in phrases
     )
-    tier = grade_honesty(retrieved, scores, lexicon_hit=lexicon_hit)
+    tier = grade_honesty(retrieved, scores, lexicon_hit=lexicon_hit, query=fact_query)
 
     if tier == "insufficient":   # short-circuit BEFORE the LLM (never fabricate)
+        refusal = insufficient_text(fact_query)
         return Stage3Result(
-            answer=INSUFFICIENT_TEXT,
+            answer=refusal,
             retrieved=[], verifications=[],
             retrieval_count=0, retrieval_scores=[], flagged_count=0,
-            honesty_tier="insufficient", honesty_label=INSUFFICIENT_TEXT,
+            honesty_tier="insufficient", honesty_label=refusal,
             law_section=None, practice_section=None, analysis_section=None,
             sections_ok=False, practice_disclaimer_ok=False,
             premise_flag=premise_flag,

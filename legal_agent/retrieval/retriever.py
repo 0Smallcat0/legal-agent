@@ -469,6 +469,21 @@ def _promote_lexicon_phrases(
 DENSE_RESERVED_SEATS = 3
 
 
+# Count of queries whose dense half was silently dropped. Read by the eval
+# harnesses so a run says WHICH retriever produced its number.
+_DENSE_FALLBACKS = 0
+
+
+def dense_fallback_count() -> int:
+    """Queries since the last reset whose dense half failed and fell back."""
+    return _DENSE_FALLBACKS
+
+
+def reset_dense_fallbacks() -> None:
+    global _DENSE_FALLBACKS
+    _DENSE_FALLBACKS = 0
+
+
 def _dense_fuse(
     query: str,
     candidates: list[Statute],
@@ -490,6 +505,15 @@ def _dense_fuse(
         index_keys, matrix = dense.load_index()
         dense_keys = dense.dense_rank(query, index_keys, matrix)
     except Exception:
+        # Degrading to pure BM25 is right for the PRODUCT and wrong for a
+        # MEASUREMENT. Ollama unloads bge-m3 under memory pressure, so this
+        # fires PER QUERY, mid-run: the same recall harness produced 348, then
+        # 334, then 320 on one machine within an hour — and 320 is exactly the
+        # BM25-only figure. Each number was published without saying which
+        # system produced it. Behaviour is unchanged; the counter only makes
+        # the silence audible, and evaluation/real_recall.py reports it.
+        global _DENSE_FALLBACKS
+        _DENSE_FALLBACKS += 1
         return None
 
     def key_of(s: Statute) -> tuple[str, str, str]:
