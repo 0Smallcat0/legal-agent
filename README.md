@@ -7,7 +7,7 @@
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
-itself graded by planting errors in correct answers: 10,437/10,437 caught,
+itself graded by planting errors in correct answers: 11,904/11,904 caught,
 0 false positives.**
 
 The usual defence against a hallucinated citation is a better prompt. This one
@@ -66,10 +66,11 @@ must be right are not left to it.</sub>
 
 | | |
 |---|---|
-| seeded defects caught (whole corpus) | **10,437/10,437, 0 false positives** |
+| seeded defects caught (whole corpus) | **11,904/11,904, 0 false positives** |
 | statute coverage, 32-case golden set | **100% pass+partial, 0 miss** (73% strict) |
 | retrieval recall, real user wording | **348/356**, 5.9 unexpected articles per session |
-| honesty tier / wrong-premise detection | **84% / 100%** |
+| honesty tier / wrong-premise detection | **91% / 100%** |
+| out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
 | first reference judgment states an awarded sum | **50/60 sessions** |
 | first action names the reader's own documents | **83/168 sessions** |

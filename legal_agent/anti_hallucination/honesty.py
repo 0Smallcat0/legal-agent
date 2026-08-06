@@ -9,10 +9,29 @@ Never fabricate to fill a gap. Wired into dialogue/stage3.run_stage3.
 """
 from __future__ import annotations
 
+from legal_agent.anti_hallucination.coverage import absent_domain
 from legal_agent.data.models import Statute
 
 # Fixed text when the corpus covers nothing — the LLM is short-circuited (spec §2.4).
 INSUFFICIENT_TEXT = "這個問題我的資料庫沒有涵蓋,建議諮詢律師或換個描述方式"
+
+
+def insufficient_text(query: str = "") -> str:
+    """The refusal, naming the missing body of law when we can name it.
+
+    「資料庫沒有涵蓋」 is honest but leaves the reader nowhere to go. When the
+    coverage table knows WHICH statute is absent, say so — golden's own
+    expected_action for oos-10 asks for exactly that. Still a closed-world
+    statement: the statute exists, this corpus does not carry it.
+    """
+    found = absent_domain(query)
+    if not found:
+        return INSUFFICIENT_TEXT
+    statute, _trigger = found
+    return (
+        f"這個問題屬於{statute},不在我的資料庫涵蓋的法規內,所以我不回答。"
+        "建議諮詢律師或洽法律扶助基金會"
+    )
 # Prepended to a low-confidence answer.
 # Says what the band actually means. The old wording claimed 「未找到直接對應的
 # 法條」, which is false in the common case: a 資遣費 question scoring 97.8 lands
@@ -51,6 +70,7 @@ def grade_honesty(
     threshold: float = MARGINAL_SCORE_THRESHOLD,
     insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD,
     lexicon_hit: bool = False,
+    query: str = "",
 ) -> str:
     """Return the honesty tier: "insufficient" | "marginal" | "normal".
 
@@ -62,7 +82,15 @@ def grade_honesty(
     landing on a real article is evidence of coverage, so it floors the tier at
     「marginal」 (僅供參考) instead of refusing. It never raises anything to
     「normal」 — a short query is still a weak signal.
+
+    `query` — the assembled fact string. If it names a body of law the corpus
+    does not carry, nothing the score says can make the answer traceable, so the
+    coverage veto wins outright. It only ever REFUSES; it cannot raise a tier.
+    See coverage.py for what it does and does not detect, and for the two
+    measured directions the absolute floor was failing at the same time.
     """
+    if absent_domain(query):
+        return "insufficient"
     if not retrieved:
         return "insufficient"
     top = max(scores) if scores else 0.0
