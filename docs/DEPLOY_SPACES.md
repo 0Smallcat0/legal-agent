@@ -55,7 +55,7 @@ sdk_version: 6.20.0
 app_file: app.py
 pinned: false
 license: mit
-short_description: Legal RAG with a citation verifier graded at 10,437/10,437.
+short_description: Legal RAG with a citation verifier graded at 11,904/11,904.
 ---
 ```
 
@@ -80,7 +80,26 @@ git rm --cached docs/demo_web.png && rm -f docs/demo_web.png
 ```
 
 Re-apply the three differences above where `git checkout main -- .` overwrote
-them, then:
+them. **Pull `README.md` like everything else and re-apply its two transforms** —
+prepend the frontmatter block, and rewrite the `<img src>` to the GitHub raw
+URL. Skipping the pull to protect the frontmatter is the obvious shortcut and it
+silently drops every README CONTENT change: on 2026-08-06 the Space page was
+missing a whole published row (the reference-judgment relevance figure), its
+harness command, and a design note, none of which anything would have caught,
+because the file looked deliberately different rather than stale.
+
+```bash
+git checkout main -- README.md
+python - <<'PY'
+from pathlib import Path
+p = Path("README.md"); t = p.read_text(encoding="utf-8")
+t = t.replace('src="docs/demo_web.png"',
+              'src="https://raw.githubusercontent.com/0Smallcat0/legal-agent/main/docs/demo_web.png"')
+p.write_text(FRONTMATTER + "\n" + t, encoding="utf-8")   # FRONTMATTER = the block above
+PY
+```
+
+Then:
 
 > The frontmatter's `short_description` and the README's tests badge both carry
 > NUMBERS, so they go stale on their own schedule — check them against
@@ -105,11 +124,17 @@ the Space wizard creates.
 ## Verifying a deploy without opening a browser
 
 ```bash
-curl -s https://huggingface.co/api/spaces/<user>/<space-name> | python -c "import json,sys; r=json.load(sys.stdin)['runtime']; print(r['stage'], r.get('errorMessage') or '')"
+curl -sL https://huggingface.co/api/spaces/<user>/<space-name> | python -c "import json,sys; d=json.load(sys.stdin); print(d['runtime']['stage'], d['sha'][:7], d['runtime'].get('errorMessage') or '')"
 ```
 
-`BUILDING` → `APP_STARTING` → `RUNNING` is the healthy sequence; anything ending
-in `_ERROR` carries its reason on the same line.
+`-L` is not optional: the API redirects, and plain `curl -s` returns an empty
+body that blows up in `json.load` with `Expecting value: line 1 column 1`, which
+reads like an outage rather than a missing flag. Printing the `sha` alongside the
+stage is what proves the RUNNING Space is running YOUR commit.
+
+`RUNNING_BUILDING` → `RUNNING_APP_STARTING` → `RUNNING` is the healthy sequence
+(about four minutes); anything ending in `_ERROR` carries its reason on the same
+line.
 
 ## Résumé link
 
