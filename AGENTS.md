@@ -26,7 +26,7 @@ number moves**.
 ```bash
 pip install .          # library: verify + retrieval. 3 deps, no GPU, ~30s
 pip install .[dev]     # + pytest and ruff
-python -m pytest -q    # 438 tests, ~15s
+python -m pytest -q    # 468 tests, ~45s
 ```
 
 The corpus ships inside the package and the database builds itself on first
