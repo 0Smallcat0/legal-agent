@@ -1284,12 +1284,24 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   published 10,437 / 2,560 was measured before the corpus reached 2,922 articles
   and was never re-run. Same 100% and same 0%, larger denominators. Nothing to do
   with the tier change; it just had not been looked at.
-  Also recorded rather than fixed: `app.py`'s retrieval tab grades the tier
-  WITHOUT `lexicon_hit`, which the CLI passes — so the Spaces demo refuses some
-  questions the CLI marks 「僅供參考」. Two lines and clearly right, and it moves no
-  measured number, so by this project's own rule it is written here instead of
-  shipped. (`query=` for the coverage veto WAS wired into that tab, because the
-  veto is this change.)
+  Also found: `app.py`'s retrieval tab grades the tier WITHOUT `lexicon_hit`,
+  which the CLI passes — so the Spaces demo refuses questions the CLI marks
+  「僅供參考」. It was written up here as 「two lines and clearly right, moves no
+  measured number, so not shipped」. **That was the wrong call, and measuring it
+  is what showed why.** The 35 probe questions through the demo's own path (raw
+  question text, no intake facts, so BM25 runs on less and scores lower):
+
+  | demo retrieval tab | before | after |
+  |---|---|---|
+  | out-of-scope refused (n=20) | 20/20 | 18/20 |
+  | in-scope falsely refused (n=15) | **8/15** | **3/15** |
+
+  The demo was turning away eight of fifteen questions the corpus answers — four
+  times the CLI's rate — and 「moves no measured number」 was only true because
+  nobody had pointed a harness at that path. The two out-of-scope cases it stops
+  refusing (oos-19 動物虐待, oos-22 地下匯兌) are exactly the two the coverage
+  table does not name: they had been refused by the accident of a low score, not
+  by knowing anything. Shipped; the demo now grades identically to the CLI.
 
 - **The install was measured instead of assumed, and it was stuck in one place.**
   2026-08-06. Fresh clone from GitHub, clean venv, `LEGAL_AGENT_HOME` pointed at
