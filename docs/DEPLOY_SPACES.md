@@ -3,7 +3,7 @@
 **Live**: https://huggingface.co/spaces/NoirOAO/legal-agent-demo
 
 The Gradio demo (`app.py`) needs no GPU, no API key, and no Ollama. The corpus
-is built at startup from the JSON files in `corpus/`, the 引用查核 and 檢索 tabs
+is built at startup from the JSON files in `legal_agent/corpus/`, the 引用查核 and 檢索 tabs
 are pure Python, and the 完整流程 tab falls back to a scripted checklist when no
 model is reachable. (The one-click Ollama button reports "not available" there;
 it works when running `python app.py` locally.)
