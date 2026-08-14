@@ -1765,6 +1765,58 @@ what the gap costs a reader.
 `--answers` prints the 分析研判 beside the recorded outcome for a human, and
 scores nothing — the same refusal `golden_set.py` makes about legal correctness.
 
+**The 4/8 above was one hand-read of one run. Blind-coded, it is 2/8 — and the
+same measurement now exists on the EXTERNAL labels, where it is 3/16.**
+2026-08-15. `python -m legal_agent.evaluation.realworld --direction`.
+The old figure could as easily have been 2/8 or 6/8, and until it re-ran, no
+change could be judged against it. It is re-runnable now WITHOUT auto-grading
+legal reasoning, which this harness still refuses. Two blind codings and
+arithmetic:
+
+  1. the answers are generated (llama3.1:8B, temperature 0) into
+     `evals/realworld_answers_run1.json`, which carries the opening description
+     and the generated text and **deliberately no `real_outcome`**;
+  2. they are coded from that file alone into `evals/realworld_answer_coding_run1.json`;
+  3. the outcome side is coded from the case record afterwards, into
+     `outcome_direction` in `evals/realworld_v1.json`;
+  4. `compare_directions` counts.
+
+The order is checkable rather than asserted: the commit adding the answer
+coding touches no outcome field, and the outcome coding lands in a later one.
+Nobody is ever asked whether they AGREE with an answer — both sides go into one
+closed vocabulary (`asker` / `other_party` / `split` / `unclear`) and a value
+outside it aborts the whole run, the same rule and the same reason as
+`check_labels`. Every coded value carries the span it rests on, so a reader
+checks the quote instead of trusting the coder.
+
+| pool | opposed | same direction | at least one side non-committal |
+|---|---|---|---|
+| official — 臺中市公寓大廈, 16 cases | **3/16** | 7/13 | 3/16 |
+| derived — 臺北市租賃, 8 cases | **2/8** | 4/7 | 1/8 |
+
+**`flagged_count` was 0 on all five inversions, and tier was `normal` on all
+five.** Sharper than the anecdote it replaces: the five cases that DID draw a
+flag (apt-01, apt-11, apt-13, apt-15, apt-16 — 13 flags between them) and the
+five that pointed the wrong way do not overlap at all. On this set the citation
+check and the direction error are disjoint. That is what it means for four axes
+to certify that a cited article is REAL and never that it APPLIES.
+
+**This is the split the file complained about, closed.** hit@k was external
+(公寓大廈, official labels) while direction was internal (租賃, labels this
+project inferred) — direction had only ever been measured on the weakest label
+in the set. It is now measured on both pools, reported separately, never pooled.
+
+**Limits.** `unclear` is a real answer and stays available: 4 of 24 answers do
+not commit (two contradict themselves inside one paragraph, one never reaches
+the question asked, one refused at `tier=insufficient`), and forcing a coder to
+pick a side there would manufacture the number. `split` against a committed
+side counts as neither agreement nor inversion, which is why 同向 has a smaller
+denominator than the case count. One model, one run, one coder — the coder is
+the weak point and is stated as such: coding both sides in sequence is weaker
+than two people, and only the ORDER (answers first, outcomes after) is
+guaranteed here. Re-coding the answer side by a second hand is the obvious next
+strengthening.
+
 **Bad ruler, caught by its own guard.** The first draft labelled 民法 as
 「中華民國民法」 (the corpus spells 刑法 that way, 民法 not) and published a
 confident 1/9 that was almost entirely fake misses. `check_labels` now aborts the

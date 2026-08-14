@@ -35,6 +35,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 DEFAULT_CASES = "evals/realworld_v1.json"
+# The answer-side coding for one recorded run. Separate file because it is
+# per-run: the outcome side belongs to the case and never changes, the answer
+# side is a property of one model at one temperature.
+DEFAULT_CODING = "evals/realworld_answer_coding_run1.json"
 
 
 @dataclass
@@ -143,6 +147,196 @@ class BadLabelError(ValueError):
     """A governing article does not exist in the corpus under that name."""
 
 
+# ── direction: does the answer point the same way the case actually ended? ───
+# hit@k says the right article reached the window. It says nothing about which
+# way the answer then argued. One full-pipeline pass over the eight rental
+# disputes reasoned OPPOSITE to the recorded outcome in four of them, and
+# `flagged_count` was 0 in all eight — the four verification axes certify that a
+# cited article is real, never that it points your way.
+#
+# That 4/8 was one hand-read of one run and could as easily have been 2/8 or
+# 6/8. This makes it re-runnable WITHOUT auto-grading legal reasoning, which
+# this file's docstring refuses and will go on refusing. The trick is that
+# neither coding pass is allowed to see the other side:
+#
+#   1. the outcome fields are coded from the case record, never from an answer;
+#   2. the answer fields are coded from the generated text alone, by someone who
+#      has not read the outcome — hence `evals/realworld_answers_run*.json`,
+#      which deliberately carries no `real_outcome`;
+#   3. the comparison is arithmetic.
+#
+# Nobody is ever asked whether they AGREE with an answer. Both sides are coded
+# into the same closed vocabulary and the counting is deterministic, the way
+# `judgment_relevance` derives both of its sides rather than hand-labelling one.
+#
+# 「asker」 is whoever wrote `initial_text`; 「other_party」 is whoever they are up
+# against. 「unclear」 is a real answer and must stay available — forcing a coder
+# to pick a side when the text does not commit is how a coding scheme starts
+# manufacturing the number it was built to measure.
+#
+# `favours`     — which side the text says the law backs, read as written. An
+#                 answer that opens 「對方的說法站不住腳」 is coded `asker` even
+#                 where the reasoning under it wanders, because a reader takes
+#                 the conclusion.
+# `money_to_asker` — does the asker end up BETTER OFF in money. Being relieved
+#                 of a charge counts as `yes`; it is the same pocket. Written
+#                 down here because a rule applied differently on the two sides
+#                 would produce a disagreement that is purely the coder's.
+FAVOURS_VALUES = frozenset({"asker", "other_party", "split", "unclear"})
+MONEY_VALUES = frozenset({"yes", "no", "partial", "not_at_issue", "unclear"})
+DIRECTION_FIELDS = (("favours", FAVOURS_VALUES), ("money_to_asker", MONEY_VALUES))
+
+
+@dataclass(frozen=True)
+class DirectionCoding:
+    favours: str
+    money_to_asker: str
+    coded_from: str = ""        # the span the coder rested on, so it is checkable
+
+    @classmethod
+    def from_dict(cls, raw: dict) -> DirectionCoding:
+        return cls(
+            favours=raw["favours"],
+            money_to_asker=raw["money_to_asker"],
+            coded_from=raw.get("coded_from", ""),
+        )
+
+
+@dataclass(frozen=True)
+class DirectionMatch:
+    id: str
+    label_source: str
+    outcome: DirectionCoding
+    answer: DirectionCoding
+
+    @property
+    def committed(self) -> bool:
+        """Both sides named a side. 「unclear」 on either side is not a
+        disagreement and must not be counted as one."""
+        return "unclear" not in (self.outcome.favours, self.answer.favours)
+
+    @property
+    def agrees(self) -> bool:
+        return self.committed and self.outcome.favours == self.answer.favours
+
+    @property
+    def opposed(self) -> bool:
+        """The shape that sends a person into a dispute pointed the wrong way:
+        one side says the asker, the other says the party opposite them.
+        「split」 against either is a partial mismatch, not an inversion."""
+        return {self.outcome.favours, self.answer.favours} == {"asker", "other_party"}
+
+
+def check_direction_labels(document: dict, coding: dict) -> None:
+    """Every coded value must be inside its vocabulary, or abort the whole run.
+
+    Same rule and same reason as `check_labels`: a value outside the closed set
+    is a ruler nobody calibrated, and it renders as a confident count rather
+    than as an error. A case coded on one side only is the same failure — the
+    comparison would silently drop it and the denominator would move without
+    anyone deciding that it should.
+    """
+    bad: list[str] = []
+    coded_ids = set(coding)
+    known_ids = {case["id"] for case in document["cases"]}
+    for unknown in sorted(coded_ids - known_ids):
+        bad.append(f"{unknown}:答案編碼指向不存在的案件 id")
+    for case in document["cases"]:
+        sides = {
+            "結局": case.get("outcome_direction"),
+            "答案": coding.get(case["id"]),
+        }
+        present = [name for name, value in sides.items() if value]
+        if len(present) == 1:
+            bad.append(f"{case['id']}:只編了{present[0]}一邊,比對會靜默少算")
+        for name, value in sides.items():
+            if not value:
+                continue
+            for field_name, allowed in DIRECTION_FIELDS:
+                got = value.get(field_name)
+                if got not in allowed:
+                    bad.append(
+                        f"{case['id']}.{name}.{field_name}={got!r}"
+                        f"(允許:{'/'.join(sorted(allowed))})"
+                    )
+    if bad:
+        raise BadLabelError(
+            "方向編碼的值域不合法,計數會是假的,先修編碼:\n  " + "\n  ".join(bad)
+        )
+
+
+def load_direction_coding(path) -> dict:
+    """The answer-side coding for ONE run. Empty when the file is absent."""
+    p = Path(path)
+    if not p.exists():
+        return {}
+    return json.loads(p.read_text(encoding="utf-8")).get("coding", {})
+
+
+def compare_directions(document: dict, coding: dict) -> list[DirectionMatch]:
+    """Pair the two blind codings. Value domains are gated first."""
+    check_direction_labels(document, coding)
+    matches = []
+    for case in document["cases"]:
+        outcome, answer = case.get("outcome_direction"), coding.get(case["id"])
+        if not outcome or not answer:
+            continue
+        matches.append(DirectionMatch(
+            id=case["id"],
+            label_source=case.get("label_source", "derived"),
+            outcome=DirectionCoding.from_dict(outcome),
+            answer=DirectionCoding.from_dict(answer),
+        ))
+    return matches
+
+
+def render_directions(matches: list[DirectionMatch], run: dict | None = None) -> str:
+    """Counts, pooled by `label_source` — a number is only as external as its
+    weakest label, and that rule does not stop applying at the outcome field."""
+    lines = ["═══════ 推論方向 vs 已記錄結局(兩邊皆盲編碼,比對為程式) ═══════"]
+    if run:
+        lines.append(
+            f"answers: model={run.get('model')} temperature={run.get('temperature')}"
+        )
+    if not matches:
+        lines.append("尚未編碼:結局欄或答案編碼缺一,方向數字不存在。")
+        return "\n".join(lines)
+    for label in ("official", "derived"):
+        group = [m for m in matches if m.label_source == label]
+        if not group:
+            continue
+        head = {
+            "official": "外部標註(案例表自帶「法令依據」欄)",
+            "derived": "本專案反推的標註(僅供參考,不計入 headline)",
+        }[label]
+        lines.append(f"\n── {head} ── {len(group)} 案")
+        for m in group:
+            mark = "同向" if m.agrees else ("相反" if m.opposed else "不一致")
+            if not m.committed:
+                mark = "未表態"
+            lines.append(
+                f"  {mark}  {m.id[:32]:32s} 結局={m.outcome.favours:12s}"
+                f" 答案={m.answer.favours:12s}"
+                f" 錢給提問者 結局={m.outcome.money_to_asker}/答案={m.answer.money_to_asker}"
+            )
+        committed = [m for m in group if m.committed]
+        agree = sum(1 for m in committed if m.agrees)
+        opposed = sum(1 for m in group if m.opposed)
+        lines.append(
+            f"\n   同向 {agree}/{len(committed)} · 相反 {opposed}/{len(group)}"
+            f" · 至少一邊未表態 {len(group) - len(committed)}/{len(group)}"
+        )
+    lines += [
+        "",
+        "相反 = 結局說一方、答案說另一方。這是最該看的數字:一個把人指向反方向的"
+        "答案,四個查核軸全綠也攔不住,因為它們認證的是被引用的條文為真,不是這條"
+        "管你的事。",
+        "兩邊編碼都是盲的:結局欄從案件記錄編、不看答案;答案欄只讀生成文字、不看"
+        "結局。沒有人被問過「同不同意」,比對是確定性的。",
+    ]
+    return "\n".join(lines)
+
+
 def check_labels(document: dict, conn) -> None:
     """Every governing article must exist in the corpus, or the whole run is a
     bad ruler: a label the corpus can never match scores 0 no matter how good
@@ -242,9 +436,24 @@ if __name__ == "__main__":   # python -m legal_agent.evaluation.realworld [path]
 
     enable_utf8_stdout()
     print_corpus_fingerprint()
-    argv = [a for a in _sys.argv[1:] if a != "--answers"]
+    flags = {"--answers", "--direction"}
+    argv = [a for a in _sys.argv[1:] if a not in flags]
     want_answers = "--answers" in _sys.argv[1:]
+    want_direction = "--direction" in _sys.argv[1:]
     target = argv[0] if argv else DEFAULT_CASES
+    if want_direction:
+        # Deterministic and needs no model: both codings are already on disk,
+        # which is the whole point — the number re-runs without re-rolling it.
+        _doc = load_document(target)
+        _coding_file = Path(DEFAULT_CODING)
+        _raw = (
+            json.loads(_coding_file.read_text(encoding="utf-8"))
+            if _coding_file.exists() else {}
+        )
+        print(render_directions(
+            compare_directions(_doc, _raw.get("coding", {})), run=_raw.get("run"),
+        ))
+        raise SystemExit(0)
     runtime_llm = None
     if want_answers:
         from legal_agent.run import build_runtime_llm
