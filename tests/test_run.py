@@ -71,6 +71,48 @@ def test_scripted_conversation_reaches_stage3_and_4(real_conn, monkeypatch):
     assert "報警" in text                              # Stage 4 ladder rendered
 
 
+def test_a_clean_verification_still_prints_and_states_what_it_did_not_check():
+    """`_format_result` used to render the verification block ONLY when
+    something was flagged, so a clean run showed nothing — and silence reads as
+    endorsement. Four of eight already-decided rental disputes were reasoned
+    the wrong way round with `flagged_count` 0 in every one of them."""
+    from legal_agent.anti_hallucination.verifier import (
+        Citation,
+        VerificationResult,
+        verification_status_line,
+    )
+
+    clean = VerificationResult(
+        citation=Citation("社會秩序維護法第72條", "社會秩序維護法", "第72條"),
+        exists=True, content_match=True, in_force=True,
+        verbatim_source="…", flagged=False, reason="",
+    )
+    result = MagicMock(
+        honesty_tier="normal", sections_ok=True,
+        law_section="「法律明文」:x", practice_section="「實務見解」:x",
+        analysis_section="「分析研判」:x", practice_disclaimer_ok=True,
+        verifications=[clean], premise_flag=False, solution_text="ladder",
+    )
+    result.stage3.retrieved = ()
+    result.stage3.related_judgments = ()
+
+    text = run._format_result(result)
+
+    assert "引用查核" in text, "a clean run must not render silence"
+    assert "1 筆引用全數可回溯至資料庫" in text
+    assert "沒有查核這些條文是否適用於你的處境" in text
+    assert verification_status_line([clean]) in text
+
+
+def test_the_web_and_the_cli_state_the_same_limits():
+    """A limit stated on one surface only is a limit half-stated."""
+    import app
+    from legal_agent.anti_hallucination.verifier import VERIFIED_SCOPE_NOTE
+
+    assert VERIFIED_SCOPE_NOTE in app._quiet_verification([])
+    assert "引用查核" in app._quiet_verification([])
+
+
 def test_placeholder_model_exits_cleanly(monkeypatch, capsys):
     monkeypatch.setattr(config, "load_env", lambda: None)
     monkeypatch.setattr(config, "LLM_PROVIDER", "anthropic")         # test the paid path's guard

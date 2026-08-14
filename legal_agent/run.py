@@ -146,14 +146,22 @@ def _format_result(result) -> str:
             from legal_agent.retrieval.judgments import render_block
             out.append("\n" + render_block(list(refs)))
 
-    # Mechanism 2 — verification flags WITH the attached corpus verbatim.
+    # Mechanism 2 — verification, ALWAYS printed. This used to render only when
+    # something was flagged, so a clean run showed no verification section at
+    # all — and silence reads as endorsement. Four of eight already-decided
+    # rental disputes were reasoned the wrong way round with `flagged_count` 0.
+    # Same words as the web (verifier.verification_status_line) so the two
+    # cannot drift apart.
+    from legal_agent.anti_hallucination.verifier import verification_status_line
+
     flagged = [v for v in result.verifications if v.flagged]
-    if flagged:
-        out.append("\n⚠ 引用查核(下列引用有疑慮,請對照條文原文):")
-        for v in flagged:
-            out.append(f"  - {v.citation.statute_id}{v.citation.article_no}:{v.reason}")
-            if v.verbatim_source:
-                out.append(f"    條文原文:{v.verbatim_source}")
+    out.append(
+        ("\n⚠ " if flagged else "\n✓ ") + verification_status_line(result.verifications)
+    )
+    for v in flagged:
+        out.append(f"  - {v.citation.statute_id}{v.citation.article_no}:{v.reason}")
+        if v.verbatim_source:
+            out.append(f"    條文原文:{v.verbatim_source}")
 
     # Mechanism 5 — premise correction note.
     if result.premise_flag:

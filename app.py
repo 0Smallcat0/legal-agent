@@ -231,7 +231,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">496 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">498 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -429,15 +429,14 @@ def _clean_ladder(text: str) -> str:
 
 
 def _quiet_verification(vs) -> str:
-    if not vs:
-        return '<div class="note">引用查核:本回答未含條號引用。</div>'
-    flagged = [v for v in vs if v.flagged]
-    if not flagged:
-        return f'<div class="note">引用查核:{len(vs)} 筆引用全數可回溯至資料庫。</div>'
-    return (
-        f'<div class="note">引用查核:{len(vs)} 筆引用中 {len(flagged)} 筆有疑慮,逐筆如下。</div>'
-        + _cite_cards(flagged)
-    )
+    """The citation-check line. Wording comes from the verifier so the web and
+    the CLI cannot drift: the green sentence has to carry its own limits, and a
+    limit stated in one surface only is a limit half-stated."""
+    from legal_agent.anti_hallucination.verifier import verification_status_line
+
+    line = f'<div class="note">{escape(verification_status_line(vs))}</div>'
+    flagged = [v for v in (vs or []) if v.flagged]
+    return line + (_cite_cards(flagged) if flagged else "")
 
 
 def _consult_result_html(result) -> str:
