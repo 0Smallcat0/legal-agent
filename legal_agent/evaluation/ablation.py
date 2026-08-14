@@ -264,7 +264,7 @@ def run_ablation(
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.ablation <golden.json>
-    from legal_agent.evaluation import enable_utf8_stdout
+    from legal_agent.evaluation import enable_utf8_stdout, print_corpus_fingerprint
 
     enable_utf8_stdout()
     import argparse
@@ -277,6 +277,7 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.ablation <golden.
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", default=None, help="write per-run JSON here")
     args = parser.parse_args()
+    print_corpus_fingerprint()
 
     rep = run_ablation(
         args.golden, models=args.models, limit=args.limit,

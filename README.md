@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-480%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-525%20passing-brightgreen)
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
@@ -104,9 +104,20 @@ carries 5.9 unexpected articles per session.
 The verifier stayed green through all of it, and that is not a malfunction:
 **green means the cited article exists, is in force, and was not misquoted — it
 has never meant the article governs your problem.** 11,904/11,904 measures the
-first sentence. Nothing here measures the second, and a full-pipeline read of 8
-already-decided rental disputes found the reasoning contradicting the recorded
-outcome in 4 of 8 — with `flagged_count` 0 in every one. See
+first sentence. The second now has a number of its own, blind-coded and
+re-runnable: over the 24 ended disputes, the answer points the OPPOSITE way to
+the recorded outcome in **3 of 16** on the externally-labelled set and **2 of 8**
+on the derived one — and `flagged_count` is 0 on all five. The five cases that
+did draw a flag are not the five that pointed the wrong way; on this set the two
+do not overlap at all.
+
+```bash
+python -m legal_agent.evaluation.realworld --direction
+```
+
+Both codings are blind — the answers are coded from a file that carries no
+outcome, the outcomes from the case record afterwards, and the comparison is
+arithmetic. No model grades legal reasoning here, and none will. See
 [`evals/RESULTS.md`](evals/RESULTS.md) §7.
 
 **Two of those rows need a second half a plain install does not have.** The

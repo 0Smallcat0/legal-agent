@@ -152,7 +152,7 @@ def collect_points(scorecard) -> list[CalibrationPoint]:
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.calibrate <golden.json>
-    from legal_agent.evaluation import enable_utf8_stdout
+    from legal_agent.evaluation import enable_utf8_stdout, print_corpus_fingerprint
 
     enable_utf8_stdout()
     import sys as _sys
@@ -160,6 +160,7 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.calibrate <golden
     if len(_sys.argv) < 2:
         print("用法:python -m legal_agent.evaluation.calibrate <golden.json>")
         raise SystemExit(2)
+    print_corpus_fingerprint()
 
     from legal_agent.anti_hallucination.honesty import MARGINAL_SCORE_THRESHOLD
     from legal_agent.evaluation.golden_set import run_golden_set

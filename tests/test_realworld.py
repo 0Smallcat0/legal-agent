@@ -110,6 +110,109 @@ def test_label_sources_are_reported_separately(tmp_path):
     assert [c.id for c in report.subset("derived")] == ["t-02"]
 
 
+# ── direction: the same guard, applied to the outcome fields ────────────────
+# hit@k says the right article reached the window; it says nothing about which
+# way the answer then argued. The direction number exists because one pass over
+# eight ended rental disputes reasoned the wrong way round in four of them with
+# `flagged_count` 0 in all eight.
+
+
+def _coded(favours="asker", money="yes", **extra):
+    return {"favours": favours, "money_to_asker": money, **extra}
+
+
+def _direction_doc(outcome=None, label_source="official"):
+    return {
+        "cases": [{
+            "id": "t-01",
+            "label_source": label_source,
+            "outcome_direction": outcome if outcome is not None else _coded(),
+        }],
+    }
+
+
+def test_a_value_outside_the_vocabulary_aborts_the_whole_run():
+    """Same rule as `check_labels`, same reason: an uncalibrated value renders
+    as a confident count rather than as an error."""
+    from legal_agent.evaluation.realworld import compare_directions
+
+    doc = _direction_doc()
+    with pytest.raises(BadLabelError) as excinfo:
+        compare_directions(doc, {"t-01": _coded(favours="landlord")})
+    assert "favours" in str(excinfo.value)
+    assert "landlord" in str(excinfo.value)
+
+
+def test_a_case_coded_on_one_side_only_aborts_instead_of_being_dropped():
+    """Silently skipping it would move the denominator without anyone deciding
+    that it should."""
+    from legal_agent.evaluation.realworld import compare_directions
+
+    with pytest.raises(BadLabelError) as excinfo:
+        compare_directions(_direction_doc(), {})
+    assert "只編了" in str(excinfo.value)
+
+    with pytest.raises(BadLabelError):
+        compare_directions({"cases": [{"id": "t-01", "label_source": "official"}]},
+                           {"t-01": _coded()})
+
+
+def test_coding_an_id_the_case_file_does_not_have_aborts():
+    from legal_agent.evaluation.realworld import compare_directions
+
+    with pytest.raises(BadLabelError) as excinfo:
+        compare_directions(
+            _direction_doc(), {"t-01": _coded(), "t-99": _coded()},
+        )
+    assert "t-99" in str(excinfo.value)
+
+
+def test_opposed_is_only_an_actual_inversion():
+    """「split」 against either side is a partial mismatch, not the shape that
+    sends a person into a dispute pointed the wrong way."""
+    from legal_agent.evaluation.realworld import compare_directions
+
+    inverted = compare_directions(
+        _direction_doc(_coded("other_party", "no")), {"t-01": _coded("asker", "yes")},
+    )[0]
+    assert inverted.opposed and not inverted.agrees
+
+    partial = compare_directions(
+        _direction_doc(_coded("split", "partial")), {"t-01": _coded("asker", "yes")},
+    )[0]
+    assert not partial.opposed and not partial.agrees
+
+
+def test_unclear_on_either_side_is_not_counted_as_a_disagreement():
+    """Forcing a coder to pick a side when the text does not commit is how a
+    scheme starts manufacturing the number it was built to measure."""
+    from legal_agent.evaluation.realworld import compare_directions, render_directions
+
+    match = compare_directions(
+        _direction_doc(_coded("unclear", "unclear")), {"t-01": _coded("asker", "yes")},
+    )[0]
+    assert not match.committed
+    assert not match.opposed and not match.agrees
+    assert "未表態" in render_directions([match])
+
+
+def test_direction_counts_are_pooled_by_label_source():
+    """A number is only as external as its weakest label, and that rule does
+    not stop applying at the outcome field."""
+    from legal_agent.evaluation.realworld import compare_directions, render_directions
+
+    doc = _direction_doc()
+    doc["cases"].append({
+        "id": "t-02", "label_source": "derived",
+        "outcome_direction": _coded("other_party", "no"),
+    })
+    matches = compare_directions(doc, {"t-01": _coded(), "t-02": _coded("asker", "yes")})
+    text = render_directions(matches)
+
+    assert "外部標註" in text and "本專案反推的標註" in text
+    assert [m.label_source for m in matches] == ["official", "derived"]
+
+
 def test_shipped_case_file_labels_all_exist_in_the_shipped_corpus():
     """The published number is only external if every label is resolvable."""
     from legal_agent import config

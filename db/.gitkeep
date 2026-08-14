@@ -1,3 +1,14 @@
-# Keeps the db/ directory in version control. The SQLite file (legal_agent.db)
-# is created here at runtime by legal_agent.data.database.init_db and is
-# gitignored — never commit the database itself.
+# Keeps the db/ directory in version control.
+#
+# The database is NOT here and is not created here at runtime. It is created at
+# `legal_agent.config.DB_PATH`, which resolves under LEGAL_AGENT_HOME (the
+# platform per-user data dir by default) — see AGENTS.md trap 1. The dense
+# index is written beside that database, not here either.
+#
+# This file used to say the SQLite file is created here at runtime. It is not,
+# and stale files matching that description sat in this directory long enough
+# for two agents to compute published figures against them. They now live in
+# _orphan_do_not_use/ with a note; no code path reaches them.
+#
+# To find out which corpus a process is actually reading:
+#     python -c "import legal_agent; print(legal_agent.corpus_fingerprint().render())"
