@@ -77,7 +77,8 @@ must be right are not left to it.</sub>
 | first action names the reader's own documents | **83/168 sessions** |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** |
 | articles on the page the model skipped | **8 → 18 of 21 expected** |
-| the article the AUTHORITY cited, on disputes that already ended | **25/27**, 0 of 16 cases answered with none of them |
+| the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them |
+| the same thing, on 17 cases **held out** | **12/23**, 5 of 17 answered with none of them |
 
 ```bash
 python -m legal_agent.evaluation.mutation                          # catch rate
@@ -87,19 +88,26 @@ python -m legal_agent.evaluation.judgment_relevance                # reference t
 python -m legal_agent.evaluation.realworld                         # already-ended disputes
 ```
 
-**Read the last row before you trust the first one.** Every other number here is
-measured against expectations this project wrote — the same hand built the
-retriever and the answer key. The last row is not: the cases are government
+**Read the last two rows before you trust the first one.** Every other number here
+is measured against expectations this project wrote — the same hand built the
+retriever and the answer key. These two are not: the cases are government
 dispute-resolution case tables, the input is the party's opening description, and
 the governing article is the one the deciding body printed in its own 法令依據
-column. On that set the right article first reached the window 7 times out of 27,
-with 9 of 16 cases answered anyway with none of them and no refusal. The governance
-half of that domain had simply never been in the vocabulary table; two passes of
-curated rows took it to 25/27 with no case left answering on nothing, while every
-other figure in this table stayed exactly where it was. Two articles are still
-missed and RESULTS.md §7 names both, including the one that is refused rather than
-bought — reaching it means widening the retrieval window, and the window already
-carries 5.9 unexpected articles per session.
+column. On the first such table the right article reached the window 7 times out
+of 27, with 9 of 16 cases answered anyway with none of them and no refusal. The
+governance half of that domain had simply never been in the vocabulary table; two
+passes of curated rows took it to 25/27 with no case left answering on nothing,
+while every other figure in this table stayed exactly where it was.
+
+**Then two more tables of the same kind were added, and nothing was tuned against
+them: 12/23, with 5 of 17 cases answered on none of the governing articles.**
+That is the honest figure for a dispute the project has not seen. 25/27 is not
+withdrawn and is not wrong — it is the number on the set it was curated against,
+and it is labelled as such from here on. Three of the five silent misses want the
+same article (共用部分的修繕與費用分擔) and get its neighbours instead. Those rows
+are deliberately NOT being added to the vocabulary table: curating until they pass
+would move 52% toward 93% and destroy the only held-out number in the project.
+RESULTS.md §7 has the full breakdown.
 
 The verifier stayed green through all of it, and that is not a malfunction:
 **green means the cited article exists, is in force, and was not misquoted — it

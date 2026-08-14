@@ -16,6 +16,24 @@
       "label_source": "derived",
       "note": "只有案情與辦理情形，沒有法令依據欄。governing_statutes 是本專案從辦理情形反推的，可信度低於 official，headline 數字不採計。",
       "why_not_official": "2026-08-14 找過能把這 8 件升級為 official 的來源，沒有找到：(1) 本表原始 PDF 無法令依據欄；(2) 官方最權威的租賃文件、行政院消保處《住宅租賃常見糾紛問答集》112 年 1 月版（內政部地政司 land.moi.gov.tw 掛檔）整份以白話敘述規則，未引任何條號；(3) 租賃循不動產糾紛調處（土地法§34-1 VI、§101、§105、§122、租賃住宅條例§16），但各地政局公開之案例彙編未附逐案法令依據欄，僅見律師教育訓練簡報——那是律師見解，非作成決定之機關。要讓這一組帶外部標註，正確做法是改用另一個確有法令依據欄的領域案例表，而不是替現有案件補上本專案的推斷。"
+    },
+    {
+      "id": "taipei-apt",
+      "title": "臺北市公寓大廈爭議事件調處委員會調處案例",
+      "url": "https://www-ws.gov.taipei/001/Upload/845/relfile/-1/845/1d01f9b5-90fc-44e5-a170-5f0f88d8b8d9.pdf",
+      "label_source": "official",
+      "note": "每案自帶「法令依據」欄，是調處委員會實際引用的條文 — governing_statutes 直接抄自該欄，不是本專案的判斷。表中 14 案取 13:10601 次會議第一案只引內政部營建署函釋，語料無該函釋，加進來會製造一個語料永遠命不中的假 miss(check_labels 存在就是要擋這個)。",
+      "outcome_column": "「建議」——調處委員會的處置建議，不是裁決結果。與臺中市表同族。",
+      "why_no_outcome_direction": "這批沒有 outcome_direction 欄。編碼者在確認 PDF 欄位結構時已讀過其中數案的建議欄，方向編碼對他不再是盲的;補一組非盲的方向標註會汙染 realworld --direction 的數字。要量這批的方向，需要另一位未讀過結局的人編答案側。"
+    },
+    {
+      "id": "ntpc-apt",
+      "title": "新北市公寓大廈爭議事件調處委員會—調處案件參考",
+      "url": "https://www.publicwork.ntpc.gov.tw/userfiles/1061400/files/%E5%85%AC%E5%AF%93%E5%A4%A7%E5%BB%88%E7%88%AD%E8%AD%B0%E4%BA%8B%E4%BB%B6%E8%AA%BF%E8%99%95%E5%A7%94%E5%93%A1%E6%9C%83%E2%80%94%E8%AA%BF%E8%99%95%E6%A1%88%E4%BB%B6%E5%8F%83%E8%80%83.pdf",
+      "label_source": "official",
+      "note": "同上，每案自帶「依據法令」欄。表中 7 案取 4:土城區一案無法令依據欄;中和區一案只引內政部函釋;淡水區一案引建築法第26條，建築法不在語料內。三案都排除而非改標。",
+      "outcome_column": "「調處委員會建議」——同樣是建議，不是裁決結果。",
+      "why_no_outcome_direction": "同 taipei-apt。"
     }
   ],
   "cases": [
@@ -522,6 +540,268 @@
         "money_to_asker": "not_at_issue",
         "coded_from": "出租人向法院提出告訴；另一同類案件經法院裁決勝訴 — 此案申請人是出租人"
       }
+    },
+    {
+      "id": "apt-tp-01-upstairs-drain-leak",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "我家天花板、牆面和家具被樓上八樓的排水管滲水弄壞了，找對方溝通很多次都不理我，樓上住戶完全沒有出面處理的意願。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第12條"
+        }
+      ],
+      "real_outcome": "調處委員會引專有部分之共同壁及樓地板或其內之管線、維修費用由樓地板上下方之區分所有權人共同負擔(但可歸責於區分所有權人之事由所致者由該區分所有權人負擔)，建請協商尋公正第三方鑑定漏水之原因，以釐清修繕責任歸屬。"
+    },
+    {
+      "id": "apt-tp-02-handover-refused",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "大樓管理委員會換屆，前一任拒絕辦理移交財務報表、印鑑，害我們沒辦法完成移交大樓管理組織的相關文件和事務，社區的錢也不能用。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第29條"
+        }
+      ],
+      "real_outcome": "請於下次召開區分所有權人會議時，就社區新舊管委會交接程序、移交項目等情事於區權會作成決議或納入規約，以利爾後遵循並解決紛爭。"
+    },
+    {
+      "id": "apt-tp-03-basement-parking-self-managed",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "大樓地下室停車場一直是自行管理，沒有負擔大樓的管理費。我認為依法應該由大樓管理委員會統一管理併同收費。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第10條"
+        }
+      ],
+      "real_outcome": "有關地下室車位管理費分擔，建請循社區規約或區分所有權人會議決議訂定，以資規範。"
+    },
+    {
+      "id": "apt-tp-04-regulation-must-cover",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "有住戶在社區大門前的公共空間停車、擺盆栽做私家花園，增設廁所把新糞管拆裝到地下室公共排汙管，沒經過管委會同意就在外牆裝五個通風口、在二樓牆面拉冷氣管，裝修沒鋪保護層弄壞公共區域地磚，搬遷也拒簽切結書，還一直撕掉管委會公告、四處張貼黑函。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第23條"
+        }
+      ],
+      "real_outcome": "有關社區公共管理事務，請依規約定之 —— 規約除應載明專有部分及共用部分範圍外，約定專用部分之範圍及使用主體、住戶對共用部分使用之特別約定、違反義務之處理方式、糾紛之協調程序等事項，非經載明於規約者不生效力。"
+    },
+    {
+      "id": "apt-tp-05-committee-election",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "大樓選任新任管理委員，票選結果有爭議。新任主任委員的投票方式沒有照規約，那次出席的區分所有權人和區分所有權比例也不符合規定。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第25條"
+        },
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第29條"
+        }
+      ],
+      "real_outcome": "有關區分所有權人會議召集人之產生請依召集人規定辦理；管理委員之選任請依主任委員、管理委員之選任解任規定及規約規定辦理。"
+    },
+    {
+      "id": "apt-tp-06-two-chairmen",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "大樓管理委員會，我和對方都申請報備為主任委員，同一個管理組織的報備案件同時有兩個管理組織在申請。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第25條"
+        },
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第27條"
+        },
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第30條"
+        },
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第31條"
+        },
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第32條"
+        },
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第34條"
+        }
+      ],
+      "real_outcome": "請雙方於文到10日內提供選任該年度主任委員之會議資料，含會議程序相關資料，再行處理。"
+    },
+    {
+      "id": "apt-tp-07-fee-increase-motion",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "區分所有權人會議用臨時動議的方式提出調漲管理費，我覺得這個調漲決議有權利濫用的疑慮。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第10條"
+        }
+      ],
+      "real_outcome": "有關管理費調漲一事，建請申請人於區分所有權人會議陳述主張及意見，其餘非屬本會所能裁奪。"
+    },
+    {
+      "id": "apt-tp-08-convener-authority",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "大樓管理委員會，我和對方都申請報備為主任委員。對方是以前一年主任委員的身分重新召集區分所有權人會議，但他當時的管理委員任期其實已經屆滿。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第25條"
+        }
+      ],
+      "real_outcome": "對造人召集會議之召集權係源於前次區分所有權人會議流會；惟查對造人召集時管理委員任期已屆滿視同解任，則該日對造人以具區分所有權人身分之管理委員會主任委員或管理委員為召集人召開區分所有權人會議，其召集人身份應認喪失召集權。"
+    },
+    {
+      "id": "apt-tp-09-pet-shop-aircon",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "樓下寵物店營業時間全天開空調，害我家樓地板和樓下之間有溫差，室內潮濕、地板常常有水珠、家具發霉，生活品質受影響。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第10條"
+        }
+      ],
+      "real_outcome": "申請人建議之改善工法及補助費用，由對造人攜回交股東討論後再行協商；如雙方協商不成，建請委託開業建築師或土木、結構執業技師辦理鑑定，俾釐清責任歸屬，或循司法途徑解決。"
+    },
+    {
+      "id": "apt-tp-10-pipe-shaft-leak-share",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區管道間漏水，修繕費用要怎麼分擔，我跟管理委員會意見不一樣。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第10條"
+        }
+      ],
+      "real_outcome": "本案有關共用部分之修繕費用分擔，應依共用部分之修繕、管理、維護規定及社區規約辦理；另為利社區日後水管接頭類似案件修繕費用之訂定，建請召開區分所有權人會議決議或納入規約。"
+    },
+    {
+      "id": "apt-tp-11-terrace-fee",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "我家門前的露台，其他戶都已經加蓋使用，只有我這戶沒有加蓋，而且都是我自己維護管理修繕。我覺得社區對露台的管理使用和管理費收取不合理。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第10條"
+        }
+      ],
+      "real_outcome": "因露台之日常管理維護由陳情人負責，建議其管理費以1/3計收；修繕費是否亦由住戶分擔1/3、管委會2/3，再請由管委會衡酌後雙方協商。"
+    },
+    {
+      "id": "apt-tp-12-basement-repair-fund",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "管理委員會開臨時區分所有權人會議，通過動用社區基金修繕地下室停車場裂縫和重新鋪設表層環氧樹脂。可是社區不是每一戶都有車位，用社區基金付這筆修繕費不合理。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第10條"
+        }
+      ],
+      "real_outcome": "建議仍應查明漏水確切位置及成因；因停車位依獎勵車位、自設車位及法定車位產權登記狀態可能有所不同，建議管委會可再向住戶進一步協助說明。另有關區分所有權人會議通過之決議，如認有影響權利，可經區分所有權人五分之一以上及其區分所有權比例合計五分之一以上，以書面載明召集之目的及理由請求管委會再次召開區分所有權人會議討論。"
+    },
+    {
+      "id": "apt-tp-13-terrace-drainage",
+      "source": "taipei-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "露台的排水工程修繕責任要算誰的，還有露台到底算共有部分還是專有部分，我跟管理委員會有爭議。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第10條"
+        }
+      ],
+      "real_outcome": "有關權屬如何判斷，請向地政事務所調專有部分建號之建物勘測成果圖釐清；另淹水事宜，如屬驟雨宣洩不及則由產權權屬釐清責任歸屬，如屬排水管本身堵塞造成，可查察排水管是否為供哪幾戶使用後再行討論；如有修繕相關爭議，建請於區分所有權人會議討論決議。"
+    },
+    {
+      "id": "apt-ntpc-01-fund-allocation",
+      "source": "ntpc-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區有七棟建築物，規約規定管理委員會成立後應該把基金撥入各棟，可是管理委員會一直沒有依照規約把公共基金撥入。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第36條"
+        }
+      ],
+      "real_outcome": "管委會依區分所有權人會議決議事項之執行規定，應執行區權會決議事項辦理；若對規約有疑義，可召開區權會修改規約並決議基金移撥問題。"
+    },
+    {
+      "id": "apt-ntpc-02-roof-leak",
+      "source": "ntpc-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "屋頂從好幾年前就開始嚴重漏水，害我財產損失。我跟社區管理委員會反映很多次都沒有處置，我想請管委會賠償財產損失，並且在漏水修好之前停繳管理費。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第10條"
+        }
+      ],
+      "real_outcome": "倘漏水處為共用部分且漏水原因係因年久失修、不可歸責於區分所有權人時，建議管委會應依共用部分之修繕、管理、維護由管理委員會為之、費用由公共基金支付或由區分所有權人按其共有之應有部分比例分擔之規定，處理漏水修繕事宜。"
+    },
+    {
+      "id": "apt-ntpc-03-fire-pipe-access",
+      "source": "ntpc-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "我已經依法申請辦理變更使用執照，也拿到工務局和消防局的核准函，但是社區管理委員會不同意我使用消防管路，害我沒辦法取得變更使用執照，造成損失。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第6條"
+        }
+      ],
+      "real_outcome": "住戶於維護、修繕專有部分、約定專用部分或設置管線必須使用共用部分時，應經管理負責人或管理委員會之同意後為之。建議申請人提供施工變更計畫書，保證施工不影響其他住戶權益；另建議管委會於申請人有必要且最小影響其他住戶權益之情況下予以同意變更。"
+    },
+    {
+      "id": "apt-ntpc-04-parking-bay-scope",
+      "source": "ntpc-apt",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "地下室停車格是劃定為專有部分，所以進出方式和使用管理應該回歸專有部分的所有權人，不是由管理委員會管理。",
+      "governing_statutes": [
+        {
+          "statute_id": "公寓大廈管理條例",
+          "article_no": "第9條"
+        }
+      ],
+      "real_outcome": "一停車位停放2輛汽車、超出停車位而使用共有部分是否有違建設目的及通常使用方法，應就其是否有無妨礙出入口、車道或其他車位使用之情形，由該主管機關本於權責個案事實認定。惟為考量社區良善管理及維持社區居住品質，建議召開區權會取得共識修改規約及停車管理辦法，減少糾紛。"
     }
   ]
 }
