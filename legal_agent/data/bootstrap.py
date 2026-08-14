@@ -51,17 +51,54 @@ def corpus_size(conn: sqlite3.Connection) -> int:
         return 0
 
 
-def ensure_corpus(db_path=None) -> int:
-    """Build the schema and load the corpus if it is not there yet.
+def _statutes_are_short(conn: sqlite3.Connection) -> bool:
+    """Does the table hold fewer articles than the shipped proposals carry?
 
-    Returns the article count. Idempotent and fast on an already-loaded DB.
+    Grouped by statute_id and compared per statute, which costs one aggregate
+    over ~17 rows (about 0.2ms measured) rather than pulling ~2,900 keys. The
+    comparison is sound in the only direction that happens: articles are added
+    to this table, never removed, so a count below the shipped one means an
+    article is genuinely absent.
+
+    This used to be `if not corpus_size(conn)` — load the proposals ONLY when
+    the corpus is completely empty. Anyone whose database predates a proposal
+    file therefore stayed on the old corpus forever, with nothing on screen to
+    say so. The author already reasoned through this exact hole for judgments,
+    two lines further down, and carved them out of the early return; statutes
+    never got the same treatment. The orphaned database in the repo tree is the
+    evidence it really happened — 2,562 rows, which is bulk + noise with the
+    361-article gap batch missing.
+    """
+    try:
+        have = dict(
+            conn.execute(
+                "SELECT statute_id, COUNT(DISTINCT article_no) FROM statutes "
+                "GROUP BY statute_id"
+            )
+        )
+    except sqlite3.OperationalError:      # table not created yet
+        return True
+    return any(
+        have.get(sid, 0) < wanted for sid, wanted in _shipped_articles_by_statute().items()
+    )
+
+
+def ensure_corpus(db_path=None) -> int:
+    """Build the schema and load any part of the shipped corpus that is missing.
+
+    Returns the article count. Idempotent and fast on an already-loaded DB:
+    the completeness check is one aggregate query, and the proposal files are
+    only read when something is actually short. Re-loading cannot duplicate a
+    time slice — `statutes`' primary key is (statute_id, article_no,
+    effective_from), so an article already present raises IntegrityError and
+    `load_proposals` skips it.
     """
     path = db_path or config.DB_PATH
     init_db(path)
     conn = connect(path)
     try:
         seed_source_hierarchy(conn)
-        if not corpus_size(conn):
+        if _statutes_are_short(conn):
             for name in PROPOSALS:
                 proposal = config.CORPUS_DIR / name
                 if proposal.exists():
@@ -144,6 +181,17 @@ def _shipped_article_keys() -> tuple[frozenset[tuple[str, str]], int]:
             (entry["statute_id"], entry.get("article_no") or "") for entry in entries
         )
     return frozenset(keys), rows
+
+
+@lru_cache(maxsize=1)
+def _shipped_articles_by_statute() -> dict[str, int]:
+    """How many distinct articles each statute should have. Used by
+    `ensure_corpus` to decide whether the corpus is complete without reading
+    the proposal files on every call."""
+    counts: dict[str, int] = {}
+    for statute_id, _article_no in _shipped_article_keys()[0]:
+        counts[statute_id] = counts.get(statute_id, 0) + 1
+    return counts
 
 
 @lru_cache(maxsize=1)

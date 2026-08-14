@@ -158,6 +158,72 @@ def test_the_harness_helper_prints_the_line_and_returns_the_fingerprint(
     assert fingerprint.statutes == shipped_floor().statutes
 
 
+# ── the other half: is all of it still there after a package upgrade? ────────
+# `ensure_corpus` used to load the proposals only when the corpus was
+# completely empty, so a database built before a proposal shipped stayed on the
+# old corpus forever with no signal. The orphaned DB in the repo tree carries
+# 2,562 rows — bulk + noise, with the 361-article gap batch missing — which is
+# this failure mode having actually happened, to a file nobody was using.
+
+
+def _copy(db, tmp_path, name):
+    import shutil
+
+    target = tmp_path / name
+    shutil.copy(db, target)
+    return target
+
+
+def test_a_corpus_that_predates_a_proposal_is_repaired_on_the_next_call(
+    full_db, tmp_path
+):
+    stale = _copy(full_db, tmp_path, "stale.db")
+    conn = connect(stale)
+    try:
+        conn.execute("DELETE FROM statutes WHERE statute_id = ?", ("強制汽車責任保險法",))
+        conn.commit()
+    finally:
+        conn.close()
+    assert corpus_fingerprint(stale).shortfall, "the fixture must actually be short"
+
+    ensure_corpus(str(stale))
+
+    assert corpus_fingerprint(stale).shortfall == ()
+
+
+def test_repair_restores_the_rows_exactly_and_adds_no_duplicate_time_slices(
+    full_db, tmp_path
+):
+    """One article legitimately holds two slices, so 'restored' is a row count,
+    not an article count: a second load of the same file must be skipped by the
+    (statute_id, article_no, effective_from) primary key, not appended."""
+    stale = _copy(full_db, tmp_path, "dup.db")
+    conn = connect(stale)
+    try:
+        conn.execute("DELETE FROM statutes WHERE statute_id = ?", ("勞動基準法",))
+        conn.commit()
+    finally:
+        conn.close()
+
+    ensure_corpus(str(stale))
+
+    fingerprint = corpus_fingerprint(stale)
+    assert fingerprint.statutes == shipped_floor().statutes
+    assert fingerprint.articles == shipped_floor().articles
+
+
+def test_a_complete_corpus_never_opens_a_proposal_file(full_db, monkeypatch):
+    """The check has to stay cheap: `ensure_corpus` runs on every
+    `open_corpus`, which is every public `verify` and `retrieve` call."""
+    import legal_agent.data.bootstrap as bootstrap
+
+    def _explode(*_args, **_kwargs):
+        raise AssertionError("a complete corpus must not re-read the proposals")
+
+    monkeypatch.setattr(bootstrap, "load_proposals", _explode)
+    assert ensure_corpus(str(full_db)) == shipped_floor().statutes
+
+
 def test_the_dense_docstring_does_not_name_a_path_the_module_never_computes():
     """`dense.py` documented 「db/dense_bgem3.npy」 while computing
     `Path(config.DB_PATH).parent / "dense_bgem3"`. A repo-relative `db/` does
