@@ -39,3 +39,8 @@ dist/
 # Local knowledge-graph output (/graphify) — derived, several MB, not source
 graphify-out/
 .graphify_python
+
+# Stale artefacts nothing reads, kept as evidence of trap 1 rather than deleted.
+# ~20 MB of binaries stay out of the repo; the note explaining them does not.
+db/_orphan_do_not_use/*
+!db/_orphan_do_not_use/README.md
