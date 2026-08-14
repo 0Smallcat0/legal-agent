@@ -1487,6 +1487,52 @@ python -m legal_agent.evaluation.realworld                         # already-end
   464 tests. The published `50/60 first judgments state an award` is unaffected;
   on all 168 it reads 93/146.
 
+- **The 主文 outcome, read one sentence at a time — and the whole-block ruler it
+  replaces measured at 58–72% false positives, all in the same direction.**
+  2026-08-15. Reserving a seat for a judgment that states no sum (below) stops
+  the block implying nobody lost, but it cannot say who did. Saying that needs a
+  ruler, and the obvious ruler — test the whole 主文 for 「駁回」 — is far worse
+  than it looks. Measured on the shipped 386:
+  「之訴駁回」 anywhere calls **121/386** a loss and is wrong on **87 of them
+  (71.9%)**; the broader 「駁回」 anywhere calls **200/386** a loss and is wrong on
+  **115 (57.5%)**. **Every single disagreement runs the same way — a win or a
+  part-win read as a loss** (83 and 101 of them are 一部勝訴一部敗訴). For a block
+  whose purpose is to tell a reader that someone lost, that is the worst
+  available direction of error.
+  **The cause is a LEVEL error, not a shortage of markers.** `award_amounts` has
+  always decided sentence by sentence; the outcome was testing the block. A 主文
+  is a list of operative orders and the case result is a function of that list.
+  `judgment_text.outcome()` now splits with the SAME `_sentences()`, classifies
+  each sentence, and folds them: relief (確認 / 准 / 不得 / an 應-order against
+  the other side) against refusal (a 駁回 aimed at the mover), with costs,
+  clerical corrections and conditional 補正 orders excluded because they decide
+  nothing. Distribution over the 386: **granted 119 (30.8%), partly 101 (26.2%),
+  denied 85 (22.0%), denied_procedurally 1, unreadable 80 (20.7%)** — the last
+  splitting into 35 judgments with no 主文 heading at all and 45 procedural or
+  非訟 裁定 (裁判費核定, 移送管轄, 輔助宣告). Those stay unreadable on purpose:
+  VERBATIM or nothing applies to verdicts too.
+  **An outcome that does not name WHO is misleading on its own.** An appellate
+  主文 is relative to position — 「被告應給付原告」 and 「上訴人應給付被上訴人」 are
+  the same grammar pointing opposite ways — so `Outcome` carries the mover and
+  respondent as the 主文 itself names them, and `describe()` refuses to render a
+  verdict without them.
+  **Eight regression seeds, each a case the whole-block ruler gets wrong**, all
+  pinned against the shipped corpus in `tests/test_judgment_outcome.py`: the
+  先位/備位 split (`MLDV,114,家繼訴,56`), two outright appellate wins written as
+  「原判決廢棄。被上訴人在第一審之訴駁回」 (`TPHV,114,上,908`, `TPHV,114,上易,270`),
+  two injunctions granted beside a refused 緊急處置 (`IPCV,115,商暫,4/5`), two
+  partial appeals whose amount sits inside the 廢棄 clause and whose partial loss
+  is written 「其餘上訴駁回」 (`TCDV,114,簡上,160`, `CTDV,115,簡上,4`), and a
+  procedural 「再審之訴駁回」 (`SCDV,114,再易,12`). 8/8.
+  **What is NOT claimed.** 8/8 on the seeds and 0 suspicious calls in an audit of
+  all 204 granted/denied verdicts is not a validated recall — there is no
+  hand-labelled outcome set for the 386, so the classifier's own error rate is
+  unmeasured above the seeds. The published number here is the OLD ruler's false
+  positive rate, which needs no such set: a judgment ordering 被告應給付原告 X 元
+  is not a loss, and that can be checked by reading it. The classifier is not
+  wired into the rendered block for the same reason — see the seat reservation
+  below, which needs no outcome label at all.
+
 - **The judgment block was sorting the losses out of sight, and now keeps one
   seat for them.** 2026-08-15. `related_judgments` widens to `limit * 3` = 9
   candidates and then re-sorts them all by 「states an award」 — `not ()` is True,
