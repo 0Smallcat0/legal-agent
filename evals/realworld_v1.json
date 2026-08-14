@@ -1,0 +1,298 @@
+{
+  "version": "realworld_v1",
+  "what_this_is": "Disputes that already ENDED in the real world, with the article the deciding authority actually applied. The party's opening description is the only input; the outcome is never shown to retrieval or to the model.",
+  "sources": [
+    {
+      "id": "taichung-apt-113",
+      "title": "臺中市公寓大廈爭議事件調處案例（113年）",
+      "url": "https://thd.taichung.gov.tw/media/1216773/%E8%87%BA%E4%B8%AD%E5%B8%82%E5%85%AC%E5%AF%93%E5%A4%A7%E5%BB%88%E7%88%AD%E8%AD%B0%E4%BA%8B%E4%BB%B6%E8%AA%BF%E8%99%95%E6%A1%88%E4%BE%8B-113.pdf",
+      "label_source": "official",
+      "note": "每案自帶「法令依據」欄，是調處委員會實際引用的條文 — governing_statutes 直接抄自該欄，不是本專案的判斷。"
+    },
+    {
+      "id": "taipei-rent",
+      "title": "臺北市政府 租賃糾紛案例（案情說明 / 辦理情形）",
+      "url": "https://www-ws.gov.taipei/001/Upload/305/relfile/11498/7146723/bc3d451b-d055-401e-8f98-a8b8de76a726.pdf",
+      "label_source": "derived",
+      "note": "只有案情與辦理情形，沒有法令依據欄。governing_statutes 是本專案從辦理情形反推的，可信度低於 official，headline 數字不採計。"
+    }
+  ],
+  "cases": [
+    {
+      "id": "apt-01-motorcycle-bays",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "管理委員會私自在地下室停車場劃設機車停車格出租，已經影響住戶平常使用車位的權益，還造成多次跌倒或受傷。我的車位在車道上下坡轉角處，車格外上下車更危險。跟管理委員會溝通很多次都沒有結果，希望能要求塗銷。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第10條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第11條"}
+      ],
+      "real_outcome": "本案依建築法規應依使用執照核准圖說使用汽車停車位，如有變更需依規申請變更使用執照；機車停車位之劃設應以不妨礙原有汽車停車位使用之原則下辦理，請管理委員會於下次區分所有權人會議提案決議機車停車位變更事宜。"
+    },
+    {
+      "id": "apt-02-empty-unit-fee",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "管理委員會用管理公約規定，只要空屋就繳交半價管理費。另外社區也沒有依法遴選管理委員。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第10條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第29條"}
+      ],
+      "real_outcome": "請都市發展局向區公所查詢該社區委員之選任是否有違反連選連任限制規定；建議管理委員會依規修訂社區規約，委員連選連任規定與管理費收費標準均應依規約之規定辦理。"
+    },
+    {
+      "id": "apt-03-reverse-vote",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "區分所有權人會議用反向表決通過修改規約，還通過管理委員不用選舉就當然留任三位，跟當天只決議委員得留任的表決事實不符。另外住戶違建不停止，還施壓檢舉的住戶。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第31條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第36條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第48條"}
+      ],
+      "real_outcome": "區分所有權人會議決議之內容如有執行爭議，除得再召開區分所有權人會作成決議外，係屬私權爭執，宜循司法途徑解決。住戶違建不制止事件：管理委員會應予制止，經制止而不遵從者，應報請主管機關依條例規定處理，以免受罰。"
+    },
+    {
+      "id": "apt-04-committee-lawyer-fee",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區規約寫管理費用途只包含因管理事務洽詢律師的諮詢費用，管理委員會並沒有用管理費聘請律師的權限。但第四屆管理委員會臨時委員會議，議案另外加上「社區其他法律訴訟案，均授權主任委員聘任律師全權處理」的決議。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第29條"}
+      ],
+      "real_outcome": "如屬區分所有權人會議決議範圍內，依該決議辦理。區分所有權人會議決議之內容如有執行爭議，除得再召開區分所有權人會作成決議外，係屬私權爭執，宜循司法途徑解決。"
+    },
+    {
+      "id": "apt-05-roof-leak-share",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區頂樓平台裂縫造成我住家天花板上方漏水，去找社區管理委員會，卻被告知漏水工程修繕費必須由管理委員會跟我各分擔一半費用。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第10條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第36條"}
+      ],
+      "real_outcome": "本案漏水並非可歸責於該區分所有權人或住戶之事由所致，故不屬第10條後段但書規範，依前段規定，共用部分之修繕、管理、維護由管理委員會為之，費用由公共基金支付或由區分所有權人按其共有之應有部分比例分擔。"
+    },
+    {
+      "id": "apt-06-developer-handover",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區管理委員會反映建設公司到現在還沒有把公共設施修繕完成，也還沒有見證移交。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第57條"}
+      ],
+      "real_outcome": "請管理委員會再做檢視確認應修繕項目；雙方儘速釐清應修繕項目後，由起造人儘速處理，並依條例第57條規定進行見證移交。"
+    },
+    {
+      "id": "apt-07-fee-calculation",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "管理委員會沒有說明某個月以後相關費用的計算方式，也沒說明從某個月開始繳交公有車位費用的原因，還表示不願意溝通，都推說要法院訴訟解決。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第10條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第20條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第36條"}
+      ],
+      "real_outcome": "請管理委員會將目前管理費試算表製作一份交給申請人；建議管理委員會覈實計算社區各項費用支出情形，提案修訂管理費收繳標準與計算式。"
+    },
+    {
+      "id": "apt-08-glass-facade",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "管理委員對於外牆修繕部分認定不一致，只願意修繕有陽台磁磚的外牆和部分玻璃外牆，住戶的玻璃外牆部分卻要求各區權人自行修繕。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第10條"}
+      ],
+      "real_outcome": "C 區陽台下方玻璃牆亦為外牆，與 A、B 區之差別只是材質及形式不同，外牆修繕維護權責請依規約規定辦理；如外牆修繕費係因可歸責於區分所有權人或住戶之事由所致者，由該區分所有權人或住戶負擔。"
+    },
+    {
+      "id": "apt-09-water-tank-planter",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區有住戶把水塔堆放在社區的空地花台上。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第23條"}
+      ],
+      "real_outcome": "本案水塔係放置於社區公共花台上，非實際供通行使用，基於使用者付費原則，建議雙方協調使用範圍、使用方式、支付費用（如租金、管理維護費）後，提區分所有權人會議決議之。"
+    },
+    {
+      "id": "apt-10-refuse-inspection",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區 4 樓住戶拒絕配合檢查修繕事宜。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第6條"}
+      ],
+      "real_outcome": "依漏水三種可能原因逐一測試（4F 落水口至公共排水主幹管滲漏、4F 陽台樓板損壞、公共梯間滲漏），再依測出的原因決定由誰負擔：4F 落水口滲漏由該住戶全額負擔、陽台樓板損壞由兩造各半、公共梯間滲漏由管理委員會全額負擔。"
+    },
+    {
+      "id": "apt-11-stairwell-leak",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "公共梯間漏水，管理委員會找專業廠商勘查，認為是對造人家裡浴室漏水造成的。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第10條"}
+      ],
+      "real_outcome": "請雙方會同再測試是否為對造人之給水管漏水以釐清原因及權責；如查明為對造人給水管漏水，先以化學藥劑灌注方式修復；如處理仍無效且屬對造人權責範圍，由對造人負擔修繕；惟修繕後仍未改善，則該漏水似非可歸責於對造人，相關修繕費則由管理委員會負擔。"
+    },
+    {
+      "id": "apt-12-floor-slab-leak",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區樓地板漏水，已經影響到我住家的居住品質。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第6條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第10條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第12條"}
+      ],
+      "real_outcome": "請管理委員會提供相關管線圖給申請人；由管理委員會找三方認同之專業廠商會同三方測試，查明漏水原因並予以修繕（先測公共排水管，後測 2 樓專有部分管路）；如找不到漏水原因，建議逕由漏水處施打發泡劑等止漏材料處理。"
+    },
+    {
+      "id": "apt-13-parking-perpetual",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區公共設施的機車停車格，登記租用之後就取得永久使用（承租）的權利，這樣可以嗎？",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第9條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第23條"}
+      ],
+      "real_outcome": "機車停車格係屬共用部分，依條例第23條第2項第2款規定，住戶對共用部分使用之特別約定，非經載明於規約者，不生效力。雙方同意由管理委員會秉公平、公正及公開之原則，針對共用部分機車停車格使用之特別約定，於下次區分所有權人會議中提案修訂規約明訂之。"
+    },
+    {
+      "id": "apt-14-one-bay-one-vehicle",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區管理委員會主張區分所有權人會議決議修訂規約，停車場停車格僅能停放一輛汽車或 250cc 以上重型機車，一格僅可停放一輛。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第3條"},
+        {"statute_id": "公寓大廈管理條例", "article_no": "第23條"}
+      ],
+      "real_outcome": "建議社區可在不超出停車格之原則下，1 汽車停車格可停放多輛汽車或 250cc 以上重型機車，並可酌情加收相關管理費（應於規約明定之）；管理委員會可先做問卷調查，擬具修訂規約內容，提區分所有權人會議決議。"
+    },
+    {
+      "id": "apt-15-fire-panel",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "社區消防受信總機更新後，廠商檢查發現少數住戶家中迴路異常，導致受信總機誤報，但經過多次協調後，那兩戶區分所有權人到現在都不願意配合改善。消防局已經為此開立罰單。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第6條"}
+      ],
+      "real_outcome": "請申請人以消防局檢查為依據，邀請消防人員協助辦理或請專業公司再進行檢測，釐清責任歸屬；住戶應依條例第6條規定配合辦理，不得拒絕；查明如係屬對造人責任時，對造人同意維修。"
+    },
+    {
+      "id": "apt-16-balcony-planter-crack",
+      "source": "taichung-apt-113",
+      "domain": "公寓大廈",
+      "label_source": "official",
+      "initial_text": "13 樓住戶在陽台地面鋪土施作圍圃，造成我家 12 樓的陽台龜裂滲水。",
+      "governing_statutes": [
+        {"statute_id": "公寓大廈管理條例", "article_no": "第12條"}
+      ],
+      "real_outcome": "請對造人對陽台植栽之澆水方式改採滴灌方式處理；請申請人查明陽台上方樓板粉刷層裂痕部分是否仍有滲水情形；對造人同意針對原 12 樓陽台上方樓板粉刷層裂痕壁癌部分予以修復。"
+    },
+    {
+      "id": "rent-01-early-termination",
+      "source": "taipei-rent",
+      "domain": "租賃",
+      "label_source": "derived",
+      "initial_text": "我跟房東簽了兩年租約，現在才住不到一年，房東說他要收回去自己住，強勢要求我一個月內搬家，只說會退我兩個月押金。這樣合理嗎？我可以要求什麼？",
+      "governing_statutes": [
+        {"statute_id": "租賃住宅市場發展及管理條例", "article_no": "第10條"}
+      ],
+      "real_outcome": "房東同意補償房客 1 個月租金額的違約金，另給予房客 2 至 3 個月期間找適合房屋搬遷，並酌量補貼房客搬遷費用。"
+    },
+    {
+      "id": "rent-02-repair-leak",
+      "source": "taipei-rent",
+      "domain": "租賃",
+      "label_source": "derived",
+      "initial_text": "我住進去之後房間就有滴水的狀況，房東有派工程人員來現場檢測也修過，但兩年下來還是一直持續滴漏水。我不想住了，想要回押金搬走，可以嗎？",
+      "governing_statutes": [
+        {"statute_id": "民法", "article_no": "第430條"}
+      ],
+      "real_outcome": "因持續滴漏水問題未解，與房客協商以補償房客租金同意退押金方式讓房客搬離，並完整修繕房屋。"
+    },
+    {
+      "id": "rent-03-electricity",
+      "source": "taipei-rent",
+      "domain": "租賃",
+      "label_source": "derived",
+      "initial_text": "我租約還沒到期就提前解約，退租的時候房東算給我的電費我覺得太高，我不想付。這筆電費我非付不可嗎？",
+      "governing_statutes": [
+        {"statute_id": "民法", "article_no": "第435條"}
+      ],
+      "real_outcome": "房東依照當初簽立之電費條件合理計算電費度數與金額。經溝通協調，房客匯入協調後電費金額並撤銷申訴案 — 也就是這筆錢照付。"
+    },
+    {
+      "id": "rent-04-pet-penalty",
+      "source": "taipei-rent",
+      "domain": "租賃",
+      "label_source": "derived",
+      "initial_text": "合約上寫明不能養寵物，房東來修繕的時候發現我有養，就說要扣我一個月的違約金，還叫我搬走。我希望不要被扣這筆錢，我能怎麼辦？",
+      "governing_statutes": [
+        {"statute_id": "民法", "article_no": "第252條"}
+      ],
+      "real_outcome": "經仲介公司與屋主協調，屋主同意僅收取半個月違約金；嗣後房客到消基會、法院申訴，最終自行協調再減 1/2 違約金 — 違約成立，但金額被砍。"
+    },
+    {
+      "id": "rent-05-deposit-refund",
+      "source": "taipei-rent",
+      "domain": "租賃",
+      "label_source": "derived",
+      "initial_text": "我看完房子願意承租，先付了定金保留租屋的權利，仲介在定金收據上有列出契約效力跟權益，也口頭跟我說明過。但我後來沒辦法簽約了，我想把定金拿回來。",
+      "governing_statutes": [
+        {"statute_id": "民法", "article_no": "第249條"}
+      ],
+      "real_outcome": "房東考量房客為學生，且家境清寒，經地政局協調後將定金退還房客 — 拿回定金的理由是人情，不是法律上的請求權。"
+    },
+    {
+      "id": "rent-06-paint-cost",
+      "source": "taipei-rent",
+      "domain": "租賃",
+      "label_source": "derived",
+      "initial_text": "退租點交的時候，房東依合約要求我把屋況整理好，爭議最大的是牆面油漆。但住過本來就會有痕跡，這筆油漆的錢到底該誰出？",
+      "governing_statutes": [
+        {"statute_id": "民法", "article_no": "第432條"}
+      ],
+      "real_outcome": "由房東房客各負擔一半油漆費用。"
+    },
+    {
+      "id": "rent-07-handover-defects",
+      "source": "taipei-rent",
+      "domain": "租賃",
+      "label_source": "derived",
+      "initial_text": "我跟房東簽約，付了兩個月押金和一個月租金，本來說好 11 月點交，後來因故改到 12 月點交也才起算租金。12 月點交的時候我發現洗衣機沒換新、有壁癌、天花板油漆色差，我想退租，要求把租金押金和仲介半個月的服務費都退給我，也寄了存證信函，但房東不同意。",
+      "governing_statutes": [
+        {"statute_id": "民法", "article_no": "第430條"}
+      ],
+      "real_outcome": "經法院判決：房東可沒收 2 個月押金，退還第 1 個月租金，仲介費全額毋須退還 — 房客敗訴。"
+    },
+    {
+      "id": "rent-08-rent-arrears",
+      "source": "taipei-rent",
+      "domain": "租賃",
+      "label_source": "derived",
+      "initial_text": "我把房子租出去，房客一直欠租金，催了很多次都不繳，也不接電話。我要怎麼把房子拿回來？",
+      "governing_statutes": [
+        {"statute_id": "民法", "article_no": "第440條"},
+        {"statute_id": "民法", "article_no": "第455條"}
+      ],
+      "real_outcome": "出租人向法院提出告訴；另一同類案件經法院裁決勝訴，惟房客還要等到申請點交才肯搬離。"
+    }
+  ]
+}

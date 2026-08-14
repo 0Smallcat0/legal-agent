@@ -35,3 +35,7 @@ db/*.keys.json
 build/
 dist/
 *.egg-info/
+
+# Local knowledge-graph output (/graphify) — derived, several MB, not source
+graphify-out/
+.graphify_python

@@ -3,7 +3,7 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-474%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-480%20passing-brightgreen)
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
@@ -77,13 +77,31 @@ must be right are not left to it.</sub>
 | first action names the reader's own documents | **83/168 sessions** |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** |
 | articles on the page the model skipped | **8 → 18 of 21 expected** |
+| the article the AUTHORITY cited, on disputes that already ended | **7/27**, and **9/16** cases answered with none of them |
 
 ```bash
 python -m legal_agent.evaluation.mutation                          # catch rate
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
 python -m legal_agent.evaluation.real_recall                       # lived sessions
 python -m legal_agent.evaluation.judgment_relevance                # reference tier
+python -m legal_agent.evaluation.realworld                         # already-ended disputes
 ```
+
+**Read the last row before you trust the first one.** Every other number here is
+measured against expectations this project wrote — the same hand built the
+retriever and the answer key. The last row is not: the cases are government
+dispute-resolution case tables, the input is the party's opening description, and
+the governing article is the one the deciding body printed in its own 法令依據
+column. On that set the right article reached the window 7 times out of 27, and
+9 of 16 cases were answered anyway with none of them and no refusal.
+
+The verifier stayed green through all of it, and that is not a malfunction:
+**green means the cited article exists, is in force, and was not misquoted — it
+has never meant the article governs your problem.** 11,904/11,904 measures the
+first sentence. Nothing here measures the second, and a full-pipeline read of 8
+already-decided rental disputes found the reasoning contradicting the recorded
+outcome in 4 of 8 — with `flagged_count` 0 in every one. See
+[`evals/RESULTS.md`](evals/RESULTS.md) §7.
 
 **Two of those rows need a second half a plain install does not have.** The
 retriever is BM25 plus a hand-written vocabulary table plus optional bge-m3
