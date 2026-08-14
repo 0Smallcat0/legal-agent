@@ -28,7 +28,15 @@
 >    article governs. Reverted, and the helper deleted rather than left behind a
 >    flag.
 >
-> **The two limits worth knowing before trusting any of it.** The honesty tier's
+> **The limit that outranks the rest.** Every number above is measured on cases
+> this project wrote. On 16 disputes that already ended, labelled by the article
+> the *deciding authority itself* cited, the governing article reached the window
+> **7 times out of 27**, and **9 of the 16 cases were answered anyway with none of
+> them** — no refusal. The verifier stayed green throughout, because green means
+> "this article exists, is in force, and was not misquoted", never "this article
+> governs your problem". §7 has the whole run.
+>
+> **The two further limits worth knowing before trusting any of it.** The honesty tier's
 > 「is this in scope」 half is now a list of the statutes we know we lack, so it
 > refuses **18 of 20** named absences and nothing outside that list — a question
 > that describes an out-of-scope problem without naming its law still gets
@@ -60,6 +68,7 @@ system makes — it never means "this statute does not exist."
 | reference judgments beside an answer | 11/30 cases, 10 carrying a 主文 award figure | counted |
 | that judgment is the reader's KIND of dispute | **51/88 scorable (58%)**, 146/168 sessions carry one, 58/146 案由 too generic to score | `evaluation/judgment_relevance.py`, 168 lived problems, both sides derived |
 | bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190) | `evaluation/ablation.py`, llama3.1 over golden_v2, corpus v2 |
+| the article the AUTHORITY cited, on disputes that already ended | **7/27 (26%)**, and **9/16** cases answered with none of them | `evaluation/realworld.py`, 16 公寓大廈 調處案, labels from the case table's own 法令依據 column |
 
 ```bash
 python -m legal_agent.evaluation.mutation                          # catch rate
@@ -67,6 +76,7 @@ python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
 python -m legal_agent.evaluation.real_recall                       # lived sessions
 python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold sweep
+python -m legal_agent.evaluation.realworld                         # already-ended disputes
 ```
 
 ## What each harness refuses to measure
@@ -1569,9 +1579,67 @@ python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold s
   framings agree on the false alarms, so it is not noise), and the model swap
   measured earlier the same day scores identically on every graded axis. The
   honest statement of what this system does for a reader is unchanged and now
-  fully bounded: reliable about **which article governs**, with the prose about
-  that article carrying one failure mode that nothing in the pipeline can catch
-  without making two of every five correct citations look wrong.
+  fully bounded: reliable about **which article governs — on the cases this
+  project wrote**, with the prose about that article carrying one failure mode
+  that nothing in the pipeline can catch without making two of every five
+  correct citations look wrong. The scope clause is not hedging. §7 measures the
+  same claim on disputes labelled by the deciding authority instead of by us,
+  and it drops to 7/27.
+
+## §7 — disputes that already ended, labelled by whoever decided them
+
+Every harness above grades this system against expectations this project wrote.
+The retriever and the answer key came from the same hand, so a high number can
+only ever mean "consistent with itself". `evaluation/realworld.py` breaks that
+loop: the cases are government dispute-resolution case tables, the input is the
+party's opening description with the statute names stripped, and the article the
+case turns on is the one the deciding body printed in its own 法令依據 column.
+
+**臺中市公寓大廈爭議事件調處案例（113年）, 16 cases, 27 governing articles**
+
+| what | number |
+|---|---|
+| governing article reached the window | **7/27 (26%)** |
+| cases answered with NONE of them, no refusal | **9/16** |
+| cases refused | **0/16** |
+| dense fallbacks | 0 (hybrid retrieval fully participating) |
+
+The misses are not random. Everything physical hits — 漏水 (§10, §12), 外牆 (§10),
+拒絕進入受檢 (§6). Everything about governance misses — 規約修訂, 決議效力, 委員
+選任連任, 管理費計算方式, 共用部分使用之特別約定 (§3, §9, §20, §23, §29, §31, §36,
+§48, §57). The vocabulary table was built from noise, rental, labour and consumer
+sessions; nobody ever typed 「區分所有權人會議」 into it. That is a corpus-coverage
+gap with a name and a fix, not a mystery.
+
+**The finding that matters more than the percentage.** A separate full-pipeline
+run over 8 已結案 rental disputes (llama3.1, temperature 0) produced reasoning
+that contradicted the recorded outcome in 4 of 8 cases — including one where the
+court forfeited the tenant's two months' deposit while the answer said their
+position held, and one where the answer said an electricity bill need not be paid
+that was in fact paid in full. **`flagged_count` was 0 in all eight.** Nothing
+malfunctioned. Every citation existed, was in force, and misquoted no figure, so
+all four axes passed. The gates certify that a cited article is REAL; they have
+never certified that it APPLIES, and the 11,904/11,904 figure is a measurement of
+the former. Both statements were always true; this is the first run that shows
+what the gap costs a reader.
+
+**What this harness refuses to measure.** Whether the reasoning is right.
+`--answers` prints the 分析研判 beside the recorded outcome for a human, and
+scores nothing — the same refusal `golden_set.py` makes about legal correctness.
+
+**Bad ruler, caught by its own guard.** The first draft labelled 民法 as
+「中華民國民法」 (the corpus spells 刑法 that way, 民法 not) and published a
+confident 1/9 that was almost entirely fake misses. `check_labels` now aborts the
+run when a label names an article the corpus cannot contain, and
+`tests/test_realworld.py` pins it. Third entry in this file's bad-ruler list.
+
+**Limits of this measurement, stated before anyone quotes it.** One domain and 16
+cases for the external number; the 8 rental cases carry labels this project
+inferred from a narrative outcome, so they are reported separately and excluded
+from the headline. Most recorded outcomes are mediated settlements, shaped by
+goodwill and bargaining power rather than by law alone — that makes them a strict
+yardstick for a legal answer, though the two decided in court are not.
+Full-pipeline reasoning was read on one model, one run.
 
 ## Measured, then NOT shipped
 

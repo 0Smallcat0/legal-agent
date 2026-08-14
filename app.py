@@ -25,7 +25,7 @@ from html import escape
 
 import gradio as gr
 
-# ── ZeroGPU startup check ────────────────────────────────────────────────────
+# ── ZeroGPU startup check ─────────────────────────────────────────────────────────────────────────
 # The free Gradio tier on Hugging Face runs on ZeroGPU, which refuses to serve a
 # Space that declares no @spaces.GPU function. This project never touches a GPU,
 # so the check is satisfied by a function nothing calls. Guarded, because
@@ -40,6 +40,7 @@ try:
 
 except ImportError:            # local run, or any non-ZeroGPU host
     pass
+
 
 from legal_agent import config
 from legal_agent.anti_hallucination.honesty import grade_honesty
@@ -247,7 +248,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">474 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">480 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
