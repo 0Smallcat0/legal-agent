@@ -46,6 +46,41 @@ class VerificationResult:
     semantic_ok: bool = True     # optional 4th axis; True when the axis is off
 
 
+# ── what the reader is told the check did, and did not, cover ───────────────
+# The clean path used to render NOTHING at all in the CLI: `run.py._format_result`
+# printed the verification block only when something was flagged, so a run with
+# no flags showed no verification section, and silence reads as endorsement. A
+# full pipeline run over eight already-decided rental disputes reasoned OPPOSITE
+# to the recorded outcome in four of them, and `flagged_count` was 0 in all
+# eight. Nothing on screen was wrong; the axes had certified exactly what they
+# certify. What was missing is the sentence saying what they do not.
+VERIFIED_SCOPE_NOTE = (
+    "查核的是條號存在、當時仍有效、內容與資料庫逐字條文相符。"
+    "沒有查核這些條文是否適用於你的處境,也沒有查核推論方向是否正確 —— "
+    "查核全綠不等於結論對你有利。"
+)
+
+
+def verification_status_line(verifications) -> str:
+    """One line saying what the citation check found AND what it never looks at.
+
+    Shared by the CLI and the web so the two cannot drift. Always returns a
+    sentence: the green path is the one that most needs saying out loud.
+    """
+    if not verifications:
+        return f"引用查核:本回答未含條號引用。{VERIFIED_SCOPE_NOTE}"
+    flagged = [v for v in verifications if v.flagged]
+    if not flagged:
+        return (
+            f"引用查核:{len(verifications)} 筆引用全數可回溯至資料庫。"
+            f"{VERIFIED_SCOPE_NOTE}"
+        )
+    return (
+        f"引用查核:{len(verifications)} 筆引用中 {len(flagged)} 筆有疑慮,逐筆如下。"
+        f"{VERIFIED_SCOPE_NOTE}"
+    )
+
+
 # ── numerals: Arabic / full-width / Chinese ──────────────────────────────────
 _FULLWIDTH = {ord("０") + i: ord("0") + i for i in range(10)}
 _CN_DIGIT = {"零": 0, "〇": 0, "一": 1, "二": 2, "兩": 2, "三": 3, "四": 4,

@@ -79,6 +79,96 @@ def test_a_judgment_stating_a_sum_is_listed_first(conn):
     assert refs[0].jid.startswith("DDD")
 
 
+def _with_award(conn, jid, amount):
+    conn.execute(
+        "INSERT INTO judgments (jid, court, year, case_type, issues, "
+        "cited_articles, holding, full_text) VALUES (?, ?, ?, ?, NULL, ?, NULL, ?)",
+        (jid, jid[:3], 115, "損害賠償",
+         json.dumps([{"statute_id": "民法", "article_no": "第184條"}], ensure_ascii=False),
+         "臺灣測試地方法院民事判決\r\n115年度簡字第9號\r\n主文\r\n"
+         f"被告應給付原告新臺幣{amount:,}元。\r\n事實及理由"),
+    )
+    conn.commit()
+
+
+def _dismissed(conn, jid):
+    """A 主文 that orders no payment. `award_amounts` returns [] for these, and
+    the award sort therefore pushes them below everything carrying a figure."""
+    conn.execute(
+        "INSERT INTO judgments (jid, court, year, case_type, issues, "
+        "cited_articles, holding, full_text) VALUES (?, ?, ?, ?, NULL, ?, NULL, ?)",
+        (jid, jid[:3], 115, "損害賠償",
+         json.dumps([{"statute_id": "民法", "article_no": "第184條"}], ensure_ascii=False),
+         "臺灣測試地方法院民事判決\r\n115年度簡字第8號\r\n主文\r\n"
+         "原告之訴駁回。\r\n訴訟費用由原告負擔。\r\n事實及理由"),
+    )
+    conn.commit()
+
+
+def test_the_last_seat_is_kept_for_a_judgment_that_states_no_sum(conn):
+    """`widened.sort(key=lambda row: not row[2])` floats every judgment with a
+    figure above every judgment without one, and only `limit * 3` candidates are
+    parsed — so three parseable sums among nine filled all three seats and the
+    reader never saw a case that ordered nothing."""
+    for i, amount in enumerate((100_000, 200_000, 300_000, 400_000)):
+        _with_award(conn, f"W{i}W,115,簡,{i},20260401,1", amount)
+    _dismissed(conn, "ZZZ,115,簡,8,20260401,1")
+
+    refs = related_judgments([_statute()], conn=conn)
+
+    assert len(refs) == 3
+    assert refs[0].awards, "the sum-bearing judgment still leads"
+    assert refs[-1].awards == (), "the last seat belongs to a judgment with no sum"
+    assert refs[-1].jid.startswith("ZZZ")
+
+
+def test_the_reserved_seat_is_filled_normally_when_no_candidate_lacks_a_sum(conn):
+    """Never left blank: a missing row says nothing a reader can check."""
+    conn.execute("DELETE FROM judgments")     # the fixture's rows carry no 主文
+    for i, amount in enumerate((100_000, 200_000, 300_000, 400_000)):
+        _with_award(conn, f"W{i}W,115,簡,{i},20260401,1", amount)
+
+    refs = related_judgments([_statute()], conn=conn)
+
+    assert len(refs) == 3
+    assert all(r.awards for r in refs)
+
+
+def test_reserving_the_seat_does_not_disturb_the_first_judgment(conn):
+    """`judgment_relevance` grades 「the judgment the reader would see first」 and
+    `CaseJudgment.shown` is the first judgment's 案由. Seat 3 is the only seat
+    that leaves both published figures untouched."""
+    for i, amount in enumerate((100_000, 200_000, 300_000, 400_000)):
+        _with_award(conn, f"W{i}W,115,簡,{i},20260401,1", amount)
+    first_without_reservation = related_judgments([_statute()], conn=conn)[0]
+
+    _dismissed(conn, "ZZZ,115,簡,8,20260401,1")
+    first_with_reservation = related_judgments([_statute()], conn=conn)[0]
+
+    assert first_with_reservation.jid == first_without_reservation.jid
+    assert first_with_reservation.awards == first_without_reservation.awards
+
+
+def test_the_no_sum_seat_states_a_checkable_fact_and_never_a_verdict(conn):
+    """The label may say what the 主文 does not contain, and must show the 主文
+    so a reader can check. It must not say who lost: this module has no graded
+    ruler for that, and the obvious substring one measures ~12% false
+    positives, all of them labelling wins as losses."""
+    for i, amount in enumerate((100_000, 200_000, 300_000, 400_000)):
+        _with_award(conn, f"W{i}W,115,簡,{i},20260401,1", amount)
+    _dismissed(conn, "ZZZ,115,簡,8,20260401,1")
+
+    refs = related_judgments([_statute()], conn=conn)
+    text = render_block(refs)
+
+    assert "此判決主文未載明給付金額" in text
+    assert "原告之訴駁回" in text            # the 主文, verbatim, beside the note
+    assert "敗訴" not in text
+    assert "勝訴" not in text
+    assert refs[-1].main_text is not None
+    assert all(r.main_text is None for r in refs if r.awards)
+
+
 def test_overlap_ranked_and_unrelated_excluded(conn):
     retrieved = [_statute(), _statute("民法", "第195條", "非財產上之損害…")]
     refs = related_judgments(retrieved, conn=conn)

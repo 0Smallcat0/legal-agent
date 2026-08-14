@@ -32,6 +32,7 @@ class JudgmentRef:
     matched: tuple[str, ...]              # 「民法第184條」-style refs shared with the answer
     awards: tuple[int, ...] = ()          # amounts the 主文 orders paid (verbatim-derived)
     cite: str | None = None               # 「法院＋裁判種類 案號」, verbatim from the header
+    main_text: str | None = None          # the 主文 verbatim; carried only when awards is ()
 
 
 def related_judgments(
@@ -109,6 +110,10 @@ def related_judgments(
         for jid, meta in items[: limit * 3]
     ]
     widened.sort(key=lambda row: not row[2])
+    shown = _reserve_a_seat_without_a_sum(widened, limit)
+
+    from legal_agent.data.judgment_text import main_text as _main_text
+
     return [
         JudgmentRef(
             jid=jid,
@@ -117,9 +122,53 @@ def related_judgments(
             matched=tuple(meta["matched"]),
             awards=award,
             cite=cite,
+            # Only where there is no sum to show. That is the seat whose label
+            # has to be justified, and the 主文 verbatim is the justification.
+            main_text=None if award else _main_text(meta.get("full_text")),
         )
-        for jid, meta, award, cite in widened[:limit]
+        for jid, meta, award, cite in shown
     ]
+
+
+def _reserve_a_seat_without_a_sum(widened: list, limit: int) -> list:
+    """Give the LAST seat to a judgment whose 主文 states no sum, if the run
+    would otherwise show none.
+
+    `widened.sort(key=lambda row: not row[2])` floats every judgment carrying a
+    figure above every judgment carrying none — `not ()` is True, `not (260000,)`
+    is False, and False sorts first. Candidates are widened only to `limit * 3`,
+    so as soon as three of those nine parse a sum, all three seats a reader sees
+    carry one. Meanwhile `judgment_text.award_amounts` returns an empty list for
+    a 主文 that reads 原告之訴駁回. Multiply the two and the code was actively
+    sorting the losses out of sight.
+
+    Cheap on purpose: the reserved seat is not classified as a loss, and no
+    dismissal marker is computed. A win/loss classifier needs a ruler that has
+    itself been graded, and the obvious substring ruler already measures about
+    12% false positives — all of them labelling wins as losses. The price of
+    staying cheap is that this cannot tell the reader 「N people lost under these
+    same articles」; it can only stop the block from implying nobody did.
+
+    LAST rather than first, because `judgment_relevance` grades 「the judgment
+    the reader would see first」 and `CaseJudgment.shown` is the first
+    judgment's 案由. Seat 3 leaves both published figures untouched; seat 1
+    would break 「first judgment states a sum」 by definition.
+
+    When no candidate lacks a sum, the seat is filled by the ordinary rule.
+    Never left blank — a missing row says nothing a reader can check.
+    """
+    shown = widened[:limit]
+    if any(not row[2] for row in shown):
+        return shown
+    silent = next((row for row in widened[limit:] if not row[2]), None)
+    return shown if silent is None else [*shown[:-1], silent]
+
+
+# What a no-sum judgment is allowed to say. 「未載明給付金額」 is a fact about the
+# 主文 that the next line lets the reader check for themselves. 「敗訴」 would be
+# a claim about the case, and this module has no graded ruler for that — see
+# `_reserve_a_seat_without_a_sum`.
+NO_AWARD_NOTE = "此判決主文未載明給付金額,主文逐字:"
 
 
 def render_block(refs: list[JudgmentRef]) -> str:
@@ -138,4 +187,10 @@ def render_block(refs: list[JudgmentRef]) -> str:
         # (調解筆錄 and 宣示判決筆錄 do not carry one).
         label = r.cite or r.jid
         lines.append(f"・{label}({title})— {money}同引 {'、'.join(r.matched)}")
+        if not r.awards and r.main_text:
+            # Wrapped continuation lines are rejoined, which is whitespace only
+            # — the same treatment `judgment_text._sentences` applies. Not
+            # truncated: an elided 主文 is no longer verbatim.
+            verbatim = "".join(part.strip() for part in r.main_text.splitlines())
+            lines.append(f"  {NO_AWARD_NOTE}{verbatim}")
     return "\n".join(lines)

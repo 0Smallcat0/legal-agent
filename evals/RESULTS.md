@@ -1487,6 +1487,80 @@ python -m legal_agent.evaluation.realworld                         # already-end
   464 tests. The published `50/60 first judgments state an award` is unaffected;
   on all 168 it reads 93/146.
 
+- **The 主文 outcome, read one sentence at a time — and the whole-block ruler it
+  replaces measured at 58–72% false positives, all in the same direction.**
+  2026-08-15. Reserving a seat for a judgment that states no sum (below) stops
+  the block implying nobody lost, but it cannot say who did. Saying that needs a
+  ruler, and the obvious ruler — test the whole 主文 for 「駁回」 — is far worse
+  than it looks. Measured on the shipped 386:
+  「之訴駁回」 anywhere calls **121/386** a loss and is wrong on **87 of them
+  (71.9%)**; the broader 「駁回」 anywhere calls **200/386** a loss and is wrong on
+  **115 (57.5%)**. **Every single disagreement runs the same way — a win or a
+  part-win read as a loss** (83 and 101 of them are 一部勝訴一部敗訴). For a block
+  whose purpose is to tell a reader that someone lost, that is the worst
+  available direction of error.
+  **The cause is a LEVEL error, not a shortage of markers.** `award_amounts` has
+  always decided sentence by sentence; the outcome was testing the block. A 主文
+  is a list of operative orders and the case result is a function of that list.
+  `judgment_text.outcome()` now splits with the SAME `_sentences()`, classifies
+  each sentence, and folds them: relief (確認 / 准 / 不得 / an 應-order against
+  the other side) against refusal (a 駁回 aimed at the mover), with costs,
+  clerical corrections and conditional 補正 orders excluded because they decide
+  nothing. Distribution over the 386: **granted 119 (30.8%), partly 101 (26.2%),
+  denied 85 (22.0%), denied_procedurally 1, unreadable 80 (20.7%)** — the last
+  splitting into 35 judgments with no 主文 heading at all and 45 procedural or
+  非訟 裁定 (裁判費核定, 移送管轄, 輔助宣告). Those stay unreadable on purpose:
+  VERBATIM or nothing applies to verdicts too.
+  **An outcome that does not name WHO is misleading on its own.** An appellate
+  主文 is relative to position — 「被告應給付原告」 and 「上訴人應給付被上訴人」 are
+  the same grammar pointing opposite ways — so `Outcome` carries the mover and
+  respondent as the 主文 itself names them, and `describe()` refuses to render a
+  verdict without them.
+  **Eight regression seeds, each a case the whole-block ruler gets wrong**, all
+  pinned against the shipped corpus in `tests/test_judgment_outcome.py`: the
+  先位/備位 split (`MLDV,114,家繼訴,56`), two outright appellate wins written as
+  「原判決廢棄。被上訴人在第一審之訴駁回」 (`TPHV,114,上,908`, `TPHV,114,上易,270`),
+  two injunctions granted beside a refused 緊急處置 (`IPCV,115,商暫,4/5`), two
+  partial appeals whose amount sits inside the 廢棄 clause and whose partial loss
+  is written 「其餘上訴駁回」 (`TCDV,114,簡上,160`, `CTDV,115,簡上,4`), and a
+  procedural 「再審之訴駁回」 (`SCDV,114,再易,12`). 8/8.
+  **What is NOT claimed.** 8/8 on the seeds and 0 suspicious calls in an audit of
+  all 204 granted/denied verdicts is not a validated recall — there is no
+  hand-labelled outcome set for the 386, so the classifier's own error rate is
+  unmeasured above the seeds. The published number here is the OLD ruler's false
+  positive rate, which needs no such set: a judgment ordering 被告應給付原告 X 元
+  is not a loss, and that can be checked by reading it. The classifier is not
+  wired into the rendered block for the same reason — see the seat reservation
+  below, which needs no outcome label at all.
+
+- **The judgment block was sorting the losses out of sight, and now keeps one
+  seat for them.** 2026-08-15. `related_judgments` widens to `limit * 3` = 9
+  candidates and then re-sorts them all by 「states an award」 — `not ()` is True,
+  `not (260000,)` is False, and False sorts first. `judgment_text.award_amounts`
+  returns an empty list for a 主文 reading 原告之訴駁回. Multiply the two: as soon
+  as three of the nine parse a sum, every seat a reader sees carries one, and the
+  code has actively hidden the cases that ordered nothing.
+  Measured over the 168 real sessions, 146 of which are shown judgments:
+  **102/146 sessions saw at least one judgment with no stated sum; with the last
+  of the three seats reserved for one, 129/146 do.** The remaining 17 have no
+  such judgment among their nine candidates, and the seat is then filled by the
+  ordinary rule rather than left blank — a missing row says nothing a reader can
+  check. `dense_fallbacks` 0.
+  **Both published figures are untouched, by construction.** 「First judgment
+  states a sum」 stays **93/146** and 案由 same-family stays **51/88 (58%)**,
+  because the reservation only ever touches seat 3 and both figures are defined
+  on seat 1. Seat 1 was the alternative and would have broken the first figure by
+  definition. It is also why this is compatible with 「making the award sort a
+  tiebreak」 being rejected below: the sort's primary key is not touched.
+  **What it deliberately does NOT do.** The seat carries no win/loss label. Its
+  note says 「此判決主文未載明給付金額」 and prints the 主文 verbatim beside it — a
+  fact about the text the reader can check, not a claim about the case. A
+  classifier would need a ruler that has itself been graded, and the obvious
+  whole-block substring ruler already measures ~12% false positives on the
+  shipped 386, every one of them labelling a win as a loss. The price of staying
+  cheap is stated plainly: this cannot tell a reader 「N people lost under these
+  same articles」. It can only stop the block from implying that nobody did.
+
 - **A reasoning model was losing its whole answer inside `<think>`, and the fix
   proves the Tier-1 numbers are model-independent.** 2026-08-06. This file
   carried qwen3 as blocked: 「needs either a larger generation budget or Ollama's
@@ -1690,6 +1764,58 @@ what the gap costs a reader.
 **What this harness refuses to measure.** Whether the reasoning is right.
 `--answers` prints the 分析研判 beside the recorded outcome for a human, and
 scores nothing — the same refusal `golden_set.py` makes about legal correctness.
+
+**The 4/8 above was one hand-read of one run. Blind-coded, it is 2/8 — and the
+same measurement now exists on the EXTERNAL labels, where it is 3/16.**
+2026-08-15. `python -m legal_agent.evaluation.realworld --direction`.
+The old figure could as easily have been 2/8 or 6/8, and until it re-ran, no
+change could be judged against it. It is re-runnable now WITHOUT auto-grading
+legal reasoning, which this harness still refuses. Two blind codings and
+arithmetic:
+
+  1. the answers are generated (llama3.1:8B, temperature 0) into
+     `evals/realworld_answers_run1.json`, which carries the opening description
+     and the generated text and **deliberately no `real_outcome`**;
+  2. they are coded from that file alone into `evals/realworld_answer_coding_run1.json`;
+  3. the outcome side is coded from the case record afterwards, into
+     `outcome_direction` in `evals/realworld_v1.json`;
+  4. `compare_directions` counts.
+
+The order is checkable rather than asserted: the commit adding the answer
+coding touches no outcome field, and the outcome coding lands in a later one.
+Nobody is ever asked whether they AGREE with an answer — both sides go into one
+closed vocabulary (`asker` / `other_party` / `split` / `unclear`) and a value
+outside it aborts the whole run, the same rule and the same reason as
+`check_labels`. Every coded value carries the span it rests on, so a reader
+checks the quote instead of trusting the coder.
+
+| pool | opposed | same direction | at least one side non-committal |
+|---|---|---|---|
+| official — 臺中市公寓大廈, 16 cases | **3/16** | 7/13 | 3/16 |
+| derived — 臺北市租賃, 8 cases | **2/8** | 4/7 | 1/8 |
+
+**`flagged_count` was 0 on all five inversions, and tier was `normal` on all
+five.** Sharper than the anecdote it replaces: the five cases that DID draw a
+flag (apt-01, apt-11, apt-13, apt-15, apt-16 — 13 flags between them) and the
+five that pointed the wrong way do not overlap at all. On this set the citation
+check and the direction error are disjoint. That is what it means for four axes
+to certify that a cited article is REAL and never that it APPLIES.
+
+**This is the split the file complained about, closed.** hit@k was external
+(公寓大廈, official labels) while direction was internal (租賃, labels this
+project inferred) — direction had only ever been measured on the weakest label
+in the set. It is now measured on both pools, reported separately, never pooled.
+
+**Limits.** `unclear` is a real answer and stays available: 4 of 24 answers do
+not commit (two contradict themselves inside one paragraph, one never reaches
+the question asked, one refused at `tier=insufficient`), and forcing a coder to
+pick a side there would manufacture the number. `split` against a committed
+side counts as neither agreement nor inversion, which is why 同向 has a smaller
+denominator than the case count. One model, one run, one coder — the coder is
+the weak point and is stated as such: coding both sides in sequence is weaker
+than two people, and only the ORDER (answers first, outcomes after) is
+guaranteed here. Re-coding the answer side by a second hand is the obvious next
+strengthening.
 
 **Bad ruler, caught by its own guard.** The first draft labelled 民法 as
 「中華民國民法」 (the corpus spells 刑法 that way, 民法 not) and published a

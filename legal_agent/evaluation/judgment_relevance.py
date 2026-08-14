@@ -316,8 +316,9 @@ def run_judgment_relevance(path, conn=None, k: int | None = None) -> RelevanceRe
 if __name__ == "__main__":   # python -m legal_agent.evaluation.judgment_relevance
     import sys as _sys
 
-    from legal_agent.evaluation import enable_utf8_stdout
+    from legal_agent.evaluation import enable_utf8_stdout, print_corpus_fingerprint
 
     enable_utf8_stdout()
+    print_corpus_fingerprint()
     target = _sys.argv[1] if len(_sys.argv) > 1 else "evals/real_sessions.json"
     print(run_judgment_relevance(target).render())
