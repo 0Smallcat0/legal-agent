@@ -1761,6 +1761,53 @@ never certified that it APPLIES, and the 11,904/11,904 figure is a measurement o
 the former. Both statements were always true; this is the first run that shows
 what the gap costs a reader.
 
+**Held out: 25/27 was 93% on the cases it was tuned on. On 17 cases from the
+same domain that nothing was ever tuned against, it is 52%.** 2026-08-15. Two
+more government tables of the same kind were found and added — 臺北市公寓大廈爭
+議事件調處委員會調處案例 (13 of its 14 cases) and 新北市公寓大廈爭議事件調處委員會
+—調處案件參考 (4 of its 7). Both publish a per-case 法令依據 column, so the
+labels are again the deciding body's and not this project's.
+
+| set | cases | hit@k | silent misses |
+|---|---|---|---|
+| 臺中市 — **tuned on**, two vocabulary passes | 16 | **25/27 (93%)** | 0/16 |
+| 臺北市 — held out | 13 | **8/19 (42%)** | 5/13 |
+| 新北市 — held out | 4 | **4/4 (100%)** | 0/4 |
+| held out, combined | 17 | **12/23 (52%)** | 5/17 |
+| official pool, all | 33 | **37/50 (74%)** | 5/33 |
+
+`dense_fallbacks` 0. **The published 25/27 is not withdrawn and is not wrong —
+it is the number on that set. It is now labelled as what it always was: a
+measurement taken after two rounds of vocabulary curation against those exact
+16 cases.** 52% is what the same pipeline scores where no such round happened,
+and it is the figure to quote about unseen disputes. This is the single most
+informative row this file has ever carried, and the reason the split is stated
+rather than the pooled 74%.
+
+**Why the misses, which is more useful than the rate.** Three of the five
+silent misses expect the SAME article — §10, 共用部分之修繕、管理、維護及其費用
+分擔, the most-cited article in all three tables. It fails to reach the window
+for 「管道間漏水費用分擔」, 「地下室停車場修繕動用社區基金」 and 「樓下寵物店空調造成
+樓地板溫差」, each time under a window full of neighbours: §11, §12, §16, §33,
+and in one case 民法's 連帶債務 block (§273–§282) end to end. A fourth expects
+§29 for a committee-handover dispute and the window returns §20 — literally the
+handover article, and arguably the better one, but the committee cited §29 and
+relabelling to match the retriever is exactly what CONTRIBUTING forbids. The
+fifth (「雙方都報備為主任委員」) expects six procedural articles at once and gets
+§28/§29/§29-1/§55 — adjacent, none of the six.
+
+**These cases are NOT being tuned on, and that is the point.** Curating
+vocabulary rows until §10 surfaces would move 52% toward 93% and would destroy
+the only held-out number in this file. Anyone tempted should read the row above
+it first. If those rows are ever added, this table has to gain a THIRD set.
+
+**No `outcome_direction` on the new 17.** The person who built these entries had
+already read part of the disposition column while checking the PDFs' structure,
+so direction coding on them would not be blind. Adding a non-blind set would
+contaminate `--direction`; measuring their direction needs a coder who has not
+read their outcomes. The gap is recorded in each source's
+`why_no_outcome_direction` field rather than papered over.
+
 **What this harness refuses to measure.** Whether the reasoning is right.
 `--answers` prints the 分析研判 beside the recorded outcome for a human, and
 scores nothing — the same refusal `golden_set.py` makes about legal correctness.
