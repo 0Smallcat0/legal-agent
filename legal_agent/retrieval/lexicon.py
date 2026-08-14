@@ -1880,21 +1880,46 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
 
     # Money: the fee, who bears it, and the committee's duty to show the books.
     # 「不說明計算方式」/「不公布帳目」 is the everyday form of §20's 公告 duty.
-    (("管理費", "公共基金", "帳目", "帳務", "公布明細", "計算方式", "繳費標準"),
+    # 分擔一半/各分擔 is added deliberately narrow. Bare 分擔 was dropped in the
+    # first pass for being generic; the phrase a resident actually types when a
+    # committee bills them for a shared-part repair is 「要我分擔一半」, and that
+    # is the §10-but-書 vs §36-職務 question (apt-05).
+    (("管理費", "公共基金", "帳目", "帳務", "公布明細", "計算方式", "繳費標準",
+      "分擔一半", "各分擔", "分擔費用", "要我分擔"),
      ("其費用由公共基金支付或由區分所有權人按其共有之應有部分比例分擔之",
       "應定期將公共基金或區分所有權人、住戶應分擔或其他應負擔費用之收支、保管及運用情形公告",
+      "共有及共用部分之清潔、維護、修繕及一般改良",
       "收益、公共基金及其他經費之收支、保管及運用")),
 
     # Altering shared space. The committee redrawing a car park, a resident
     # parking a water tank on a planter, a claim of perpetual use of a shared
     # bay — all of them are 共用部分 use, and §9/§11 are where that lives.
+    # Handover from the developer. 建商/建設公司/公設點交 is the everyday name for
+    # 起造人 and the §57 檢測+移交 duty; none of those words appear in the article.
+    (("起造人", "建商", "建設公司", "見證移交", "公設點交", "竣工"),
+     ("起造人應將公寓大廈共用部分、約定共用部分與其附屬設施設備",
+      "設施設備使用維護手冊及廠商資料、使用執照謄本、竣工圖說")),
+
     # 佔用 is NOT a trigger: measured, it fired on a co-owned-land session and
     # displaced 民法§821 — 共有物 and 共用部分 are different institutions and
     # only the second one lives in this statute.
-    (("共用部分", "公共設施", "公設", "公共空間", "花台", "中庭",
+    # 公共設施 is NOT a trigger here: it is also how a committee describes what
+    # the DEVELOPER owes it, and once this row grew the §10/§23 clauses those
+    # outranked §57 and turned the handover case into a silent miss. The handover
+    # row above keeps it; a genuine shared-space complaint still fires on
+    # 共用部分/停車格/花台/堆放/永久使用.
+    (("共用部分", "公設", "公共空間", "花台", "中庭",
       "停車格", "劃設", "堆放", "永久使用"),
      ("各區分所有權人按其共有之應有部分比例，對建築物之共用部分及其基地有使用收益之權",
       "住戶對共用部分之使用應依其設置目的及通常使用方法為之",
+      # §23 rides here, not only in the 規約 row: someone claiming a permanent
+      # right to a shared bay is asking a 規約 question without knowing the word.
+      # Measured — apt-13 named 停車格 and 永久使用 and nothing else.
+      "非經載明於規約者，不生效力",
+      # §10's first half. A committee redrawing shared space is exercising the
+      # 管理 power, not repairing anything, so the 管理費 row's cost clause never
+      # reached it (apt-01).
+      "共用部分、約定共用部分之修繕、管理、維護，由管理負責人或管理委員會為之",
       "共用部分及其相關設施之拆除、重大修繕或改良，應依區分所有權人會議之決議為之")),
 
     # A resident breaking the rules, and what the committee must do before the
@@ -1915,11 +1940,17 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("他住戶因維護、修繕專有部分、約定專用部分或設置管線，必須進入或使用其專有部分或約定專用部分時，不得拒絕",
       "管理負責人或管理委員會因維護、修繕共用部分或設置管線")),
 
-    # Handover from the developer. 建商/建設公司/公設點交 is the everyday name for
-    # 起造人 and the §57 檢測+移交 duty; none of those words appear in the article.
-    (("起造人", "建商", "建設公司", "見證移交", "公設點交", "竣工"),
-     ("起造人應將公寓大廈共用部分、約定共用部分與其附屬設施設備",
-      "設施設備使用維護手冊及廠商資料、使用執照謄本、竣工圖說")),
+    # Whose floor, whose ceiling. §12 puts the repair bill for a shared wall or
+    # slab on BOTH sides, and it is the article every 樓上樓下滲水 dispute turns
+    # on — but the word 樓地板 is the statute's, not the resident's, who says
+    # 陽台/龜裂/滲水/壁癌 and names the floor above. 漏水 is deliberately NOT a
+    # trigger: it is the single most common word in this corpus's sessions and
+    # already reaches §10/§12 on its own lexical merit.
+    (("樓地板", "共同壁", "龜裂", "滲水", "壁癌", "樓上住戶", "樓下住戶",
+      "樓上的", "樓下的", "上下樓"),
+     ("專有部分之共同壁及樓地板或其內之管線，其維修費用由該共同壁雙方或樓地板上下方之區分所有權人共同負擔",
+      "他住戶因維護、修繕專有部分、約定專用部分或設置管線，必須進入或使用其專有部分或約定專用部分時，不得拒絕")),
+
 )
 
 

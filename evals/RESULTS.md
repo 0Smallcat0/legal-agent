@@ -32,8 +32,8 @@
 > this project wrote. On 16 disputes that already ended, labelled by the article
 > the *deciding authority itself* cited, the governing article first reached the
 > window **7 times out of 27**, with **9 of the 16 cases answered anyway with none
-> of them** and no refusal. Eight curated 社區治理 vocabulary rows took that to
-> **19/27 and one silent miss**, with every other published figure unmoved. The
+> of them** and no refusal. Two passes of curated 社區治理 vocabulary took that to
+> **25/27 and zero silent misses**, with every other published figure unmoved. The
 > verifier stayed green through both runs, because green means "this article
 > exists, is in force, and was not misquoted", never "this article governs your
 > problem". §7 has both runs and the four triggers that had to be narrowed.
@@ -1599,12 +1599,12 @@ case turns on is the one the deciding body printed in its own 法令依據 colum
 
 **臺中市公寓大廈爭議事件調處案例（113年）, 16 cases, 27 governing articles**
 
-| what | first run | after the 社區治理 lexicon rows |
-|---|---|---|
-| governing article reached the window | 7/27 (26%) | **19/27 (70%)** |
-| cases answered with NONE of them, no refusal | 9/16 | **1/16** |
-| cases refused | 0/16 | 0/16 |
-| dense fallbacks | 0 | 0 (hybrid fully participating) |
+| what | first run | + 社區治理 rows | + second pass |
+|---|---|---|---|
+| governing article reached the window | 7/27 (26%) | 19/27 (70%) | **25/27 (93%)** |
+| cases answered with NONE of them, no refusal | 9/16 | 1/16 | **0/16** |
+| cases refused | 0/16 | 0/16 | 0/16 |
+| dense fallbacks | 0 | 0 | 0 (hybrid fully participating) |
 
 The first run's misses were not random. Everything physical hit — 漏水 (§10, §12),
 外牆 (§10), 拒絕進入受檢 (§6). Everything about governance missed — 規約修訂,
@@ -1640,12 +1640,40 @@ table, not from run-to-run noise); BM25-only **320/356** before and after, twice
 each; golden_v2 **pass 19 / partial 7 / miss 0, 73% strict, tier 29/32, premise
 32/32** — every figure identical to what was already published.
 
-**What is still missed (8 of 27), so nobody reads 70% as done.** §10 in the
-car-park and floor-slab cases and §36 in the roof-leak case lose their seats to
-articles from the same statute that the new rows point at more sharply; §48 (the
-fine) and §3 (the definitions) are articles a lay description never resembles;
-§23 in apt-13 and §12 in apt-16 remain the one case each where nothing governing
-surfaced — apt-16 (陽台圍圃致樓下龜裂) is the last remaining silent miss.
+**The second pass, and the trade it exposed.** Ranking the eight remaining misses
+first was the whole method: none sat in the dense top-3, so the reserved seats
+could not reach them (N was swept to 3 on 2026-07-21 and N≥4 costs a golden case),
+which left vocabulary as the only lever. Four targeted additions, each aimed at a
+named case: §23's 「非經載明於規約者，不生效力」 and §10's 管理 clause moved into the
+共用部分 row (apt-13 said 停車格/永久使用 and never said 規約; apt-01's committee was
+exercising the 管理 power, not repairing anything); 分擔一半/各分擔/要我分擔 as
+triggers plus §36's 「共有及共用部分之清潔、維護、修繕及一般改良」 in the fee row
+(apt-05); and a new 樓地板/共同壁/龜裂/滲水/壁癌 row carrying §12 verbatim (apt-16).
+漏水 was deliberately left out of that row — it is the most common word in these
+sessions and already reaches §10/§12 on its own.
+
+**One addition immediately broke another case, and the fix is the lesson.**
+Widening the 共用部分 row with those two clauses knocked 公寓大廈§57 out of the
+handover case (apt-06), turning a hit into the run's only silent miss. Reordering
+the rows did not help — the expansion-order theory was wrong, and it is recorded
+as wrong. The actual cause was the trigger: `公共設施` is also how a committee
+describes what the DEVELOPER still owes it, so the shared-space clauses were
+being handed to a handover complaint. Removing `公共設施` from that row (apt-13
+still fires on 停車格/永久使用) restored §57 and took the run to **25/27, zero
+silent misses**.
+
+**What is still missed (2 of 27), so nobody reads 93% as done.** §48 in apt-03 is
+the penalty article — a lay description of a dispute never resembles a schedule of
+fines, and no honest trigger points at it. §10 in apt-12 is a window-budget
+problem, not a vocabulary one: that case is labelled with three governing articles
+(§6, §10, §12) and `DEFAULT_K` is 8 seats shared with everything else the query
+pulls; two of the three now surface. Widening k would buy it and is refused here
+for the reason `real_recall` prints every run — the window already carries 5.9
+unexpected articles per session, and that cost is paid by the reader.
+
+Every published figure is unchanged after both passes: `real_recall` **348/356**,
+golden_v2 **pass 19 / partial 7 / miss 0, 73% strict, tier 29/32, premise 32/32**,
+480 tests.
 
 **The finding that matters more than the percentage.** A separate full-pipeline
 run over 8 已結案 rental disputes (llama3.1, temperature 0) produced reasoning

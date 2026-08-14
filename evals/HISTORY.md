@@ -46,11 +46,43 @@ attributed to run-to-run dense noise. It was not noise — it was the broad
 was restricted to the sessions the new rows could actually touch. Cheap
 attribution first; blame variance last.
 
-**Still missed, 8 of 27**: §10 (apt-01 car park, apt-12 floor slab) and §36
-(apt-05 roof leak) lose their seats to same-statute articles the new rows point at
-more sharply; §48 (the fine) and §3 (the definitions) are articles a lay
-description never resembles; §23 (apt-13) and §12 (apt-16) are the two cases where
-nothing governing surfaced, and apt-16 is the last silent miss.
+**Second pass, same day — 19/27 → 25/27, silent misses 1/16 → 0/16.** Ranking the
+eight stragglers first decided the method: dense ranks were 10–48, none inside the
+top-3 the reserved seats can promote (N=3, swept 2026-07-21, N≥4 costs a golden
+case), so vocabulary was the only lever left. Four targeted additions:
+
+- §23's 「非經載明於規約者，不生效力」 and §10's 管理 clause into the 共用部分 row —
+  apt-13 said 停車格/永久使用 and never said 規約; apt-01's committee was exercising
+  the 管理 power, not repairing anything, so the fee row's cost clause never reached it.
+- 分擔一半 / 各分擔 / 要我分擔 as triggers, plus §36's 「共有及共用部分之清潔、維護、
+  修繕及一般改良」, into the fee row (apt-05, billed half a shared-part repair).
+- A new 樓地板 / 共同壁 / 龜裂 / 滲水 / 壁癌 row carrying §12 verbatim (apt-16).
+  漏水 deliberately excluded — the most common word in these sessions, and it
+  already reaches §10/§12 on its own lexical merit.
+
+**A fix that broke a neighbour, and a wrong theory recorded as wrong.** Widening
+the 共用部分 row knocked §57 out of the handover case (apt-06): a hit became the
+run's only silent miss. First hypothesis — expansion order, since both rows matched
+a 4-character trigger and ties break by table position — was tested by moving the
+handover row first. **It changed nothing.** The real cause was the trigger itself:
+`公共設施` is also how a committee describes what the DEVELOPER still owes it, so a
+handover complaint was being handed shared-space clauses. Removing `公共設施` from
+that row (apt-13 still fires on 停車格/永久使用) restored §57: **25/27, 0 silent
+misses**, and the reordering was reverted rather than left in place with a comment
+claiming a fix it never made.
+
+Regression check after the second pass: `real_recall` **348/356**, golden_v2 **pass
+19 / partial 7 / miss 0, 73% strict, tier 29/32, premise 32/32**, 480 tests, ruff
+clean — all identical.
+
+**Still missed, 2 of 27, and one of them on purpose.** §48 (apt-03) is the penalty
+schedule; a lay description of a dispute never resembles a list of fines and no
+honest trigger points at it. §10 (apt-12) is a window-budget problem, not a
+vocabulary one — that case carries three governing articles and `DEFAULT_K` is 8
+seats shared with everything else the query pulls; two of three surface. Widening k
+would buy it and is refused, for the reason `real_recall` prints every run: the
+window already delivers 5.9 unexpected articles per session and the reader pays
+that cost.
 
 ---
 
