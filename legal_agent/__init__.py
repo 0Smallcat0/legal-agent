@@ -38,6 +38,7 @@ __all__ = [
     "Statute",
     "VerificationResult",
     "__version__",
+    "corpus_fingerprint",
     "corpus_path",
     "ensure_corpus",
     "open_corpus",
@@ -66,6 +67,25 @@ def corpus_path() -> Path:
     from legal_agent import config
 
     return Path(config.DB_PATH)
+
+
+def corpus_fingerprint(db_path: str | Path | None = None):
+    """Which corpus this process is reading, and whether all of it is there.
+
+    Returns the resolved database path, the statute row count, the distinct
+    article count, the judgment row count, and the floor the installed package
+    can build on its own. Read-only — it neither builds the corpus nor raises.
+
+        >>> print(legal_agent.corpus_fingerprint().render())
+
+    Worth one line at the top of anything that reports a number. The database
+    is NOT in the repo (it lives under ``LEGAL_AGENT_HOME``), so a script that
+    hardcodes a path can open a stale or half-built copy and report a confident
+    wrong figure with nothing on screen to say so. That has happened twice.
+    """
+    from legal_agent.data.bootstrap import corpus_fingerprint as _fingerprint
+
+    return _fingerprint(Path(db_path) if db_path else None)
 
 
 def ensure_corpus(db_path: str | Path | None = None) -> int:

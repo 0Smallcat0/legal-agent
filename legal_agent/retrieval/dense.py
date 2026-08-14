@@ -19,10 +19,18 @@ Same philosophy as every model in this project:
   * Fusion is RRF (reciprocal rank fusion): rank-based, no score-scale tuning,
     no learned weights — deterministic and explainable.
 
-The corpus index (current slices only) is cached beside the DB:
-    db/dense_bgem3.npy        float32 [N, 1024] L2-normalized
-    db/dense_bgem3.keys.json  [[statute_id, article_no, effective_from], ...]
+The corpus index (current slices only) is cached beside the DATABASE — i.e.
+under `Path(config.DB_PATH).parent`, which is `LEGAL_AGENT_HOME` (the platform
+per-user data dir by default), NOT the repo:
+    <config.DB_PATH>/../dense_bgem3.npy        float32 [N, 1024] L2-normalized
+    <config.DB_PATH>/../dense_bgem3.keys.json  [[statute_id, article_no, effective_from], ...]
 Rebuilt automatically when the corpus's current-slice key set changes.
+
+These two lines used to name a repo-relative `db/` directory, which this module
+has never computed. Such a directory does exist in the checkout and does hold
+files by these names — orphans no code path reaches, already mistaken for the
+live index twice. `legal_agent.corpus_fingerprint()` prints the resolved
+database path; trust it over any path written in prose, this docstring included.
 """
 from __future__ import annotations
 

@@ -170,8 +170,9 @@ def run_honesty_probe(path=DEFAULT_CASES, conn=None) -> ProbeReport:
 if __name__ == "__main__":   # python -m legal_agent.evaluation.honesty_probe [path]
     import sys as _sys
 
-    from legal_agent.evaluation import enable_utf8_stdout
+    from legal_agent.evaluation import enable_utf8_stdout, print_corpus_fingerprint
 
     enable_utf8_stdout()
+    print_corpus_fingerprint()
     target = _sys.argv[1] if len(_sys.argv) > 1 else DEFAULT_CASES
     print(run_honesty_probe(target).render())

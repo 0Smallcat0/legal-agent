@@ -30,3 +30,25 @@ def enable_utf8_stdout() -> None:
     """
     with contextlib.suppress(AttributeError, ValueError):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
+
+
+def print_corpus_fingerprint(db_path=None):
+    """Say which corpus this run reads, and ABORT if it is below the floor.
+
+    Every harness here prints a number, and a number is only as good as the
+    corpus behind it. Two agents have already published figures computed
+    against the wrong database, in both cases with nothing on screen naming
+    which one they had opened.
+
+    Below the floor aborts rather than warns, for the same reason
+    `realworld.check_labels` does: a corpus that cannot hold the article and a
+    label the corpus cannot match are one failure, and it renders as a
+    confident wrong number, not as an error. Above the floor is fine and
+    prints as-is — an overnight harvest legitimately accumulates judgments.
+    """
+    from legal_agent.data.bootstrap import corpus_fingerprint, ensure_corpus
+
+    ensure_corpus(db_path)
+    fingerprint = corpus_fingerprint(db_path)
+    print(fingerprint.render())
+    return fingerprint.require_floor()

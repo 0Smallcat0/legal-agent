@@ -238,9 +238,10 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
 if __name__ == "__main__":   # python -m legal_agent.evaluation.realworld [path]
     import sys as _sys
 
-    from legal_agent.evaluation import enable_utf8_stdout
+    from legal_agent.evaluation import enable_utf8_stdout, print_corpus_fingerprint
 
     enable_utf8_stdout()
+    print_corpus_fingerprint()
     argv = [a for a in _sys.argv[1:] if a != "--answers"]
     want_answers = "--answers" in _sys.argv[1:]
     target = argv[0] if argv else DEFAULT_CASES
