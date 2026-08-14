@@ -1,0 +1,136 @@
+{
+  "what_this_is": "Run 1 of the ANSWER side of the direction measurement. Coded from evals/realworld_answers_run1.json alone — the generated text and the party's opening description, nothing else. The coder had not read any case's real_outcome when this file was written, and the commit that adds it touches no outcome field, so the ORDER is checkable in git history rather than asserted here. The outcome side lives in evals/realworld_v1.json under outcome_direction and is coded from the case record without reading these answers. legal_agent.evaluation.realworld does the comparison; nobody is ever asked whether they agree with an answer.",
+  "run": {
+    "model": "llama3.1:latest (8B, Ollama)",
+    "temperature": 0.0,
+    "answers_file": "evals/realworld_answers_run1.json",
+    "generated": "2026-08-15",
+    "note": "temperature 0 because a grader that samples measures the dice — see AGENTS.md trap 3."
+  },
+  "vocabulary": {
+    "favours": "which side the text says the law backs, read as the conclusion a reader would take away. 'unclear' where the text contradicts itself or never reaches the question actually asked.",
+    "money_to_asker": "does the asker end up better off in money. Being relieved of a charge counts as 'yes' — same pocket. 'not_at_issue' where the dispute is about conduct rather than money."
+  },
+  "coding": {
+    "apt-01-motorcycle-bays": {
+      "favours": "asker",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "管理委員會私自在地下室停車場劃設機車停車格出租的行為不合法，並要求塗銷"
+    },
+    "apt-02-empty-unit-fee": {
+      "favours": "unclear",
+      "money_to_asker": "unclear",
+      "coded_from": "對方的說法站得住腳的是，社區沒有依法遴選管理委員，但這並不影響管理委員會的職權和責任 — never reaches the half-price fee the asker asked about"
+    },
+    "apt-03-reverse-vote": {
+      "favours": "other_party",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "對方的說法站得住腳，因為區分所有權人會議之決議應有區分所有權人三分之二以上"
+    },
+    "apt-04-committee-lawyer-fee": {
+      "favours": "unclear",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "社區的對方說法站不住，因為社區沒有聘請律師的權限，但可以通過決議授權主任委員聘任律師處理 — the two halves point opposite ways"
+    },
+    "apt-05-roof-leak-share": {
+      "favours": "asker",
+      "money_to_asker": "yes",
+      "coded_from": "對方的說法站不住腳，因為公寓大廈管理條例第10條明文規定"
+    },
+    "apt-06-developer-handover": {
+      "favours": "asker",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "法律明文規定了起造人應將公共設施移交給管理委員會或管理負責人，並進行檢測和確認"
+    },
+    "apt-07-fee-calculation": {
+      "favours": "asker",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "對方的說法站不住腳，因為法律明文要求管理負責人或管理委員會應定期將…公告"
+    },
+    "apt-08-glass-facade": {
+      "favours": "other_party",
+      "money_to_asker": "no",
+      "coded_from": "他可以向管理委員會或法院主張住戶應負擔修繕費用（依據公寓大廈管理條例第10條）"
+    },
+    "apt-09-water-tank-planter": {
+      "favours": "asker",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "主張該住戶違反公寓大廈管理條例第16條規定，應予制止"
+    },
+    "apt-10-refuse-inspection": {
+      "favours": "asker",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "對方的說法可能違反公寓大廈管理條例第6條之規定，若拒絕配合檢查修繕事宜"
+    },
+    "apt-11-stairwell-leak": {
+      "favours": "asker",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "對方的說法站不住，對造人家裡浴室漏水造成公共梯間漏水是有可能的"
+    },
+    "apt-12-floor-slab-leak": {
+      "favours": "other_party",
+      "money_to_asker": "no",
+      "coded_from": "對方的說法站得住腳，因為公寓大廈管理條例第12條規定了…由樓地板上下方之區分所有權人共同負擔"
+    },
+    "apt-13-parking-perpetual": {
+      "favours": "unclear",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "他可以向區分所有權人會議或管理委員會申請永久使用…對方的說法站得住腳 — the asker asked whether the practice is lawful and the text takes no side on that"
+    },
+    "apt-14-one-bay-one-vehicle": {
+      "favours": "asker",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "對方的說法站不住腳，因為…這些規定並未出現在任何法律文本中"
+    },
+    "apt-15-fire-panel": {
+      "favours": "asker",
+      "money_to_asker": "not_at_issue",
+      "coded_from": "因此，他們有義務配合改善"
+    },
+    "apt-16-balcony-planter-crack": {
+      "favours": "asker",
+      "money_to_asker": "yes",
+      "coded_from": "13 樓住戶違反了公寀大廈管理條例第16條,造成我家 12 樓的損害"
+    },
+    "rent-01-early-termination": {
+      "favours": "asker",
+      "money_to_asker": "unclear",
+      "coded_from": "對方的說法站不住腳的是,房東沒有提供任何理由或事實證明…這可能違反《租賃住宅市場發展及管理條例第11條》 — names no financial consequence either way"
+    },
+    "rent-02-repair-leak": {
+      "favours": "asker",
+      "money_to_asker": "unclear",
+      "coded_from": "他可以催告房東修繕屋況及附屬設備，若房東於期限內不為修繕者，他得終止契約 — silent on whether the deposit comes back"
+    },
+    "rent-03-electricity": {
+      "favours": "asker",
+      "money_to_asker": "yes",
+      "coded_from": "承租人有權提前終止租賃契約，並不需要支付任何費用"
+    },
+    "rent-04-pet-penalty": {
+      "favours": "asker",
+      "money_to_asker": "yes",
+      "coded_from": "房東不能因為他養寵物而要求他搬走或扣違約金"
+    },
+    "rent-05-deposit-refund": {
+      "favours": "asker",
+      "money_to_asker": "yes",
+      "coded_from": "他可以向仲介主張返還定金（依據民法第249條第一項一）"
+    },
+    "rent-06-paint-cost": {
+      "favours": "split",
+      "money_to_asker": "partial",
+      "coded_from": "油漆費用應由出租人承擔…但仍需償還因增值而增加的費用"
+    },
+    "rent-07-handover-defects": {
+      "favours": "asker",
+      "money_to_asker": "yes",
+      "coded_from": "因此，他的要求站得住腳"
+    },
+    "rent-08-rent-arrears": {
+      "favours": "unclear",
+      "money_to_asker": "unclear",
+      "coded_from": "這個問題我的資料庫沒有涵蓋,建議諮詢律師或換個描述方式 — tier=insufficient, the system refused"
+    }
+  }
+}
