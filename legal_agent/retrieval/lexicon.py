@@ -1827,6 +1827,99 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
      ("私立就業服務機構及其從業人員從事就業服務業務",
       "留置其國民身分證、工作憑證或其他證明文件",
       "扣留求職人財物或收取推介就業保證金")),
+
+    # ── 社區治理 (公寓大廈條例§9, §10, §11, §20, §23, §29, §31, §36, §48, §57) ──
+    # added 2026-08-14, from evals/realworld.py. Measured on 16 government
+    # 調處案 labelled by the committee's own 法令依據 column: the physical half
+    # of this domain already hit (漏水 §10/§12, 外牆 §10, 拒絕受檢 §6) and the
+    # governance half missed every time — 規約, 決議, 委員選任, 管理費計算,
+    # 共用部分的特別約定. The table was grown from noise, rental, labour and
+    # consumer sessions; nobody had ever typed 區分所有權人會議 into it.
+    #
+    # Split into narrow rows rather than one wide one: a committee dispute is
+    # usually about exactly one of 錢 / 權限 / 規約 / 移交, and a single row
+    # would hand all four sets of terms to every one of them.
+
+    # 規約 and what it takes to make a house rule binding. 「非經載明於規約者，
+    # 不生效力」 is the sentence every one of these cases turned on and it appears
+    # in no other article of the corpus.
+    (("規約", "管理公約", "住戶公約", "社區公約", "修改規約", "修訂規約"),
+     ("非經載明於規約者，不生效力",
+      "有關公寓大廈、基地或附屬設施之管理使用及其他住戶間相互關係",
+      "約定專用部分、約定共用部分之範圍及使用主體")),
+
+    # The meeting and its threshold. §31 is the only article stating the quorum.
+    # Bare 決議/表決 are NOT triggers: measured, they fired on a 社團總會 session
+    # and pushed 民法§56 (撤銷總會決議) out of its window. Every 公寓大廈 meeting
+    # dispute names the meeting itself, so the specific words carry the row.
+    # 民法§56 rides in the same row on purpose. A resident challenging a
+    # meeting needs BOTH the quorum rule and the article that lets a court set
+    # the decision aside, and the first draft of this row carried only the
+    # first — measured, that pushed §56 out of a stored session's window. The
+    # remedy and the threshold are one question to the person asking.
+    (("區分所有權人會議", "區權會", "住戶大會", "反向表決"),
+     ("區分所有權人會議之決議，除規約另有規定外",
+      "應有區分所有權人三分之二以上及其區分所有權比例合計三分之二以上出席",
+      "總會之召集程序或決議方法，違反法令或章程時",
+      "社員得於決議後三個月內請求法院撤銷其決議",
+      "區分所有權人會議決議事項之執行")),
+
+    # Who may act for the community, and how they got there. 遴選/連任/留任 is
+    # how people describe a committee election; the statute says 選任、解任.
+    # 管委會/管理委員 are NOT triggers, for the same reason bare 賠 is not one
+    # above: measured on the 168 lived sessions, 管委會 fires in 9 of them, and
+    # in every one it is merely the counterparty of a leak or noise complaint,
+    # not the subject. Handing those sessions 選任、解任、職務 cost 公寓大廈§10
+    # its seat in a stairwell-leak case. An election dispute always names the
+    # election.
+    (("主任委員", "遴選", "連任", "留任", "改選", "選委員", "委員選舉"),
+     ("公寓大廈應成立管理委員會或推選管理負責人",
+      "主任委員、管理委員之選任、解任、權限與其委員人數",
+      "主任委員對外代表管理委員會",
+      "管理委員會之職務如下")),
+
+    # Money: the fee, who bears it, and the committee's duty to show the books.
+    # 「不說明計算方式」/「不公布帳目」 is the everyday form of §20's 公告 duty.
+    (("管理費", "公共基金", "帳目", "帳務", "公布明細", "計算方式", "繳費標準"),
+     ("其費用由公共基金支付或由區分所有權人按其共有之應有部分比例分擔之",
+      "應定期將公共基金或區分所有權人、住戶應分擔或其他應負擔費用之收支、保管及運用情形公告",
+      "收益、公共基金及其他經費之收支、保管及運用")),
+
+    # Altering shared space. The committee redrawing a car park, a resident
+    # parking a water tank on a planter, a claim of perpetual use of a shared
+    # bay — all of them are 共用部分 use, and §9/§11 are where that lives.
+    # 佔用 is NOT a trigger: measured, it fired on a co-owned-land session and
+    # displaced 民法§821 — 共有物 and 共用部分 are different institutions and
+    # only the second one lives in this statute.
+    (("共用部分", "公共設施", "公設", "公共空間", "花台", "中庭",
+      "停車格", "劃設", "堆放", "永久使用"),
+     ("各區分所有權人按其共有之應有部分比例，對建築物之共用部分及其基地有使用收益之權",
+      "住戶對共用部分之使用應依其設置目的及通常使用方法為之",
+      "共用部分及其相關設施之拆除、重大修繕或改良，應依區分所有權人會議之決議為之")),
+
+    # A resident breaking the rules, and what the committee must do before the
+    # authority can fine anyone. 制止 is the statutory verb; people say 檢舉/不理.
+    (("違建", "制止", "勸導無效", "屢勸不聽", "住戶違規"),
+     ("住戶違規情事之制止及相關資料之提供",
+      "並得令其限期改善或履行義務、職務；屆期不改善或不履行者，得連續處罰",
+      "住戶違反第六條第一項規定之協調")),
+
+    # Refusing entry for maintenance — the fire-panel and leak-testing cases.
+    # §6 already fired when the query said 修繕; it did not when the query said
+    # 「不願意配合」, which is how a committee actually describes the same refusal.
+    # Bare 不配合 is NOT a trigger: measured, it fired on a co-owned-land
+    # session (「對方不配合」) and displaced 民法§821. The refusal only means
+    # this article when what is being refused is entry for maintenance.
+    (("不願意配合", "拒絕配合", "拒絕進入", "不讓進", "不給檢查", "不讓修",
+      "受信總機", "消防", "管線檢查"),
+     ("他住戶因維護、修繕專有部分、約定專用部分或設置管線，必須進入或使用其專有部分或約定專用部分時，不得拒絕",
+      "管理負責人或管理委員會因維護、修繕共用部分或設置管線")),
+
+    # Handover from the developer. 建商/建設公司/公設點交 is the everyday name for
+    # 起造人 and the §57 檢測+移交 duty; none of those words appear in the article.
+    (("起造人", "建商", "建設公司", "見證移交", "公設點交", "竣工"),
+     ("起造人應將公寓大廈共用部分、約定共用部分與其附屬設施設備",
+      "設施設備使用維護手冊及廠商資料、使用執照謄本、竣工圖說")),
 )
 
 

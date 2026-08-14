@@ -8,6 +8,52 @@ RESULTS.md; this file is the story of getting them.
 
 ---
 
+## 社區治理語彙 (2026-08-14) — 7/27 → 19/27 on labels nobody here wrote
+
+`evaluation/realworld.py` had just reported its first number: on 16 臺中市
+公寓大廈爭議調處案, labelled by the article the committee itself printed in its
+法令依據 column, the governing article reached the window **7/27**, and **9 of 16**
+cases were answered with none of them and no refusal. The split in the misses was
+the whole diagnosis: every physical dispute hit (漏水 §10/§12, 外牆 §10, 拒絕受檢
+§6) and every governance dispute missed (規約, 決議效力, 委員選任, 管理費計算,
+共用部分特別約定). The 口語→法條 table had been grown from noise, rental, labour
+and consumer sessions and contained no 區分所有權人會議 vocabulary at all.
+
+Eight new rows, statutory side copied verbatim from the articles. Result:
+**19/27 (70%), silent misses 9/16 → 1/16.**
+
+**The four narrowings are the part worth keeping.** The first draft moved the
+external number to 19/27 immediately and quietly cost three hits on
+`real_recall`. Each cause was a trigger naming the *counterparty* instead of the
+dispute — the same mistake the table's own comment about bare 賠 warns against:
+
+| trigger | what it did | fix |
+|---|---|---|
+| `管委會` / `管理委員` | fired in **9 of the 168 lived sessions**, in all 9 as the counterparty of a leak/noise complaint; cost 公寓大廈§10 a stairwell-leak case | dropped; an election dispute names the election (遴選/連任/留任/改選) |
+| bare `決議` / `表決` | pulled §31 into a 社團總會 session, pushing out 民法§56 | dropped — and the row was also **incomplete**, so 民法§56's own wording now rides in it beside §31: challenging a meeting needs the quorum rule *and* the article that voids the decision |
+| `佔用` | displaced 民法§821 in a co-owned-land session | dropped; 共有物 ≠ 共用部分 |
+| bare `不配合` | displaced 民法§821 (「對方不配合」) | narrowed to 不願意配合 / 拒絕配合 / 拒絕進入 / 不讓進 / 不給檢查 / 不讓修 |
+
+After the narrowings every published figure is untouched: `real_recall`
+**348/356** with a per-case diff against the pre-change table showing **zero lost,
+zero gained** (3× in-process, once from a clean process); BM25-only **320/356**
+before and after, twice each; golden_v2 **pass 19 / partial 7 / miss 0, 73%
+strict, tier 29/32, premise 32/32**. 480 tests.
+
+**Measurement trap logged.** An intermediate reading of 345/356 was nearly
+attributed to run-to-run dense noise. It was not noise — it was the broad
+`管委會` trigger, and a six-session diff found it in seconds once the comparison
+was restricted to the sessions the new rows could actually touch. Cheap
+attribution first; blame variance last.
+
+**Still missed, 8 of 27**: §10 (apt-01 car park, apt-12 floor slab) and §36
+(apt-05 roof leak) lose their seats to same-statute articles the new rows point at
+more sharply; §48 (the fine) and §3 (the definitions) are articles a lay
+description never resembles; §23 (apt-13) and §12 (apt-16) are the two cases where
+nothing governing surfaced, and apt-16 is the last silent miss.
+
+---
+
 # Measured results — 2026-07-10
 
 Environment: local, zero paid API. Models via Ollama on an RTX 4060 (8 GB);

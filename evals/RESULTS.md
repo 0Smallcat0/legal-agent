@@ -30,11 +30,13 @@
 >
 > **The limit that outranks the rest.** Every number above is measured on cases
 > this project wrote. On 16 disputes that already ended, labelled by the article
-> the *deciding authority itself* cited, the governing article reached the window
-> **7 times out of 27**, and **9 of the 16 cases were answered anyway with none of
-> them** — no refusal. The verifier stayed green throughout, because green means
-> "this article exists, is in force, and was not misquoted", never "this article
-> governs your problem". §7 has the whole run.
+> the *deciding authority itself* cited, the governing article first reached the
+> window **7 times out of 27**, with **9 of the 16 cases answered anyway with none
+> of them** and no refusal. Eight curated 社區治理 vocabulary rows took that to
+> **19/27 and one silent miss**, with every other published figure unmoved. The
+> verifier stayed green through both runs, because green means "this article
+> exists, is in force, and was not misquoted", never "this article governs your
+> problem". §7 has both runs and the four triggers that had to be narrowed.
 >
 > **The two further limits worth knowing before trusting any of it.** The honesty tier's
 > 「is this in scope」 half is now a list of the statutes we know we lack, so it
@@ -1597,19 +1599,53 @@ case turns on is the one the deciding body printed in its own 法令依據 colum
 
 **臺中市公寓大廈爭議事件調處案例（113年）, 16 cases, 27 governing articles**
 
-| what | number |
-|---|---|
-| governing article reached the window | **7/27 (26%)** |
-| cases answered with NONE of them, no refusal | **9/16** |
-| cases refused | **0/16** |
-| dense fallbacks | 0 (hybrid retrieval fully participating) |
+| what | first run | after the 社區治理 lexicon rows |
+|---|---|---|
+| governing article reached the window | 7/27 (26%) | **19/27 (70%)** |
+| cases answered with NONE of them, no refusal | 9/16 | **1/16** |
+| cases refused | 0/16 | 0/16 |
+| dense fallbacks | 0 | 0 (hybrid fully participating) |
 
-The misses are not random. Everything physical hits — 漏水 (§10, §12), 外牆 (§10),
-拒絕進入受檢 (§6). Everything about governance misses — 規約修訂, 決議效力, 委員
-選任連任, 管理費計算方式, 共用部分使用之特別約定 (§3, §9, §20, §23, §29, §31, §36,
-§48, §57). The vocabulary table was built from noise, rental, labour and consumer
-sessions; nobody ever typed 「區分所有權人會議」 into it. That is a corpus-coverage
-gap with a name and a fix, not a mystery.
+The first run's misses were not random. Everything physical hit — 漏水 (§10, §12),
+外牆 (§10), 拒絕進入受檢 (§6). Everything about governance missed — 規約修訂,
+決議效力, 委員選任連任, 管理費計算方式, 共用部分使用之特別約定. The vocabulary
+table had been grown from noise, rental, labour and consumer sessions; nobody had
+ever typed 「區分所有權人會議」 into it. So the fix was the same instrument as
+2026-07-19: eight hand-curated 口語→法條 rows, every statutory phrase copied
+verbatim from the article it points at.
+
+**Every published number is unchanged, and that was not free.** Four triggers had
+to be narrowed after measurement, each for the reason the table's own comments
+already warned about — a word that names the counterparty rather than the dispute:
+
+- `管委會` / `管理委員` fired in **9 of the 168 lived sessions**, in every one of
+  them as the counterparty of a leak or noise complaint. Handing those sessions
+  選任、解任、職務 cost 公寓大廈§10 its seat in a stairwell-leak case. Removed; an
+  election dispute always names the election (遴選/連任/留任/改選).
+- bare `決議` / `表決` pulled 公寓大廈§31 into a 社團總會 session and pushed out
+  民法§56. Removed — but the same case showed the row was *incomplete*, not just
+  over-broad: someone challenging a meeting needs the quorum rule **and** the
+  article that lets a court set the decision aside, so 民法§56's own wording now
+  rides in that row alongside §31.
+- `佔用` displaced 民法§821 in a co-owned-land session. 共有物 and 共用部分 are
+  different institutions and only the second is in this statute. Removed.
+- bare `不配合` displaced 民法§821 as well (「對方不配合」). The refusal only means
+  §6 when what is refused is entry for maintenance, so the trigger is now
+  不願意配合 / 拒絕配合 / 拒絕進入 / 不讓進 / 不給檢查 / 不讓修.
+
+After those four narrowings: `real_recall` **348/356**, per-case diff against the
+pre-change table showing **zero lost and zero gained** (measured 3× in-process
+plus once from a clean process — an earlier reading of 345 came from the broad
+table, not from run-to-run noise); BM25-only **320/356** before and after, twice
+each; golden_v2 **pass 19 / partial 7 / miss 0, 73% strict, tier 29/32, premise
+32/32** — every figure identical to what was already published.
+
+**What is still missed (8 of 27), so nobody reads 70% as done.** §10 in the
+car-park and floor-slab cases and §36 in the roof-leak case lose their seats to
+articles from the same statute that the new rows point at more sharply; §48 (the
+fine) and §3 (the definitions) are articles a lay description never resembles;
+§23 in apt-13 and §12 in apt-16 remain the one case each where nothing governing
+surfaced — apt-16 (陽台圍圃致樓下龜裂) is the last remaining silent miss.
 
 **The finding that matters more than the percentage.** A separate full-pipeline
 run over 8 已結案 rental disputes (llama3.1, temperature 0) produced reasoning
