@@ -1487,6 +1487,34 @@ python -m legal_agent.evaluation.realworld                         # already-end
   464 tests. The published `50/60 first judgments state an award` is unaffected;
   on all 168 it reads 93/146.
 
+- **The judgment block was sorting the losses out of sight, and now keeps one
+  seat for them.** 2026-08-15. `related_judgments` widens to `limit * 3` = 9
+  candidates and then re-sorts them all by 「states an award」 — `not ()` is True,
+  `not (260000,)` is False, and False sorts first. `judgment_text.award_amounts`
+  returns an empty list for a 主文 reading 原告之訴駁回. Multiply the two: as soon
+  as three of the nine parse a sum, every seat a reader sees carries one, and the
+  code has actively hidden the cases that ordered nothing.
+  Measured over the 168 real sessions, 146 of which are shown judgments:
+  **102/146 sessions saw at least one judgment with no stated sum; with the last
+  of the three seats reserved for one, 129/146 do.** The remaining 17 have no
+  such judgment among their nine candidates, and the seat is then filled by the
+  ordinary rule rather than left blank — a missing row says nothing a reader can
+  check. `dense_fallbacks` 0.
+  **Both published figures are untouched, by construction.** 「First judgment
+  states a sum」 stays **93/146** and 案由 same-family stays **51/88 (58%)**,
+  because the reservation only ever touches seat 3 and both figures are defined
+  on seat 1. Seat 1 was the alternative and would have broken the first figure by
+  definition. It is also why this is compatible with 「making the award sort a
+  tiebreak」 being rejected below: the sort's primary key is not touched.
+  **What it deliberately does NOT do.** The seat carries no win/loss label. Its
+  note says 「此判決主文未載明給付金額」 and prints the 主文 verbatim beside it — a
+  fact about the text the reader can check, not a claim about the case. A
+  classifier would need a ruler that has itself been graded, and the obvious
+  whole-block substring ruler already measures ~12% false positives on the
+  shipped 386, every one of them labelling a win as a loss. The price of staying
+  cheap is stated plainly: this cannot tell a reader 「N people lost under these
+  same articles」. It can only stop the block from implying that nobody did.
+
 - **A reasoning model was losing its whole answer inside `<think>`, and the fix
   proves the Tier-1 numbers are model-independent.** 2026-08-06. This file
   carried qwen3 as blocked: 「needs either a larger generation budget or Ollama's
