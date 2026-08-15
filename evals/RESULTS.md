@@ -1878,6 +1878,88 @@ goodwill and bargaining power rather than by law alone — that makes them a str
 yardstick for a legal answer, though the two decided in court are not.
 Full-pipeline reasoning was read on one model, one run.
 
+## §8 — the seat the user is sitting in
+
+**2026-08-15. The owner brought a live dispute of his own and he is the party
+being complained about. Everything on the noise path was written for the party
+making the complaint, and the half that pointed the wrong way was the
+deterministic half.** The full record, including the predictions written and
+committed before the run, is `journal/2026-08-15-owner-noise-respondent.md`. It
+is a journal entry and not an eval: n=1, unfinished, self-labelled, and — the
+deciding reason — tuning vocabulary for a case and then scoring against that
+same case is the 93%-then-52% loop in §7 rebuilt exactly.
+
+Run end to end twice, `dense_fallbacks` 0, llama3.1:8B at temperature 0, corpus
+at the shipping floor.
+
+| predicted | measured |
+|---|---|
+| the analysis writes him as the complainant | **wrong** — it largely wrote him as the respondent (主張自己沒有製造, 證明自己沒有製造) and even said 對方的說法站得住 |
+| the ladder hands him the complainant's actions | **right, including which rung it recommends** |
+| §72's 不聽禁止 and §793's 但書 are never surfaced | **half wrong** — both reached the page verbatim, and neither was used as a condition the other side must still meet |
+| no deadline appears | **right, for the predicted structural reason** — the noise ladder never called `_deadline_rung` |
+| `flagged_count` 0, tier not `insufficient` | right, and as uninformative as §7 says: the five direction inversions there also had `flagged_count` 0 |
+
+**The ladder is the finding.** With his sentence alone it recommended
+報警(110) — to the person being complained about — with 社維法§72, the article
+that fines him, printed as its 依據. With the same sentence filed into fields it
+marked 管委會 and 報警 已嘗試 off his own words and recommended 調解, then
+存證信函, then 民事訴訟, against the neighbour who had complained about him;
+underneath, a 存證信函 template reading 請停止製造噪音 for him to send. **The
+model's prose was the half that partly got his seat right. The escalation
+ladder — pure Python, the layer this project forbids the model to touch — was
+wrong in both runs and wrong identically.**
+
+What shipped, and what each change cost:
+
+- **the seat is asked and printed** (`triage.classify_stance`, `flow`). Inferred
+  where the sentence says it, asked once in TRIAGE where it does not, re-read
+  every turn so a later 不對,是鄰居投訴我 flips it. `MAX_INTAKE_TURNS` is still 3.
+  The inference renders as 【本次假設】 above the answer, with the fields the
+  answer never got — gaps alone read as 「you did not answer」, and the assumption
+  line is the half that lets a reader see the tool in the wrong chair. Gaps come
+  from `field_keys(ptype)` minus `collected_facts`, never from `asked_keys`,
+  which is empty on the default smart path.
+- **the respondent gets no escalation ladder** (`build_respondent_ladder`). Not
+  an inverted one: there is no cheapest-first escalation for someone who is not
+  asserting a claim, and inventing one so there is something to print is how the
+  wrong-side ladder came about. He gets the conditions the retrieved articles
+  state in their own words and the records he can keep, and the note says plainly
+  why the ladder is absent.
+- **a ban on 你沒事 verdicts** in `stage3.SYSTEM_PROMPT`, at the same level as the
+  existing ban on the model stating periods. The reason is the statute: §72 fines
+  不聽禁止者, so a reader who concludes the other side has not met the requirement
+  and therefore ignores the next warning supplies the missing element himself.
+  **It cost something, and the cost is recorded rather than buried: the golden
+  run attaches reference judgments in 7/32 cases against 10/32 before, 3 with an
+  award against 6.** That is the counts-only line, not a published figure, and it
+  reproduced identically on a second run at temperature 0 — so it is the ban's
+  effect, not harness spread. Everything scored stayed put: pass 19 / partial 7 /
+  miss 0, tier 29/32, premise 32/32.
+- **one vocabulary row** for the respondent's wording. Triggers are compounds
+  only (被投訴, 投訴我, 說我太吵, 來勸導), never a bare 檢舉 — that word is also
+  how a 勞資 or 消費 session describes going to the authority. The terms are the
+  conditions the articles state themselves: 不聽禁止, 經制止而不遵從, 按土地形狀,
+  each verbatim in the corpus. **The test a row must pass is whether it could be
+  written by reading the statutes alone, before seeing any case** — §7 is what
+  the other kind costs. After it: `real_recall` 348/356 with the window still
+  8.0 sent / 5.9 unexpected, and `realworld` **byte-identical** to the run
+  before, so the held-out 12/23 did not move. What it buys: on 我被投訴太吵,
+  收到管委會的通知 all three governing articles now reach the window; §793 could
+  not before, because its row keys on 樓上/樓下/隔壁/鄰居, none of which a
+  respondent says.
+- **the noise ladder quotes deadlines at all.** It ignored `retrieved` entirely,
+  so the one scenario with a hand-built ladder was the only one that never
+  surfaced a period. A respondent gets the same sentences under 對方主張權利的期
+  間, not recommended and carrying no verdict either way.
+
+**What is still wrong, stated rather than fixed.** The three governing articles
+reach his window on the lexicon's reserved seats at score 0.0 — BM25 and the
+dense half both rank them below 民法§409 (贈與) and 消保法§17. Retrieval does not
+find them; the vocabulary table carries them. And nothing here measures whether
+the answer is right for him: this is one unfinished case with no outcome, and it
+is not allowed to become a ruler.
+
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:

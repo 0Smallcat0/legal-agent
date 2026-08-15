@@ -44,6 +44,14 @@ DONE_PHRASES = ("請幫我分析", "請分析", "開始分析", "幫我看", "�
 # bought paperwork, not accuracy.
 MAX_INTAKE_TURNS = 3
 
+# Field keys → what to call them on the page. A key the map does not carry is
+# printed as itself: a missing label must never hide a missing field.
+FIELD_LABELS = {
+    "problem": "問題描述", "goal": "你想達成什麼", "timeline": "時間經過",
+    "noise_type": "噪音類型", "timing": "時段與頻率", "building_type": "建築型態",
+    "impact": "受到的影響", "evidence": "證據", "actions_taken": "已採取的行動",
+}
+
 
 def wants_analysis(message: str) -> bool:
     """True when the user is asking to stop answering and get the diagnosis."""
@@ -62,6 +70,12 @@ class SessionState:
     intake_turns: int = 0          # answers taken so far (cap: MAX_INTAKE_TURNS)
     pending_key: str | None = None  # field the LAST turn asked directly (smart intake)
     asked_keys: set[str] = field(default_factory=set)  # never ask the same field twice
+    # Which side of the complaint the user is on — "complainant" | "respondent" |
+    # None. Inferred where the sentence says it, asked once where it does not,
+    # and re-read on every later turn so the user can simply say it is the other
+    # way round. None is a real value and renders as an UNCONFIRMED assumption.
+    stance: str | None = None
+    asked_stance: bool = False
 
 
 @dataclass
@@ -80,6 +94,11 @@ class PipelineResult:
     solution_text: str             # Stage 4: rendered escalation ladder
     solution_ladder: SolutionLadder
     stage3: Stage3Result         # full Stage 3 result, for deeper access
+    # The two things the reader cannot otherwise see: which seat this answer
+    # was written for, and which checklist fields it never got. Printing only
+    # the gaps reads as 「you did not answer」; printing the assumption is what
+    # lets him see the system sitting in the wrong chair.
+    assumptions_text: str = ""
     # False when the model returned nothing. A blank answer must never be shown
     # under a confident tier — see stage3.MODEL_EMPTY_TEXT.
     model_output_ok: bool = True
@@ -114,25 +133,57 @@ def _seed_key(problem_type: str | None) -> str:
     return intake.checklist_for(problem_type)[0][0].key
 
 
+def _update_stance(state: SessionState, message: str) -> None:
+    """Read the seat off this turn's words; keep the old one when it says nothing.
+
+    Called on EVERY turn on purpose — 「不是,是我被投訴」 three turns in has to be
+    able to flip it, and that sentence is the whole correction mechanism.
+    """
+    stance = triage.classify_stance(message)
+    if stance is not None:
+        state.stance = stance
+
+
+def _enter_noise_intake(state: SessionState, user_message: str) -> tuple[str, SessionState]:
+    """Move into the noise checklist, seeding it with the user's own words."""
+    state.problem_type = "noise"
+    state.stage = Stage.INTAKE
+    # The opening complaint already describes the noise — the generic
+    # flow seeds `problem` with it, the noise flow did not, so a visitor
+    # who wrote 「樓上小孩跑跳、拖椅子」 was asked 「噪音主要是什麼?」 four
+    # turns running. Their own words are the best answer to that field.
+    state.collected_facts.setdefault("noise_type", state.user_text or user_message)
+    batch = intake.next_questions(state)[:1]
+    state.pending_questions = [f.key for f in batch]
+    state.asked_keys.update(state.pending_questions)
+    return (
+        triage.stance_line(state.stance) + "\n"
+        + "了解,住宅噪音的問題。再問一件事就好——\n" + _render_batch(batch)
+    ), state
+
+
 def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionState]:
     """Advance one turn (Stages 1-2 only). Returns (reply, state). Never retrieves."""
     if state.user_text is None:
         state.user_text = user_message   # remember the opening complaint (Mechanism 5)
+    _update_stance(state, user_message)
 
     if state.stage is Stage.TRIAGE:
+        # The stance question was asked last turn; this turn's words answer it,
+        # and the problem type was already settled before it was asked.
+        if state.asked_stance and state.problem_type == "noise":
+            return _enter_noise_intake(state, user_message)
+
         result = triage.classify(user_message)
         if result.kind == "noise":
             state.problem_type = "noise"
-            state.stage = Stage.INTAKE
-            # The opening complaint already describes the noise — the generic
-            # flow seeds `problem` with it, the noise flow did not, so a visitor
-            # who wrote 「樓上小孩跑跳、拖椅子」 was asked 「噪音主要是什麼?」 four
-            # turns running. Their own words are the best answer to that field.
-            state.collected_facts.setdefault("noise_type", user_message)
-            batch = intake.next_questions(state)[:1]
-            state.pending_questions = [f.key for f in batch]
-            state.asked_keys.update(state.pending_questions)
-            return "了解,住宅噪音的問題。再問一件事就好——\n" + _render_batch(batch), state
+            # Ask ONCE, and only when the sentence does not say which side he is
+            # on. This costs no intake turn: like the discriminating question it
+            # is asked in TRIAGE, so MAX_INTAKE_TURNS is untouched.
+            if state.stance is None and not state.asked_stance:
+                state.asked_stance = True
+                return triage.STANCE_QUESTION, state
+            return _enter_noise_intake(state, user_message)
         if result.kind == "other" or state.asked_discriminating:
             # Generic fallback (spec §3.4): non-noise problems get the shallow
             # intake instead of a dead end — the corpus covers far more than
@@ -193,6 +244,9 @@ def handle_turn_smart(state: SessionState, user_message: str,
     from legal_agent.dialogue.smart_intake import field_keys, run_smart_intake_turn
 
     preface = ""
+    # Every turn, not just the first: the model drives this interview, so the
+    # only place a correction can land is the user's own next sentence.
+    _update_stance(state, user_message)
     if state.user_text is None:
         state.user_text = user_message
         result = triage.classify(user_message)
@@ -230,6 +284,36 @@ def handle_turn_smart(state: SessionState, user_message: str,
     return preface + turn.reply, state
 
 
+def missing_fields(state: SessionState) -> list[str]:
+    """Checklist fields this answer never got.
+
+    `asked_keys` is NOT usable here: it is only updated inside `handle_turn`, so
+    on the default smart path (ollama + SMART_INTAKE) it is empty and every field
+    would read as never-asked. The checklist minus what was collected is the
+    honest set either way.
+    """
+    from legal_agent.dialogue.smart_intake import field_keys
+
+    ptype = state.problem_type or "generic"
+    return [k for k in field_keys(ptype) if k not in state.collected_facts]
+
+
+def assumptions_block(state: SessionState) -> str:
+    """The seat this answer was written for, then the fields it never got.
+
+    The gap list alone reads as 「you did not answer these」 and quietly keeps the
+    system's own assumption out of sight. Measured on the owner's live dispute
+    (journal/, 2026-08-15): the whole page was written for the other side, and
+    nothing on it said so.
+    """
+    lines = [triage.stance_line(state.stance)]
+    missing = missing_fields(state)
+    if missing:
+        labels = "、".join(FIELD_LABELS.get(k, k) for k in missing)
+        lines.append(f"【本次沒有的資訊】{labels}——沒問到或沒答到,結論可能因此不同。")
+    return "\n".join(lines)
+
+
 def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None) -> PipelineResult:
     """Run the Stage 3 -> Stage 4 pipeline. Requires READY_FOR_STAGE3.
 
@@ -247,7 +331,9 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         user_text=state.user_text,
     )
     if state.problem_type == "noise":
-        ladder = solution.build_solution_ladder(state.collected_facts, retrieved=s3.retrieved)
+        ladder = solution.build_solution_ladder(
+            state.collected_facts, retrieved=s3.retrieved, stance=state.stance,
+        )
     else:
         # The articles the ANSWER cited, so the letter and the deadline quote what the
         # case turns on rather than whatever headed the retrieval window.
@@ -275,4 +361,5 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         solution_text=ladder.render(),
         solution_ladder=ladder,
         stage3=s3,
+        assumptions_text=assumptions_block(state),
     )

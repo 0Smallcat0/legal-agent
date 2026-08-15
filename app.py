@@ -248,7 +248,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">525 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">550 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -456,10 +456,24 @@ def _quiet_verification(vs) -> str:
     return line + (_cite_cards(flagged) if flagged else "")
 
 
+def _assumptions_html(result) -> str:
+    """Which seat this answer was written for, and which fields it never got.
+
+    Both belong above the answer: a reader who cannot see the assumption cannot
+    contradict it, and on the owner's own dispute (journal/, 2026-08-15) the
+    whole page was written for the other side with nothing on it saying so.
+    """
+    text = getattr(result, "assumptions_text", "")
+    if not isinstance(text, str) or not text:   # fakes in tests are Mocks
+        return ""
+    return f'<div class="note">{escape(text)}</div>'
+
+
 def _consult_result_html(result) -> str:
     if result.honesty_tier == "insufficient":
         return (
-            _tier_bar("insufficient")
+            _assumptions_html(result)
+            + _tier_bar("insufficient")
             + f'<div class="note">{escape(result.answer)}</div>'
             + '<h4 class="blockhead">一般性處理順序(不涉法條)</h4>'
             + f'<div class="ladder">{escape(_clean_ladder(result.solution_text))}</div>'
@@ -468,6 +482,7 @@ def _consult_result_html(result) -> str:
     # answer to be confident about, and a green 「充分」 bar over a blank page is
     # the worst thing this demo can show — so the failure takes the bar instead.
     parts = [
+        _assumptions_html(result),
         _tier_bar(result.honesty_tier) if getattr(result, "model_output_ok", True)
         else '<div class="verdict insufficient">模型未產生回答——下方條文仍可直接閱讀</div>'
     ]
