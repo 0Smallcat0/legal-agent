@@ -1964,6 +1964,17 @@ is not allowed to become a ruler.
 
 Each of these looked obviously right and lost on the numbers:
 
+- **marking 「…者」 as a statutory condition.** §8 found the thresholds reaching
+  the page and never being read as thresholds, and 「…者」 is how an article names
+  the person a rule bites. **2,066 of the 2,922 articles in force carry it — 71%.**
+  That is the register of Chinese statutory drafting, not a marker: highlighting
+  seven articles in ten highlights nothing. 「但…不在此限」 shipped instead
+  (`legal_agent/data/statute_text.py`), because it is delimited at both ends by
+  the statute itself — 223 articles, and the 2 that carry 不在此限 without 但 are
+  MISSED rather than mis-marked. Low recall was chosen deliberately there for
+  `award_amounts`' reason: silence beats a wrong number, and the verbatim article
+  is on the page either way.
+
 - **asking the semantic axis a second, inverted question and flagging only when
   both agree.** The theory was that the false positives are the model being
   jumpy rather than genuinely reading a contradiction. On a 120-control sample
