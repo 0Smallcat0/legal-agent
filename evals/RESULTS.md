@@ -1953,6 +1953,34 @@ What shipped, and what each change cost:
   surfaced a period. A respondent gets the same sentences under 對方主張權利的期
   間, not recommended and carrying no verdict either way.
 
+**A coverage gap found while testing a presentation hypothesis, and the
+hypothesis died.** 2026-08-15. The idea was that a respondent needs 實務見解
+before 法律明文, so the three-section order should depend on the seat. The
+premise did not survive the first query: **the corpus in force is 法律 2,856,
+命令 65, 行政實務見解 1.** That single 行政實務見解 row is the 新北市 police
+handling principle — the one document the hypothesis was built on IS the entire
+population, so nothing can be tested and there would be nothing to reorder.
+
+The direction has separate support, and it points at coverage rather than
+presentation. Counting articles that contain any of 具名/指證/筆錄/限期/通知/舉發/
+查證/會同/移送/報請:
+
+| level | articles | with procedural wording |
+|---|---|---|
+| 法律 | 2,856 | 320 (**11%**) |
+| 命令 | 65 | 22 (**34%**) |
+| 行政實務見解 | 1 | 1 (n=1) |
+
+Procedural rules — what an authority must do before it acts on someone — live
+lower in the hierarchy, at roughly three times the density, and this corpus is
+**2.2% 命令 plus one 實務見解 document**. The material a respondent needs most is
+the material barely present. Adding it would pass the information-flow test
+(「procedural rules live in 命令」 is a fact about the legal system, not about any
+case), but **this entry is the whole of the work: the gap is recorded, not
+filled.** Ingesting a new tier of sources is its own task with its own
+measurement, and starting it here because it was noticed here is exactly the
+scope creep this file exists to prevent.
+
 **What is still wrong, stated rather than fixed.** The three governing articles
 reach his window on the lexicon's reserved seats at score 0.0 — BM25 and the
 dense half both rank them below 民法§409 (贈與) and 消保法§17. Retrieval does not
@@ -1963,6 +1991,17 @@ is not allowed to become a ruler.
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
+
+- **marking 「…者」 as a statutory condition.** §8 found the thresholds reaching
+  the page and never being read as thresholds, and 「…者」 is how an article names
+  the person a rule bites. **2,066 of the 2,922 articles in force carry it — 71%.**
+  That is the register of Chinese statutory drafting, not a marker: highlighting
+  seven articles in ten highlights nothing. 「但…不在此限」 shipped instead
+  (`legal_agent/data/statute_text.py`), because it is delimited at both ends by
+  the statute itself — 223 articles, and the 2 that carry 不在此限 without 但 are
+  MISSED rather than mis-marked. Low recall was chosen deliberately there for
+  `award_amounts`' reason: silence beats a wrong number, and the verbatim article
+  is on the page either way.
 
 - **asking the semantic axis a second, inverted question and flagging only when
   both agree.** The theory was that the false positives are the model being

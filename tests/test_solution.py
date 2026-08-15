@@ -59,7 +59,7 @@ def test_an_article_with_a_period_leads_the_skipped_list():
     only: §949 sat sixth in retrieval order and the list showed five."""
     window = [_11_1, _226, _805, _949]
     block = build_generic_ladder(
-        {"problem": "我買到贓車"}, window, cited=[("民法", "第226條")]
+        {"problem": "我買到贓車"}, window, stance="complainant", cited=[("民法", "第226條")]
     ).also_retrieved
     first = block.split("・")[1]
     assert "民法第805條" in first or "民法第949條" in first
@@ -80,9 +80,9 @@ def test_the_letter_quotes_what_the_answer_cited_not_what_headed_the_window():
     # §949 sits fourth, as it sat sixth in the real 買到贓車 window — outside the three
     # the letter quotes.
     window = [_805, _11_1, _226, _949]
-    plain = build_generic_ladder({"problem": "我買到贓車"}, window)
+    plain = build_generic_ladder({"problem": "我買到贓車"}, window, stance="complainant")
     focused = build_generic_ladder(
-        {"problem": "我買到贓車"}, window, cited=[("民法", "第949條")]
+        {"problem": "我買到贓車"}, window, stance="complainant", cited=[("民法", "第949條")]
     )
     assert "自喪失占有之時起二年以內" not in plain.letter_template.split("四、")[0]
     assert "自喪失占有之時起二年以內" in focused.letter_template
@@ -94,7 +94,7 @@ def test_the_letter_template_is_rendered_and_quotes_the_law_verbatim():
     """Measured: 「見 letter_template」 pointed at something render() never printed and
     neither run.py nor app.py picked up — the reader was sent to a page that did not
     exist. The template now prints, and its 依據 lines are corpus text."""
-    ladder = build_generic_ladder({"problem": "我買到贓車"}, [_949])
+    ladder = build_generic_ladder({"problem": "我買到贓車"}, [_949], stance="complainant")
     out = ladder.render()
     assert "存證信函範本" in out
     assert "非法律意見" in out
@@ -220,20 +220,20 @@ def _statute(sid):
 def test_authority_rung_is_named_from_the_retrieved_statute():
     from legal_agent.dialogue.solution import build_generic_ladder
 
-    labour = build_generic_ladder({}, retrieved=[_statute("勞動基準法")]).render()
+    labour = build_generic_ladder({}, stance="complainant", retrieved=[_statute("勞動基準法")]).render()
     assert "勞工局" in labour and "勞資爭議調解" in labour
 
-    consumer = build_generic_ladder({}, retrieved=[_statute("消費者保護法")]).render()
+    consumer = build_generic_ladder({}, stance="complainant", retrieved=[_statute("消費者保護法")]).render()
     assert "1950" in consumer
 
-    rental = build_generic_ladder({}, retrieved=[_statute("租賃住宅市場發展及管理條例")]).render()
+    rental = build_generic_ladder({}, stance="complainant", retrieved=[_statute("租賃住宅市場發展及管理條例")]).render()
     assert "住宅" in rental and "調處" in rental
 
 
 def test_authority_rung_falls_back_when_the_domain_is_unknown():
     from legal_agent.dialogue.solution import build_generic_ladder
 
-    text = build_generic_ladder({}, retrieved=[_statute("民法")]).render()
+    text = build_generic_ladder({}, stance="complainant", retrieved=[_statute("民法")]).render()
     assert "主管機關申訴/檢舉" in text
 
 
@@ -242,11 +242,11 @@ def test_refusal_recommends_the_free_consultation_not_evidence_gathering():
     # 資料庫沒有涵蓋」 — pointing at 蒐證 as the next step answers nothing.
     from legal_agent.dialogue.solution import build_generic_ladder
 
-    refused = build_generic_ladder({}, retrieved=[]).render()
+    refused = build_generic_ladder({}, stance="complainant", retrieved=[]).render()
     recommended = [line for line in refused.splitlines() if "建議下一步" in line]
     assert recommended and "法律扶助" in recommended[0]
 
-    answered = build_generic_ladder({}, retrieved=[_statute("勞動基準法")]).render()
+    answered = build_generic_ladder({}, stance="complainant", retrieved=[_statute("勞動基準法")]).render()
     recommended = [line for line in answered.splitlines() if "建議下一步" in line]
     assert recommended and "蒐證" in recommended[0]
 
@@ -254,7 +254,7 @@ def test_refusal_recommends_the_free_consultation_not_evidence_gathering():
 def test_generic_ladder_offers_free_legal_help_before_litigation():
     from legal_agent.dialogue.solution import build_generic_ladder
 
-    text = build_generic_ladder({}).render()
+    text = build_generic_ladder({}, stance="complainant").render()
     assert "法律扶助" in text
     assert text.index("法律扶助") < text.index("民事訴訟")
 
