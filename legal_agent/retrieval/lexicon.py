@@ -106,6 +106,19 @@ LEXICON: tuple[tuple[tuple[str, ...], tuple[str, ...]], ...] = (
     # (低頻/震動/很吵), which is what the golden 冷氣機半夜低頻震動 case fires on.
     (("震動", "振動", "低頻"),
      ("發生喧囂、振動及其他與此相類之行為",)),
+    # ── The RESPONDENT's wording (社維法§72, 公寓大廈條例§16 V, 民法§793 但書) ──
+    # Every term on the right is a CONDITION the articles state in their own
+    # words: §72 fines 不聽禁止者, §16 V needs 經制止而不遵從 before a case can be
+    # 報請主管機關處理, and §793's proviso turns on 按土地形狀、地方習慣. All three
+    # are readable off the statutes without seeing any case, which is the test
+    # this row had to pass — the 93% → 52% split is what curating rows against
+    # named cases costs.
+    # Compounds only, never a bare 檢舉/投訴: 檢舉 is also how a 勞資 or 消費
+    # session describes going to the authority, and a bare trigger would pull
+    # noise articles into those windows — the 冷氣/機器 lesson two rows up.
+    (("被投訴", "被檢舉噪音", "投訴我", "檢舉我", "說我太吵", "說我很吵", "嫌我吵",
+      "來勸導", "勸導我", "制止我", "被反映"),
+     ("不聽禁止", "經制止而不遵從", "按土地形狀")),
 
     # ── 勞資 (勞基法§22, §24, §84-1) ──
     (("加班費", "加班", "超時", "責任制"),
