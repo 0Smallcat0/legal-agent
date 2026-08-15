@@ -105,6 +105,12 @@ def _format_result(result) -> str:
     """Format a PipelineResult for the terminal, in the required order."""
     out = ["\n══════════════ 診斷結果 ══════════════"]
 
+    # Which seat this answer was written for, and what it never got. First,
+    # because both change how everything below should be read.
+    assumptions = getattr(result, "assumptions_text", "")
+    if isinstance(assumptions, str) and assumptions:   # fakes in tests are Mocks
+        out.append(assumptions)
+
     # Mechanism 3 — honesty tier / label.
     if result.honesty_tier == "insufficient":
         out.append(f"【資料涵蓋】不足:{result.answer}")

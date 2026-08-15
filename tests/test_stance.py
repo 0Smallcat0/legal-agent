@@ -20,7 +20,9 @@ from legal_agent.dialogue.flow import (  # noqa: E402
     MAX_INTAKE_TURNS,
     SessionState,
     Stage,
+    assumptions_block,
     handle_turn,
+    missing_fields,
 )
 from legal_agent.dialogue.solution import (  # noqa: E402
     build_respondent_ladder,
@@ -201,6 +203,39 @@ def test_empty_beats_a_reversed_ladder_and_says_why():
     ladder = build_respondent_ladder({"noise_type": "半夜關門"}, retrieved=[])
     assert "被投訴的一方" in ladder.note
     assert len(ladder.rungs) == 1 and ladder.rungs[0].key == "records"
+
+
+def test_the_assumption_and_the_gaps_are_printed_together():
+    """Printing only the gaps reads as 「you did not answer」; the assumption line
+    is what lets the reader see the system in the wrong chair."""
+    state = SessionState(problem_type="noise", stance="respondent",
+                         collected_facts={"noise_type": "半夜關門"})
+    block = assumptions_block(state)
+    assert "被投訴的一方" in block
+    assert "時段與頻率" in block and "受到的影響" in block   # labels, not raw keys
+    assert "噪音類型" not in block                          # the one field he gave
+
+
+def test_the_gap_list_is_empty_when_every_field_was_collected():
+    state = SessionState(
+        problem_type="noise", stance="complainant",
+        collected_facts=dict.fromkeys(
+            ("noise_type", "timing", "building_type", "impact", "evidence",
+             "actions_taken"), "x"),
+    )
+    block = assumptions_block(state)
+    assert "本次沒有的資訊" not in block
+    assert "提出投訴的一方" in block
+
+
+def test_the_gaps_do_not_come_from_asked_keys():
+    """asked_keys is only updated in handle_turn, so on the default smart path it
+    is empty — reading gaps off it would call every field never-asked."""
+    state = SessionState(problem_type="noise", stance="respondent",
+                         collected_facts={"noise_type": "半夜關門"})
+    assert state.asked_keys == set()
+    assert missing_fields(state) == ["timing", "building_type", "impact",
+                                     "evidence", "actions_taken"]
 
 
 def test_the_complainants_ladder_is_untouched():

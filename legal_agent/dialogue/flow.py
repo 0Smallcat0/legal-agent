@@ -44,6 +44,14 @@ DONE_PHRASES = ("請幫我分析", "請分析", "開始分析", "幫我看", "�
 # bought paperwork, not accuracy.
 MAX_INTAKE_TURNS = 3
 
+# Field keys → what to call them on the page. A key the map does not carry is
+# printed as itself: a missing label must never hide a missing field.
+FIELD_LABELS = {
+    "problem": "問題描述", "goal": "你想達成什麼", "timeline": "時間經過",
+    "noise_type": "噪音類型", "timing": "時段與頻率", "building_type": "建築型態",
+    "impact": "受到的影響", "evidence": "證據", "actions_taken": "已採取的行動",
+}
+
 
 def wants_analysis(message: str) -> bool:
     """True when the user is asking to stop answering and get the diagnosis."""
@@ -86,6 +94,11 @@ class PipelineResult:
     solution_text: str             # Stage 4: rendered escalation ladder
     solution_ladder: SolutionLadder
     stage3: Stage3Result         # full Stage 3 result, for deeper access
+    # The two things the reader cannot otherwise see: which seat this answer
+    # was written for, and which checklist fields it never got. Printing only
+    # the gaps reads as 「you did not answer」; printing the assumption is what
+    # lets him see the system sitting in the wrong chair.
+    assumptions_text: str = ""
     # False when the model returned nothing. A blank answer must never be shown
     # under a confident tier — see stage3.MODEL_EMPTY_TEXT.
     model_output_ok: bool = True
@@ -271,6 +284,36 @@ def handle_turn_smart(state: SessionState, user_message: str,
     return preface + turn.reply, state
 
 
+def missing_fields(state: SessionState) -> list[str]:
+    """Checklist fields this answer never got.
+
+    `asked_keys` is NOT usable here: it is only updated inside `handle_turn`, so
+    on the default smart path (ollama + SMART_INTAKE) it is empty and every field
+    would read as never-asked. The checklist minus what was collected is the
+    honest set either way.
+    """
+    from legal_agent.dialogue.smart_intake import field_keys
+
+    ptype = state.problem_type or "generic"
+    return [k for k in field_keys(ptype) if k not in state.collected_facts]
+
+
+def assumptions_block(state: SessionState) -> str:
+    """The seat this answer was written for, then the fields it never got.
+
+    The gap list alone reads as 「you did not answer these」 and quietly keeps the
+    system's own assumption out of sight. Measured on the owner's live dispute
+    (journal/, 2026-08-15): the whole page was written for the other side, and
+    nothing on it said so.
+    """
+    lines = [triage.stance_line(state.stance)]
+    missing = missing_fields(state)
+    if missing:
+        labels = "、".join(FIELD_LABELS.get(k, k) for k in missing)
+        lines.append(f"【本次沒有的資訊】{labels}——沒問到或沒答到,結論可能因此不同。")
+    return "\n".join(lines)
+
+
 def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None) -> PipelineResult:
     """Run the Stage 3 -> Stage 4 pipeline. Requires READY_FOR_STAGE3.
 
@@ -318,4 +361,5 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         solution_text=ladder.render(),
         solution_ladder=ladder,
         stage3=s3,
+        assumptions_text=assumptions_block(state),
     )
