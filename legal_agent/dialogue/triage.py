@@ -82,6 +82,17 @@ STANCE_QUESTION = (
     "先確認一件事,因為它會改變後面每一題的意思:"
     "是別人製造的聲音吵到你,還是有人反映/投訴你這邊太吵?"
 )
+# The same question outside the noise scenario. Four of the five triage domains
+# live on the generic path, and its ladder is the complainant's too: 申訴, 檢舉,
+# 申請理賠, 存證信函, 提告.
+STANCE_QUESTION_GENERIC = (
+    "先確認一件事,因為它會改變後面每一題的意思:"
+    "是你要向對方主張什麼,還是對方在向你要求或指控什麼?"
+)
+
+
+def stance_question(problem_type: str | None) -> str:
+    return STANCE_QUESTION if problem_type == "noise" else STANCE_QUESTION_GENERIC
 
 # "Someone is complaining about ME." Phrases only — a bare 「我被」 or 「投訴」
 # cannot tell the two sides apart, and a wrong stance is worse than no stance.
@@ -92,6 +103,13 @@ _BEING_COMPLAINED_ABOUT = re.compile(
     r"被[^,,。.;;\s]{0,6}?(?:投訴|檢舉|申訴|反映|抗議|舉發|報警)"
 )
 _RESPONDENT = [
+    # Outside the noise scenario the same seat is described differently: the
+    # landlord accused of keeping a deposit, the employer under a complaint, the
+    # seller a buyer reported, the driver blamed for the crash.
+    "告我", "對我提告", "要我賠", "要我付", "要求我賠", "跟我求償", "向我求償",
+    "被求償", "說我違約", "指控我", "申訴我", "投訴我的", "客訴我",
+    "收到存證信函", "收到律師函", "收到支付命令", "收到通知書", "被申訴",
+    "房客說我", "房東說我", "員工說我", "客人說我", "對方說我",
     "投訴我", "檢舉我", "反映我", "抗議我", "說我太吵", "說我很吵", "說我家太吵",
     "說我製造", "嫌我吵", "嫌我太吵", "被投訴", "被檢舉", "被反映", "被抗議",
     "鄰居說我", "樓下說我", "樓上說我", "隔壁說我", "來勸導我", "勸導我",
@@ -103,6 +121,11 @@ _COMPLAINANT = [
     "吵到我", "吵得我", "很吵", "太吵", "受不了", "睡不著", "睡不好", "失眠",
     "影響我", "干擾我", "擾人", "妨害我", "對方", "鄰居", "樓上", "樓下",
     "隔壁", "他們", "對面",
+    # Outside the noise scenario, 「X 沒有對我做 Y」 is how a claimant states it.
+    # Without these rows almost every rent/labour/consumer session would fall to
+    # None and be asked a question its own sentence already answered.
+    "不還我", "不讓我", "不給我", "沒還我", "沒給我", "沒付我", "欠我",
+    "不處理", "不修", "不退", "拒絕", "我要退", "想拿回", "跟我要",
 ]
 
 

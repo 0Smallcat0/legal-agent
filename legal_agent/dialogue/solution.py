@@ -274,8 +274,15 @@ def _also_retrieved_block(retrieved, cited) -> str | None:
 
 def _generic_letter(retrieved, collected_facts: dict) -> str | None:
     """A 存證信函 the reader can copy, with the law quoted VERBATIM from what was
-    retrieved. Only the 主旨 request and the facts are blanks for them to fill —
-    the tool does not draft assertions of fact or law on anyone's behalf."""
+    retrieved. The blanks are the FACTS and the amount; the POSTURE is written in
+    — 主旨 demands that 台端 do something 以維本人權益, and 說明五 announces that the
+    sender will 依法主張權利 if the deadline passes.
+
+    The docstring used to claim 「the tool does not draft assertions of fact or law
+    on anyone's behalf」, and that was false in the same way 「this can never
+    launder an invented statute」 was: true of the statute quotes, not of the
+    letter around them. It is a claimant's letter, and `build_generic_ladder`
+    withholds it from anyone who has not said they are the one asserting."""
     if not retrieved:
         return None
     cited = retrieved[:3]
@@ -475,8 +482,65 @@ _DOMAIN_RUNGS: dict[str, list[Rung]] = {
 }
 
 
+# Rungs that only make sense when the READER is the one asserting a claim.
+# Measured 2026-08-15: every one of the nine domain rungs, plus negotiate,
+# authority and litigation, is phrased 申請 / 申訴 / 檢舉 / 聲請 — 「you go to an
+# authority and assert」. A landlord accused of keeping a deposit, an employer
+# under a labour complaint, a seller a buyer reported, a driver blamed for the
+# crash: each was handed 「report the other side」. 39bdece fixed the noise ladder
+# only, and the generic path is where four of the five triage domains live.
+_ASSERTING_RUNGS = frozenset({
+    "negotiate", "authority", "litigation",
+    "labor_report", "consumer_hotline", "compulsory_insurance",
+})
+
+# Mediation is the exception, and the reason is what mediation IS: both parties
+# attend, either may apply, and applying is not an admission. The wording was
+# the problem, not the step — so these survive with the two-way sentence added
+# rather than being silenced.
+_TWO_WAY_MEDIATION = (
+    ";調解由雙方到場,任何一方都可以聲請,被要求的一方主動聲請不等於承認對方的主張"
+)
+
+# 強制險 is silenced for a different reason than the rest: its next_step names
+# the other party outright — 「向對方投保的產險公司申請理賠」 — so handing it to
+# the person blamed for the crash instructs him to claim against his own
+# counterparty.
+
+NON_ASSERTING_NOTE = (
+    "以下少了幾個步驟,是刻意的。申訴、檢舉、寄存證信函、提起訴訟這些階段是寫給"
+    "「提出主張的一方」的;在還不知道你是哪一方、或你是被要求的一方時端出來,等於"
+    "叫你去對要求你的人採取行動。想看那一組,只要說一句你是提出主張的一方。"
+)
+
+
+def _deadline_for_stance(rung: Rung | None, stance: str | None) -> Rung | None:
+    """A period means opposite things to the two sides, so it is labelled.
+
+    The claimant's version tells him to consider 存證信函 to interrupt the clock;
+    that sentence handed to a respondent is an instruction to act on someone
+    else's deadline.
+    """
+    if rung is None or stance == "complainant":
+        return rung
+    if stance == "respondent":
+        return replace(
+            rung,
+            key="other_side_deadline", title="對方主張權利的期間(條文原文)",
+            next_step="把日期對照條文原文自己看過;本工具不判斷這段期間是否已經經過,"
+                      "也不代表期間經過就對你有利",
+            recommended=False,
+        )
+    return replace(
+        rung,
+        next_step="對照條文確認距離期間屆滿還有多久;這段期間對哪一方有意義,"
+                  "取決於是誰在向誰主張權利",
+    )
+
+
 def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
-                         domain: str | None = None) -> SolutionLadder:
+                         domain: str | None = None,
+                         stance: str | None = None) -> SolutionLadder:
     """Generic escalation ladder for non-noise problems (spec §3.4 fallback):
     same cheapest-first shape, no scenario-specific statutes baked in — the
     legal basis for a generic case is whatever Stage 3 retrieved, and the
@@ -485,7 +549,7 @@ def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
     `cited` is the (statute_id, article_no) pairs the ANSWER cited; when given, the
     deadline and the letter are drawn from those first."""
     retrieved = _answer_first(retrieved, cited)
-    deadline = _deadline_rung(retrieved)
+    deadline = _deadline_for_stance(_deadline_rung(retrieved), stance)
     rungs = [
         Rung(
             "evidence", "蒐證與書面紀錄",
@@ -517,10 +581,31 @@ def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
     ]
     if deadline is not None:
         rungs.insert(0, deadline)
+
+    note, letter = GENERIC_NOTE, _generic_letter(retrieved, collected_facts)
+    if stance != "complainant":
+        kept = []
+        for rung in rungs:
+            if rung.key in _ASSERTING_RUNGS:
+                continue
+            if "調解" in rung.title or "調處" in rung.title:
+                rung = replace(rung, what_it_is=rung.what_it_is + _TWO_WAY_MEDIATION)
+            kept.append(rung)
+        # The recommendation may have gone with a dropped rung, and a ladder with
+        # nothing flagged is better than one flagging a step that is no longer there.
+        if not any(r.recommended for r in kept):
+            for i, r in enumerate(kept):
+                if not r.done:
+                    kept[i] = replace(r, recommended=True)
+                    break
+        rungs = kept
+        # The letter drafts one side's demand — see _generic_letter's docstring.
+        note, letter = f"{NON_ASSERTING_NOTE}\n{GENERIC_NOTE}", None
+
     return SolutionLadder(
         rungs=rungs,
-        note=GENERIC_NOTE,
-        letter_template=_generic_letter(retrieved, collected_facts),
+        note=note,
+        letter_template=letter,
         also_retrieved=_also_retrieved_block(retrieved, cited),
     )
 

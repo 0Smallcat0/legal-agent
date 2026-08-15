@@ -25,6 +25,7 @@ from legal_agent.dialogue.flow import (  # noqa: E402
     missing_fields,
 )
 from legal_agent.dialogue.solution import (  # noqa: E402
+    build_generic_ladder,
     build_respondent_ladder,
     build_solution_ladder,
 )
@@ -236,6 +237,90 @@ def test_the_gaps_do_not_come_from_asked_keys():
     assert state.asked_keys == set()
     assert missing_fields(state) == ["timing", "building_type", "impact",
                                      "evidence", "actions_taken"]
+
+
+# ── the generic path: four of the five triage domains live here ──────────────
+def _generic(stance, domain="labor", retrieved=None):
+    return build_generic_ladder(
+        {"problem": "x"}, retrieved=retrieved or [], domain=domain, stance=stance,
+    )
+
+
+def test_the_generic_ladder_asserting_rungs_are_the_claimants():
+    """All nine domain rungs plus negotiate/authority/litigation are phrased
+    申請 / 申訴 / 檢舉 / 聲請 — 39bdece fixed the noise ladder only."""
+    text = _generic("complainant").render()
+    assert "向勞工局申訴/檢舉" in text and "民事訴訟" in text
+
+
+def test_the_accused_employer_is_not_told_to_report_the_employee():
+    keys = [r.key for r in _generic("respondent").rungs]
+    for banned in ("labor_report", "negotiate", "authority", "litigation"):
+        assert banned not in keys, banned
+
+
+def test_an_unknown_stance_is_silenced_too_because_it_may_be_either():
+    keys = [r.key for r in _generic(None).rungs]
+    assert "labor_report" not in keys and "litigation" not in keys
+
+
+def test_mediation_survives_with_two_way_wording():
+    """The wording was the problem, not the step: both parties attend, either may
+    apply, and applying is not an admission."""
+    rungs = {r.key: r for r in _generic("respondent").rungs}
+    assert "labor_mediate" in rungs
+    assert "不等於承認對方的主張" in rungs["labor_mediate"].what_it_is
+
+
+def test_the_traffic_rung_that_names_the_other_party_is_dropped():
+    text = _generic("respondent", domain="traffic").render()
+    assert "向對方投保的產險公司申請理賠" not in text
+
+
+def test_the_claimants_letter_is_withheld_from_everyone_else():
+    assert _generic("complainant", retrieved=[_72]).letter_template is not None
+    assert _generic("respondent", retrieved=[_72]).letter_template is None
+    assert _generic(None, retrieved=[_72]).letter_template is None
+
+
+def test_the_missing_rungs_are_explained_rather_than_just_absent():
+    note = _generic("respondent").note
+    assert "刻意的" in note and "提出主張的一方" in note
+
+
+def test_something_is_still_recommended_after_the_gate():
+    """The flagged rung may have been one of the dropped ones."""
+    ladder = _generic("respondent")
+    assert sum(1 for r in ladder.rungs if r.recommended) == 1
+
+
+def test_the_generic_deadline_is_relabelled_for_the_respondent():
+    ladder = _generic("respondent", retrieved=[_197])
+    rung = next(r for r in ladder.rungs if r.key == "other_side_deadline")
+    assert "存證信函" not in rung.next_step        # the claimant's move
+    assert "對方主張權利的期間" in rung.title
+
+
+def test_the_generic_stance_question_is_asked_once_and_costs_no_intake_turn():
+    state = SessionState()
+    reply, state = handle_turn(state, "房東跟我說押金的事")
+    assert reply == triage.STANCE_QUESTION_GENERIC
+    assert state.intake_turns == 0 and state.stage is Stage.TRIAGE
+    reply, state = handle_turn(state, "是他要跟我求償")
+    assert state.stance == "respondent" and state.stage is Stage.INTAKE
+
+
+def test_a_plain_claimant_sentence_is_not_asked():
+    state = SessionState()
+    reply, state = handle_turn(state, "網購買到瑕疵品,賣家不讓我退貨")
+    assert reply != triage.STANCE_QUESTION_GENERIC
+    assert state.stance == "complainant" and state.stage is Stage.INTAKE
+
+
+def test_generic_respondent_phrasings():
+    for text in ("房東說我違約要沒收押金", "客人投訴我的店", "對方要我賠修車費",
+                 "收到存證信函說我欠款", "前員工告我"):
+        assert triage.classify_stance(text) == "respondent", text
 
 
 # Verbatim from the corpus.
