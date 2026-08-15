@@ -7,6 +7,7 @@ question instead of answering). The LLM classifier is a later step.
 """
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 # One discriminating question (spec §3.2) for vague openings. Corpus v2 covers
@@ -64,6 +65,80 @@ _OTHER = [
     ("odor", "氣味", ["異味", "惡臭", "臭味", "油煙", "菸味", "煙味", "味道", "燒香"]),
     ("space", "占用空間", ["占用", "佔用", "堆放", "堆置", "侵占", "停車", "雜物", "擋住", "通道"]),
 ]
+
+
+# ── Which side of the complaint the user is on ───────────────────────────────
+# Measured 2026-08-15 on the owner's own live dispute (journal/): every question
+# in NOISE_CHECKLIST, all five rungs of the noise ladder and the 存證信函 template
+# were written for the party MAKING the complaint. Run against a respondent's
+# description the ladder recommended 報警(110) citing 社維法§72 — the article that
+# fines him — and, once his own words were filed into fields, 調解 → 存證信函 →
+# 民事訴訟 against the neighbour who had complained about him.
+#
+# So the seat is inferred where the sentence says it, and ASKED where it does
+# not. It is never assumed silently: an assumption nobody states is one the
+# reader cannot correct.
+STANCE_QUESTION = (
+    "先確認一件事,因為它會改變後面每一題的意思:"
+    "是別人製造的聲音吵到你,還是有人反映/投訴你這邊太吵?"
+)
+
+# "Someone is complaining about ME." Phrases only — a bare 「我被」 or 「投訴」
+# cannot tell the two sides apart, and a wrong stance is worse than no stance.
+#「被鄰居投訴」 does not contain 「被投訴」, and the owner's own sentence is exactly
+# that shape. One pattern covers 被X投訴 / 被X檢舉 / 被X反映 for any short X,
+# instead of a row per neighbour noun.
+_BEING_COMPLAINED_ABOUT = re.compile(
+    r"被[^,,。.;;\s]{0,6}?(?:投訴|檢舉|申訴|反映|抗議|舉發|報警)"
+)
+_RESPONDENT = [
+    "投訴我", "檢舉我", "反映我", "抗議我", "說我太吵", "說我很吵", "說我家太吵",
+    "說我製造", "嫌我吵", "嫌我太吵", "被投訴", "被檢舉", "被反映", "被抗議",
+    "鄰居說我", "樓下說我", "樓上說我", "隔壁說我", "來勸導我", "勸導我",
+    "指控我", "怪我", "我被說", "說我這邊",
+]
+# "The noise is reaching ME." The historical default of this whole path, stated
+# explicitly so that 「neither」 becomes a real answer instead of a silent guess.
+_COMPLAINANT = [
+    "吵到我", "吵得我", "很吵", "太吵", "受不了", "睡不著", "睡不好", "失眠",
+    "影響我", "干擾我", "擾人", "妨害我", "對方", "鄰居", "樓上", "樓下",
+    "隔壁", "他們", "對面",
+]
+
+
+def classify_stance(message: str) -> str | None:
+    """「respondent」 / 「complainant」 / None — None means ASK, never assume.
+
+    Respondent is checked FIRST and wins a tie: 「鄰居說我太吵」 carries 鄰居 and
+    說我太吵 at once, and the complainant list is deliberately the looser of the
+    two because it is the seat this whole path was built in.
+    """
+    low = (message or "").lower()
+    if _BEING_COMPLAINED_ABOUT.search(low) or _hits(low, _RESPONDENT):
+        return "respondent"
+    if _hits(low, _COMPLAINANT):
+        return "complainant"
+    return None
+
+
+STANCE_LABELS = {
+    "respondent": "被投訴的一方(有人反映你這邊太吵)",
+    "complainant": "提出投訴的一方(別人的聲音吵到你)",
+}
+
+
+def stance_line(stance: str | None) -> str:
+    """The one visible line that makes the system's assumption correctable.
+
+    Silence reads as endorsement — the same lesson the verification section
+    learned when it rendered only on a flag.
+    """
+    if stance not in STANCE_LABELS:
+        return (
+            "【本次假設】還沒確認你是哪一方,下面預設你是提出投訴的一方;"
+            "若相反請說一句,我改。"
+        )
+    return f"【本次假設】你是{STANCE_LABELS[stance]}。如果反了,直接說一句,我改。"
 
 
 @dataclass(frozen=True)
