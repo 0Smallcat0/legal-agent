@@ -587,6 +587,22 @@ def build_respondent_ladder(collected_facts: dict, retrieved=None) -> SolutionLa
             "把上面每一句對照你的實際情形逐條看過;有疑問時以條文原文與律師意見為準",
             False, True,
         ))
+    # A period in these articles is the OTHER side's clock, and that is exactly
+    # how it is labelled. Handing a respondent 「你要在二年內…」 would be the same
+    # error as the ladder: a deadline printed to the wrong party reads as an
+    # instruction to act on it.
+    deadlines = _deadline_sentences(retrieved)
+    if deadlines:
+        quoted = ";".join(f"{ref}「{sentence}」" for ref, sentence in deadlines[:3])
+        rungs.append(Rung(
+            "other_side_deadline", "對方主張權利的期間(條文原文)",
+            f"以下期間出現在本案檢索到的條文原文中,逐字引用:{quoted}。"
+            "這是對方主張權利的期間,不是你要做什麼的期限;起算日與是否中斷因個案而異",
+            tuple(ref for ref, _ in deadlines[:3]),
+            "免費", "立刻", "低",
+            "把日期對照條文原文自己看過;本工具不判斷這段期間是否已經經過,"
+            "也不代表期間經過就對你有利", False, False,
+        ))
     rungs.append(Rung(
         "records", "保存你這一側的紀錄",
         "把已經發生的事寫下來並留存:何時被反映、誰來過、你當下在做什麼、你如何回應",
@@ -635,6 +651,16 @@ def build_solution_ladder(collected_facts: dict, retrieved=None,
         if not r.done:
             rungs[i] = replace(r, recommended=True)
             break
+
+    # The noise ladder ignored `retrieved` entirely, so the one scenario with a
+    # hand-built ladder was also the only one that never surfaced a period —
+    # measured on the owner's live run, where no deadline appeared anywhere and
+    # the reason was structural rather than a judgement that none applied.
+    # A deadline is the only thing here that cannot be repaired once missed, so
+    # it leads, exactly as it does in the generic ladder.
+    deadline = _deadline_rung(retrieved)
+    if deadline is not None:
+        rungs = [deadline, *(replace(r, recommended=False) for r in rungs)]
 
     return SolutionLadder(
         rungs=rungs,

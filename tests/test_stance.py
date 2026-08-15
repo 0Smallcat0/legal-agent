@@ -238,6 +238,48 @@ def test_the_gaps_do_not_come_from_asked_keys():
                                      "evidence", "actions_taken"]
 
 
+# Verbatim from the corpus.
+_197 = _Article(
+    "民法", "第197條",
+    "因侵權行為所生之損害賠償請求權，自請求權人知有損害及賠償義務人時起，"
+    "二年間不行使而消滅。",
+)
+
+
+def test_the_noise_ladder_now_surfaces_a_deadline_at_all():
+    """It ignored `retrieved` entirely, so the one scenario with a hand-built
+    ladder was the only one that never quoted a period."""
+    ladder = build_solution_ladder(
+        {"building_type": "公寓大廈"}, retrieved=[_197, _72]
+    )
+    assert ladder.rungs[0].key == "deadline"
+    assert ladder.rungs[0].recommended is True
+    assert "二年間不行使而消滅" in ladder.render()
+
+
+def test_the_respondent_gets_the_period_as_the_other_sides_clock():
+    ladder = build_solution_ladder(
+        _RESPONDENT_FACTS, retrieved=[_197, _793], stance="respondent"
+    )
+    keys = [r.key for r in ladder.rungs]
+    assert "other_side_deadline" in keys and "deadline" not in keys
+    rung = ladder.rungs[keys.index("other_side_deadline")]
+    assert "對方主張權利的期間" in rung.title
+    assert rung.recommended is False        # it is not his to act on
+    assert "二年間不行使而消滅" in rung.what_it_is
+
+
+def test_the_respondents_period_is_not_turned_into_a_you_are_safe_verdict():
+    ladder = build_solution_ladder(
+        _RESPONDENT_FACTS, retrieved=[_197], stance="respondent"
+    )
+    # The note says the tool will NOT tell him 這樣不會被罰, so the check belongs
+    # where a verdict would live: the rungs.
+    rungs = "".join(r.title + r.what_it_is + r.next_step for r in ladder.rungs)
+    assert "不會被罰" not in rungs and "沒事" not in rungs
+    assert "時效已過" not in rungs
+
+
 def test_the_complainants_ladder_is_untouched():
     text = build_solution_ladder(
         {"building_type": "公寓大廈", "actions_taken": "報過警"}, retrieved=[_72]
