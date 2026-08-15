@@ -59,9 +59,12 @@ class SolutionLadder:
     letter_template: str | None = None
     also_retrieved: str | None = None
     specific_venue_suspected: bool = False
+    # The complainant's heading is an escalation promise. A respondent is not
+    # escalating anything, and the heading is the first line he reads.
+    header: str = "建議處理順序(由低成本 → 高成本;打官司是最後手段):"
 
     def render(self) -> str:
-        lines = ["建議處理順序(由低成本 → 高成本;打官司是最後手段):"]
+        lines = [self.header]
         for i, r in enumerate(self.rungs, 1):
             tags = []
             if r.done:
@@ -522,13 +525,100 @@ def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
     )
 
 
-def build_solution_ladder(collected_facts: dict, retrieved=None) -> SolutionLadder:
+# ── The respondent's side ────────────────────────────────────────────────────
+# Measured 2026-08-15 on the owner's own live dispute (journal/): run against the
+# party being complained about, this ladder recommended 報警(110) with 社維法§72 —
+# the article that fines him — printed as its 依據; and once his own words were
+# filed into fields it marked 管委會 and 報警 已嘗試 and recommended 調解, then
+# 存證信函, then 民事訴訟 against the neighbour who had complained about him. The
+# 存證信函 template said 請停止製造噪音, for him to send.
+#
+# Nothing here is an inverted ladder. There is no cheapest-first escalation for
+# someone who is not asserting a claim, and inventing one so there is something
+# to print is how the wrong-side ladder came about in the first place. What a
+# respondent can be given is what the statutes themselves say the complaining
+# side must still establish — verbatim, with no conclusion attached.
+
+# Words that mark a CONDITION inside an article rather than a penalty. Every one
+# is readable off 社維法§72, 公寓大廈條例§16 and 民法§793 without seeing any case:
+# 不聽禁止者 / 經制止而不遵從者 / 但其侵入輕微…不在此限 / 情節重大. 具名 comes from
+# the police handling principle, which states who must identify themselves before
+# a case is 移送法辦.
+_THRESHOLD_WORDS = (
+    "不聽禁止", "經制止", "不遵從", "不在此限", "情節重大", "具名", "限期",
+)
+
+
+def _threshold_sentences(retrieved) -> list[tuple[str, str]]:
+    """(article ref, verbatim sentence) for every retrieved article whose own text
+    states a condition. Quoted, never paraphrased, and never summed into a
+    conclusion about whether the condition is met here."""
+    out: list[tuple[str, str]] = []
+    for statute in retrieved or []:
+        ref = f"{statute.statute_id}{statute.article_no}"
+        for sentence in re.split(r"[。\n]", statute.content or ""):
+            if any(word in sentence for word in _THRESHOLD_WORDS):
+                out.append((ref, sentence.strip()))
+    return out
+
+
+RESPONDENT_NOTE = (
+    "你是被投訴的一方,所以這裡沒有列「下一步該做什麼」的階梯——這個工具的階梯是為"
+    "提出投訴的一方寫的(報警、寄存證信函、聲請調解、提告),端給你會變成叫你對投訴你的"
+    "人做這些事。空著並說明原因,好過給你反方向的指示。\n"
+    "上面列的是條文自己寫的要件與原文,是否成立要看個案;本工具不會、也不能告訴你"
+    "「這樣不會被罰」。重大爭議請諮詢律師。"
+)
+
+
+def build_respondent_ladder(collected_facts: dict, retrieved=None) -> SolutionLadder:
+    """What a respondent can be given: the retrieved articles' own conditions,
+    verbatim, plus the records he himself can keep. No escalation, no letter."""
+    rungs: list[Rung] = []
+    thresholds = _threshold_sentences(retrieved)
+    if thresholds:
+        quoted = ";".join(f"{ref}「{sentence}」" for ref, sentence in thresholds[:4])
+        rungs.append(Rung(
+            "thresholds", "先讀條文自己寫的要件(逐字)",
+            f"以下要件出現在本案檢索到的條文原文中,逐字引用:{quoted}。"
+            "這些是條文寫下的條件,不是本工具對你的案子的判斷",
+            tuple(ref for ref, _ in thresholds[:4]),
+            "免費", "立刻", "低",
+            "把上面每一句對照你的實際情形逐條看過;有疑問時以條文原文與律師意見為準",
+            False, True,
+        ))
+    rungs.append(Rung(
+        "records", "保存你這一側的紀錄",
+        "把已經發生的事寫下來並留存:何時被反映、誰來過、你當下在做什麼、你如何回應",
+        (), "免費", "隨時", "低",
+        _evidence_next_step(collected_facts)
+        or "依時間順序記下每一次被反映的日期、對方說法、你的回應與改善作為,並保留書面或訊息紀錄",
+        False, not thresholds,
+    ))
+    return SolutionLadder(
+        rungs=rungs,
+        note=RESPONDENT_NOTE,
+        letter_template=None,      # the template accuses someone else of noise
+        also_retrieved=None,
+        header="你這一側可以做的事(這不是升級階梯,也不會叫你對投訴你的人採取行動):",
+    )
+
+
+def build_solution_ladder(collected_facts: dict, retrieved=None,
+                          stance: str | None = None) -> SolutionLadder:
     """Build the ranked 住宅噪音 escalation ladder from the collected facts.
 
     Cheapest/lowest-effort first, litigation last; the 管委會 rung is included only
     for 公寓大廈; rungs already attempted are marked done and the first not-done rung
     is flagged as the recommended next step. `retrieved` is unused in v1.
+
+    `stance` is the seat the user is in. A respondent gets `build_respondent_ladder`
+    instead — the rungs below are the complainant's actions, and handing them to
+    the person being complained about tells him to report himself.
     """
+    if stance == "respondent":
+        return build_respondent_ladder(collected_facts, retrieved)
+
     facts = collected_facts or {}
     building_type = facts.get("building_type", "")
     actions_taken = facts.get("actions_taken", "")

@@ -22,6 +22,10 @@ from legal_agent.dialogue.flow import (  # noqa: E402
     Stage,
     handle_turn,
 )
+from legal_agent.dialogue.solution import (  # noqa: E402
+    build_respondent_ladder,
+    build_solution_ladder,
+)
 
 
 # ── inference ────────────────────────────────────────────────────────────────
@@ -129,3 +133,79 @@ def test_silence_does_not_flip_it():
 def test_the_unconfirmed_line_says_what_it_is_defaulting_to():
     line = triage.stance_line(None)
     assert "還沒確認" in line and "提出投訴的一方" in line
+
+
+# ── the ladder must not hand him the complainant's actions ───────────────────
+class _Article:
+    """Minimal stand-in for a retrieved Statute: the ladder reads only these three."""
+
+    def __init__(self, statute_id: str, article_no: str, content: str) -> None:
+        self.statute_id = statute_id
+        self.article_no = article_no
+        self.content = content
+
+
+# Verbatim from the corpus.
+_72 = _Article(
+    "社會秩序維護法", "第72條",
+    "有左列各款行為之一者，處新臺幣六千元以下罰鍰：三、製造噪音或深夜喧嘩，"
+    "妨害公眾安寧者。",
+)
+_793 = _Article(
+    "民法", "第793條",
+    "土地所有人於他人之土地、建築物或其他工作物有瓦斯、蒸氣、臭氣、煙氣、熱氣、"
+    "灰屑、喧囂、振動及其他與此相類者侵入時，得禁止之。但其侵入輕微，或按土地形狀、"
+    "地方習慣，認為相當者，不在此限。",
+)
+
+_RESPONDENT_FACTS = {
+    "noise_type": "半夜走路、關門的聲音,鄰居說太吵",
+    "building_type": "公寓大廈(有管委會)",
+    "actions_taken": "管委會來勸導過,警察來過一次",
+}
+
+
+def test_the_respondent_is_never_told_to_report_write_or_sue():
+    """The measured defect: with these exact facts the complainant ladder marked
+    管委會 and 報警 已嘗試 and recommended 調解 → 存證信函 → 民事訴訟 against the
+    neighbour who had complained about him."""
+    ladder = build_solution_ladder(
+        _RESPONDENT_FACTS, retrieved=[_72, _793], stance="respondent"
+    )
+    # The note names what was withheld and why, so the banned words are checked
+    # where an instruction would live: the rungs themselves, and the heading.
+    instructions = ladder.header + "".join(
+        r.title + r.what_it_is + r.next_step for r in ladder.rungs
+    )
+    for banned in ("報警", "110", "存證信函", "提起民事訴訟", "調解", "訴請排除侵害",
+                   "打官司", "反映管理委員會"):
+        assert banned not in instructions, banned
+
+
+def test_the_respondent_gets_no_letter_template():
+    ladder = build_solution_ladder(
+        _RESPONDENT_FACTS, retrieved=[_72, _793], stance="respondent"
+    )
+    assert ladder.letter_template is None
+    assert "請停止製造噪音" not in ladder.render()
+
+
+def test_the_respondent_is_given_the_articles_own_conditions_verbatim():
+    text = build_respondent_ladder(_RESPONDENT_FACTS, retrieved=[_72, _793]).render()
+    assert "但其侵入輕微" in text and "不在此限" in text
+
+
+def test_empty_beats_a_reversed_ladder_and_says_why():
+    """Nothing is invented to have something to print — the note explains the
+    absence instead."""
+    ladder = build_respondent_ladder({"noise_type": "半夜關門"}, retrieved=[])
+    assert "被投訴的一方" in ladder.note
+    assert len(ladder.rungs) == 1 and ladder.rungs[0].key == "records"
+
+
+def test_the_complainants_ladder_is_untouched():
+    text = build_solution_ladder(
+        {"building_type": "公寓大廈", "actions_taken": "報過警"}, retrieved=[_72]
+    ).render()
+    assert "報警請警察到場" in text and "已嘗試" in text
+    assert "民事訴訟" in text

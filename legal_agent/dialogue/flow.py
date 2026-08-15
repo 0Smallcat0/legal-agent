@@ -288,7 +288,9 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         user_text=state.user_text,
     )
     if state.problem_type == "noise":
-        ladder = solution.build_solution_ladder(state.collected_facts, retrieved=s3.retrieved)
+        ladder = solution.build_solution_ladder(
+            state.collected_facts, retrieved=s3.retrieved, stance=state.stance,
+        )
     else:
         # The articles the ANSWER cited, so the letter and the deadline quote what the
         # case turns on rather than whatever headed the retrieval window.
