@@ -1981,6 +1981,84 @@ filled.** Ingesting a new tier of sources is its own task with its own
 measurement, and starting it here because it was noticed here is exactly the
 scope creep this file exists to prevent.
 
+### §8.1 — four measurements taken to check §8's own claims (2026-08-15)
+
+All four are deterministic, no model, `dense_fallbacks` 0, corpus at the
+shipping floor. Three of them weaken a claim made above rather than support it.
+
+**44% of the headline recall arrives on a reserved seat.** Of the 348 hits in
+`real_recall`, **153 (44%) enter the window at score 0.0** — placed by the
+vocabulary table's reserved seat, with the lexical and dense channels both
+scoring them zero. §8 said this about the owner's three articles; at corpus
+scale it is nearly half the number. **So `hit@k 348/356` measures the retriever
+and the vocabulary table together, and the vocabulary table carries a large
+minority of it.** That is not a defect — reserved seats exist because BM25
+cannot match 「跑跳」 to 「製造噪音」 — but the figure should be read as coverage of
+the pair, not of retrieval.
+
+*(The first run of this measurement reported 42% of 321 hits. It had
+`dense_fallbacks` 168 — Ollama had stopped between harness runs, silently, for
+the second time today. The number above is the re-run at 0. `AGENTS.md` trap 2,
+in the wild, twice.)*
+
+**The honesty tier is not miscalibrated; it is measuring something else.** The
+five silent misses on the held-out set have top scores of 158 / 530 / 685 / 620
+/ 702 against `MARGINAL_SCORE_THRESHOLD = 106.0` — retrieval matched something
+extremely strongly, and the something was the wrong article. **No threshold can
+separate a wrong 702 from a right 700, so recalibrating this statistic is not
+expensive, it is impossible.** The limitation is narrower than 「the thresholds
+were never validated externally」 and must be written as what it is:
+`max(scores)` separates 「nothing matched」 from 「something matched strongly」 —
+`honesty_probe` still refuses 18/20 out-of-scope questions on it — and cannot
+separate 「the right article matched」 from 「a strong neighbour matched」. The
+44% figure above compounds it: when the governing article rides a 0.0 seat, its
+score contributes nothing to `max(scores)` at all.
+
+**Window concentration does not separate them either — measured, then NOT
+shipped.** The hypothesis was that a window packed with neighbours from one
+statute marks the 「right topic, wrong article」 failure. On the 17 held-out
+cases:
+
+| | n | same-statute seats (mean) | range | contiguous run | top score |
+|---|---|---|---|---|---|
+| silent miss | 5 | 6.40 | 5–8 | 2.80 | 522 |
+| hit | 12 | 6.58 | 5–8 | 3.00 | 790 |
+
+The ranges overlap completely and the means differ by 0.2 of a seat. This route
+is closed; no threshold was fitted on these 17 and none should be.
+
+**The respondent vocabulary row cannot be validated by anything in this repo.**
+Its triggers (被投訴, 投訴我, 說我太吵, 來勸導) fire on **0 of the 168 stored
+sessions** — 0 hits and 0 false fires. The false-fire half is the good news and
+matches `real_recall` not moving. The other half is not: the 29 sessions that
+are respondent-shaped are all money and contract disputes (要我賠, 告我,
+說我違約), and **not one stored session is a noise respondent**. So that row's
+trigger side still rests on n=1, and no run available here can change that.
+Stated rather than papered over with 「we ran a check」.
+
+**Stance inference, measured on the same 168.** respondent 12, complainant 71,
+**unknown 85 (51%)**. The 12 were read one by one and all 12 are genuinely the
+accused side (對方要我賠修車費, 管委會告我欠管理費, 鄰居要我拆雨遮, 業者說我違約,
+房東要扣清運費, 社工要我付安養費). Two respondent-shaped sessions were missed and
+they share a shape — `old-card-debt` and `debt-sold-without-notice`, both people
+being pursued for money, classified `complainant` because the loose 對方/他們
+rows fired first. The 51% unknown is the cost of the generic partisan gate: on
+those sessions the asserting rungs are withheld. A live session asks the
+question instead, so the user-visible share is lower than 51% — but that is an
+argument, not a measurement, and the measurement is 51%.
+
+**Provenance of the 168, since it was called unrecorded.** It is recorded, in
+`evals/HISTORY.md` §6: 「six ordinary problems were typed into
+`python -m legal_agent.run` and the whole transcript was read as a user reads
+it」, and §7 adds six more 「chosen to be things the assistant had never seen」.
+The file entered at `c088587` (2026-07-25) with those six named. Two real gaps
+remain: `real_recall.py`'s docstring still said 「nine problems」 for a file that
+now holds 168 (fixed in this commit), and the sessions are the AUTHOR's own
+wording typed as an ordinary person types — not external users, so 「real user
+wording」 overstates it. They were also curated against: the 2026-07-31 commit
+series is one vocabulary row per session whose window came back wrong. **That
+makes 348/356 a tuned-on number in exactly the sense §7 spells out for 25/27.**
+
 **What is still wrong, stated rather than fixed.** The three governing articles
 reach his window on the lexicon's reserved seats at score 0.0 — BM25 and the
 dense half both rank them below 民法§409 (贈與) and 消保法§17. Retrieval does not
