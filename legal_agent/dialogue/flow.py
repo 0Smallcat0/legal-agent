@@ -62,6 +62,12 @@ class SessionState:
     intake_turns: int = 0          # answers taken so far (cap: MAX_INTAKE_TURNS)
     pending_key: str | None = None  # field the LAST turn asked directly (smart intake)
     asked_keys: set[str] = field(default_factory=set)  # never ask the same field twice
+    # Which side of the complaint the user is on — "complainant" | "respondent" |
+    # None. Inferred where the sentence says it, asked once where it does not,
+    # and re-read on every later turn so the user can simply say it is the other
+    # way round. None is a real value and renders as an UNCONFIRMED assumption.
+    stance: str | None = None
+    asked_stance: bool = False
 
 
 @dataclass
@@ -114,25 +120,57 @@ def _seed_key(problem_type: str | None) -> str:
     return intake.checklist_for(problem_type)[0][0].key
 
 
+def _update_stance(state: SessionState, message: str) -> None:
+    """Read the seat off this turn's words; keep the old one when it says nothing.
+
+    Called on EVERY turn on purpose — 「不是,是我被投訴」 three turns in has to be
+    able to flip it, and that sentence is the whole correction mechanism.
+    """
+    stance = triage.classify_stance(message)
+    if stance is not None:
+        state.stance = stance
+
+
+def _enter_noise_intake(state: SessionState, user_message: str) -> tuple[str, SessionState]:
+    """Move into the noise checklist, seeding it with the user's own words."""
+    state.problem_type = "noise"
+    state.stage = Stage.INTAKE
+    # The opening complaint already describes the noise — the generic
+    # flow seeds `problem` with it, the noise flow did not, so a visitor
+    # who wrote 「樓上小孩跑跳、拖椅子」 was asked 「噪音主要是什麼?」 four
+    # turns running. Their own words are the best answer to that field.
+    state.collected_facts.setdefault("noise_type", state.user_text or user_message)
+    batch = intake.next_questions(state)[:1]
+    state.pending_questions = [f.key for f in batch]
+    state.asked_keys.update(state.pending_questions)
+    return (
+        triage.stance_line(state.stance) + "\n"
+        + "了解,住宅噪音的問題。再問一件事就好——\n" + _render_batch(batch)
+    ), state
+
+
 def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionState]:
     """Advance one turn (Stages 1-2 only). Returns (reply, state). Never retrieves."""
     if state.user_text is None:
         state.user_text = user_message   # remember the opening complaint (Mechanism 5)
+    _update_stance(state, user_message)
 
     if state.stage is Stage.TRIAGE:
+        # The stance question was asked last turn; this turn's words answer it,
+        # and the problem type was already settled before it was asked.
+        if state.asked_stance and state.problem_type == "noise":
+            return _enter_noise_intake(state, user_message)
+
         result = triage.classify(user_message)
         if result.kind == "noise":
             state.problem_type = "noise"
-            state.stage = Stage.INTAKE
-            # The opening complaint already describes the noise — the generic
-            # flow seeds `problem` with it, the noise flow did not, so a visitor
-            # who wrote 「樓上小孩跑跳、拖椅子」 was asked 「噪音主要是什麼?」 four
-            # turns running. Their own words are the best answer to that field.
-            state.collected_facts.setdefault("noise_type", user_message)
-            batch = intake.next_questions(state)[:1]
-            state.pending_questions = [f.key for f in batch]
-            state.asked_keys.update(state.pending_questions)
-            return "了解,住宅噪音的問題。再問一件事就好——\n" + _render_batch(batch), state
+            # Ask ONCE, and only when the sentence does not say which side he is
+            # on. This costs no intake turn: like the discriminating question it
+            # is asked in TRIAGE, so MAX_INTAKE_TURNS is untouched.
+            if state.stance is None and not state.asked_stance:
+                state.asked_stance = True
+                return triage.STANCE_QUESTION, state
+            return _enter_noise_intake(state, user_message)
         if result.kind == "other" or state.asked_discriminating:
             # Generic fallback (spec §3.4): non-noise problems get the shallow
             # intake instead of a dead end — the corpus covers far more than
@@ -193,6 +231,9 @@ def handle_turn_smart(state: SessionState, user_message: str,
     from legal_agent.dialogue.smart_intake import field_keys, run_smart_intake_turn
 
     preface = ""
+    # Every turn, not just the first: the model drives this interview, so the
+    # only place a correction can land is the user's own next sentence.
+    _update_stance(state, user_message)
     if state.user_text is None:
         state.user_text = user_message
         result = triage.classify(user_message)
