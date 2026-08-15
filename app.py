@@ -47,6 +47,7 @@ from legal_agent.anti_hallucination.honesty import grade_honesty
 from legal_agent.anti_hallucination.verifier import verify_answer
 from legal_agent.data.bootstrap import ensure_corpus
 from legal_agent.data.database import connect
+from legal_agent.data.statute_text import mark_provisos
 from legal_agent.dialogue.flow import (
     SessionState,
     Stage,
@@ -248,7 +249,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">550 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">573 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -347,8 +348,15 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
             width = max(4, round(sc / top * 100))
             relevance = f"字面相關度 {width}%"
         excerpt = escape(s.content[:56].replace("\n", " "))
+        # The proviso is marked, not explained: 民法§793 reached the owner's page
+        # verbatim and its 但書 — the sentence his whole side turns on — read as
+        # more law-coloured text. Verbatim slice, no interpretation; see
+        # legal_agent/data/statute_text.py for the precision/recall it accepts.
+        body = mark_provisos(s.content, '<mark class="proviso">', "</mark>", escape)
         fulltext = (
-            f'<details><summary>條文全文</summary><pre>{escape(s.content)}</pre></details>'
+            f'<details><summary>條文全文</summary><pre>{body}</pre>'
+            '<p class="meta">標示處為條文自帶的但書(「但…不在此限」),逐字擷取,'
+            '本工具不判斷它是否適用於你的情形。</p></details>'
             if with_fulltext else ""
         )
         cards.append(

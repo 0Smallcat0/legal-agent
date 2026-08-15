@@ -162,6 +162,30 @@ def _enter_noise_intake(state: SessionState, user_message: str) -> tuple[str, Se
     ), state
 
 
+def _enter_generic_intake(state: SessionState, user_message: str,
+                          label: str | None, message: str | None) -> tuple[str, SessionState]:
+    """Move into the generic checklist (spec §3.4 fallback), seeded with their words."""
+    state.stage = Stage.INTAKE
+    seed = _seed_key(state.problem_type)
+    if state.collected_facts.get(seed) is None:
+        # seed with the ORIGINAL complaint plus this turn's clarifying
+        # reply (when they differ) — nothing the user typed is dropped
+        parts = [p.strip() for p in (state.user_text, user_message) if p and p.strip()]
+        state.collected_facts[seed] = " / ".join(dict.fromkeys(parts))
+    batch = intake.next_questions(state)[:1]
+    state.pending_questions = [f.key for f in batch]
+    state.asked_keys.update(state.pending_questions)
+    # A human acknowledgement of what they described, then ONE question.
+    # Triage's message is added only when it carries something actionable
+    # (the personal-safety route's 110 / 113 pointer).
+    opener = f"了解,{label}的問題。" if label else "了解。"
+    preface = f"{message}\n" if message else ""
+    return (
+        preface + triage.stance_line(state.stance) + "\n"
+        + opener + "再問一件事就好——\n" + _render_batch(batch)
+    ), state
+
+
 def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionState]:
     """Advance one turn (Stages 1-2 only). Returns (reply, state). Never retrieves."""
     if state.user_text is None:
@@ -171,8 +195,10 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
     if state.stage is Stage.TRIAGE:
         # The stance question was asked last turn; this turn's words answer it,
         # and the problem type was already settled before it was asked.
-        if state.asked_stance and state.problem_type == "noise":
-            return _enter_noise_intake(state, user_message)
+        if state.asked_stance and state.problem_type:
+            if state.problem_type == "noise":
+                return _enter_noise_intake(state, user_message)
+            return _enter_generic_intake(state, user_message, label=None, message=None)
 
         result = triage.classify(user_message)
         if result.kind == "noise":
@@ -189,22 +215,16 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
             # intake instead of a dead end — the corpus covers far more than
             # noise now. Keep the finer other:* label when triage produced one.
             state.problem_type = result.problem_type or "generic"
-            state.stage = Stage.INTAKE
-            seed = _seed_key(state.problem_type)
-            if state.collected_facts.get(seed) is None:
-                # seed with the ORIGINAL complaint plus this turn's clarifying
-                # reply (when they differ) — nothing the user typed is dropped
-                parts = [p.strip() for p in (state.user_text, user_message) if p and p.strip()]
-                state.collected_facts[seed] = " / ".join(dict.fromkeys(parts))
-            batch = intake.next_questions(state)[:1]
-            state.pending_questions = [f.key for f in batch]
-            state.asked_keys.update(state.pending_questions)
-            # A human acknowledgement of what they described, then ONE question.
-            # Triage's message is added only when it carries something actionable
-            # (the personal-safety route's 110 / 113 pointer).
-            opener = f"了解,{result.label}的問題。" if result.label else "了解。"
-            preface = f"{result.message}\n" if result.message else ""
-            return preface + opener + "再問一件事就好——\n" + _render_batch(batch), state
+            # Same rule as the noise path, and the generic ladder needs it just as
+            # badly: 申訴 / 檢舉 / 申請理賠 / 存證信函 / 提告 are all the asserting
+            # party's moves. Asked in TRIAGE, so the intake budget is untouched.
+            if state.stance is None and not state.asked_stance:
+                state.asked_stance = True
+                preface = f"{result.message}\n" if result.message else ""
+                return preface + triage.STANCE_QUESTION_GENERIC, state
+            return _enter_generic_intake(
+                state, user_message, label=result.label, message=result.message,
+            )
         state.asked_discriminating = True
         return result.question, state
 
@@ -257,6 +277,12 @@ def handle_turn_smart(state: SessionState, user_message: str,
         if result.urgent and result.message:
             preface = f"{result.message}\n"
         state.stage = Stage.INTAKE
+        # Same question, same place in the conversation, both front ends. The
+        # model drives this interview, so the scripted question is returned
+        # directly rather than asked through it — and it costs no intake turn.
+        if state.stance is None and not state.asked_stance:
+            state.asked_stance = True
+            return preface + triage.stance_question(state.problem_type), state
 
     # Was 「noise if noise else generic」, which threw away what triage had just
     # worked out: a car-accident claim and an unreturned deposit both landed on
@@ -344,7 +370,7 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         )
         ladder = solution.build_generic_ladder(
             state.collected_facts, retrieved=s3.retrieved, cited=cited,
-            domain=intake.domain_of(state.problem_type),
+            domain=intake.domain_of(state.problem_type), stance=state.stance,
         )
     return PipelineResult(
         answer=s3.answer,
