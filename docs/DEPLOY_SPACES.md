@@ -155,9 +155,28 @@ body that blows up in `json.load` with `Expecting value: line 1 column 1`, which
 reads like an outage rather than a missing flag. Printing the `sha` alongside the
 stage is what proves the RUNNING Space is running YOUR commit.
 
-`RUNNING_BUILDING` → `RUNNING_APP_STARTING` → `RUNNING` is the healthy sequence
-(about four minutes); anything ending in `_ERROR` carries its reason on the same
-line.
+`RUNNING_BUILDING` → `RUNNING_APP_STARTING` → `RUNNING` is the healthy sequence;
+anything ending in `_ERROR` carries its reason on the same line.
+
+**Budget 30–40 minutes, not four.** Two deploys on 2026-08-15 each sat in
+`RUNNING_APP_STARTING` for roughly half an hour with an empty `errorMessage`
+before reaching `RUNNING`. The old 「about four minutes」 here is what made a
+healthy deploy read as a hung one.
+
+**A 200 from the Space URL is NOT proof your commit is live.** The previous
+container keeps serving throughout the build, so
+`curl -o /dev/null -w "%{http_code}"` answers 200 the whole time — and `sha` in
+the API is the commit being DEPLOYED, not the one running. Ask the app what it
+is instead; the tests badge is a number that changes on almost every deploy:
+
+```bash
+curl -sL https://<space-subdomain>.hf.space/config | grep -o "[0-9]\+ 項測試通過"
+```
+
+Gradio renders the hero client-side, so the page HTML does not carry it —
+`/config` does. That check separates 「still starting」 from 「started, still
+serving the old build」, and both from a real failure. Without it, a stale build
+is indistinguishable from a fresh one.
 
 ## Résumé link
 
