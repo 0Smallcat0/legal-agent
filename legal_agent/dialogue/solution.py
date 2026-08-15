@@ -556,9 +556,18 @@ def _threshold_sentences(retrieved) -> list[tuple[str, str]]:
     out: list[tuple[str, str]] = []
     for statute in retrieved or []:
         ref = f"{statute.statute_id}{statute.article_no}"
+        # Up to TWO sentences per article. 社維法§72 states 不聽禁止者 in both its
+        # first clause (酗酒滋事、謾罵喧鬧) and its second (製造噪音或深夜喧嘩), and
+        # taking one per article printed the first — a real condition, from the
+        # wrong clause. Picking by which clause fits this case would be tuning
+        # against the case; printing both is not.
+        found = 0
         for sentence in re.split(r"[。\n]", statute.content or ""):
+            if found >= 2:
+                break
             if any(word in sentence for word in _THRESHOLD_WORDS):
                 out.append((ref, sentence.strip()))
+                found += 1
     return out
 
 
@@ -577,12 +586,12 @@ def build_respondent_ladder(collected_facts: dict, retrieved=None) -> SolutionLa
     rungs: list[Rung] = []
     thresholds = _threshold_sentences(retrieved)
     if thresholds:
-        quoted = ";".join(f"{ref}「{sentence}」" for ref, sentence in thresholds[:4])
+        quoted = ";".join(f"{ref}「{sentence}」" for ref, sentence in thresholds[:6])
         rungs.append(Rung(
             "thresholds", "先讀條文自己寫的要件(逐字)",
             f"以下要件出現在本案檢索到的條文原文中,逐字引用:{quoted}。"
             "這些是條文寫下的條件,不是本工具對你的案子的判斷",
-            tuple(ref for ref, _ in thresholds[:4]),
+            tuple(dict.fromkeys(ref for ref, _ in thresholds[:6])),
             "免費", "立刻", "低",
             "把上面每一句對照你的實際情形逐條看過;有疑問時以條文原文與律師意見為準",
             False, True,

@@ -177,6 +177,35 @@ externally-coded cases `flagged_count` was 0 on all five direction inversions.
 The verification line was green here while the ladder pointed him at mediation
 against his own complainant.
 
+## The same case after the changes (2026-08-15, later the same day)
+
+Re-run with `stance="respondent"`, same corpus fingerprint, `dense_fallbacks` 0,
+llama3.1:8B at temperature 0. Raw output:
+`2026-08-15-owner-noise-respondent-raw-output-after.txt`.
+
+What the page says now, in order:
+
+1. 【本次假設】你是被投訴的一方(有人反映你這邊太吵)。如果反了,直接說一句,我改。
+2. 【本次沒有的資訊】時段與頻率、建築型態、受到的影響、證據、已採取的行動
+3. the tier reminder, then the three-section answer as before
+4. **先讀條文自己寫的要件(逐字)** — the police handling principle's 「必須有『舉發人
+   具名指證並製作筆錄』…始得以社維法移送法辦」, 公寓大廈條例§16「經制止而不遵從者,
+   得報請…主管機關處理」, 民法§793「但其侵入輕微,或按土地形狀、地方習慣,認為
+   相當者,不在此限」, and 社維法§72's 不聽禁止者
+5. **保存你這一側的紀錄**
+6. the note explaining that the escalation ladder is deliberately absent
+
+Gone: 報警(110), 存證信函 and its template, 調解, 民事訴訟, and the 已嘗試 marks
+that pushed him up the ladder.
+
+Still true and not fixed by any of this: the three governing articles arrive on
+the lexicon's reserved seats at score 0.0. Retrieval does not find them.
+
+The analysis section still says 「對方的說法站得住腳,因為警察機關已經來過一次,
+並且管委會也來勸導過」. The facts that go toward 不聽禁止 are still being read as
+evidence against him rather than named as the condition they are — the model
+half, unchanged by a ladder fix, and the honest state of prediction (c).
+
 ## Why this case is never allowed to be a ruler
 
 n=1, unfinished, and self-labelled — but the deciding reason is the fourth one:
