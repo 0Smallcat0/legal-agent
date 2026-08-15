@@ -81,14 +81,101 @@ five direction inversions — the citation check and the direction error are
 disjoint, so a clean verification line is expected here and proves nothing about
 whether the answer points the right way.
 
-## Run conditions (to be filled by the result commit)
+## Run conditions
 
-- corpus fingerprint:
-- `dense_fallbacks`:
-- provider / model / temperature:
-- retrieval window with scores:
-- honesty tier, `flagged_count`:
-- full output:
+- corpus fingerprint: `statutes 2923 列 / 2922 條號｜judgments 386｜地板 2923/2922/386｜達出貨地板`
+- `dense_fallbacks`: **0** on both runs
+- provider / model / temperature: ollama / `llama3.1:latest` / **0.0**
+- baseline harnesses on the same tree, before any change: pytest 525 passed;
+  mutation 11904/11904 (100%) with 0/2921 false positives; real_recall 348/356
+  (98%) at `dense_fallbacks` 0
+
+Two configurations, both driven straight into `advance_to_stage3` with
+`problem_type="noise"`, so no words were put in his mouth by a scripted intake:
+
+- **Run A — his sentence only.** `noise_type` holds the paraphrase above and
+  nothing else; `building_type` and `actions_taken` are empty.
+- **Run B — the same sentence re-filed into fields.** No new facts: the
+  committee and the police move from the description into `actions_taken`, and
+  「公寓大廈(有管委會)」 into `building_type`, which is what a smart-intake
+  session extracts. This is the configuration that reaches `_TRIED_KEYWORDS`.
+
+| | Run A | Run B |
+|---|---|---|
+| tier | `marginal` | `normal` |
+| `flagged_count` | 0 | 0 |
+| `premise_flag` | False | False |
+| 民法§793 in window | yes, score **0.0** | yes, score **0.0** |
+| 社維法§72 in window | yes, score **0.0** | yes, score **0.0** |
+| 公寓大廈§16 in window | yes, score **0.0** | yes, score **0.0** |
+| top of window | 噪音案件…處理原則 59.5 | 噪音案件…處理原則 114.3 |
+
+All three governing articles arrive on the lexicon's reserved seats at 0.0 in
+both runs, with dense retrieval fully participating. §793 DID reach his window
+this time — in the earlier `dense_fallbacks=1` probe it did not — and it still
+scores 0.0, so it is the reserved seat carrying it, not the retriever.
+
+## Results against the predictions
+
+**(a) Does 分析研判 write him as the complainant? — WRONG, and wrong in the
+direction that flatters the model.** Run A's analysis is written from his seat:
+「他可以向警察機關主張**自己沒有**製造…之聲音」 and 「準備或保存證據…以**證明自己
+沒有**製造噪音」. It even tells him the other side's position holds:
+「對方的說法站得住,因為警察機關已經來過一次,並且管委會也來勸導過」. Run B drifts
+back: 「保存警察機關的處理紀錄和證據,以便於**追究法律責任**」 is complainant
+language. So the prose half handled the seat better than predicted, and
+unevenly between two runs of the same case.
+
+**(b) Which rungs print? — RIGHT, both runs, including the recommended rung.**
+Run A prints four rungs (no `hoa`, because `building_type` is empty) and flags
+**報警請警察到場 👉 建議下一步** — the tool's recommended next step for the
+person being complained about is to call 110 about the noise, with 社維法§72,
+the article that fines him, printed as its 依據. Run B prints five, marks
+`hoa` and `police` 已嘗試 off his own words, and flags **調解 👉 建議下一步**,
+with 存證信函 and 民事訴訟 below it: apply for mediation against the neighbour
+who complained about him, then send that neighbour a demand letter, then sue
+him. Under it, in both runs, the code prints a 存證信函 template whose 主旨 is
+「請停止製造噪音」 and whose 說明 reads 「台端…持續發出【噪音情形】,妨害本人生活
+安寧」 — a letter for him to send, accusing someone else of the thing he is
+accused of.
+
+**This is the finding.** The model's prose was the half that partly got his
+seat right; the deterministic half — the ladder and the letter template, the
+layer this project trusts most and forbids the model to touch — was wrong in
+both runs and wrong identically. The severity order in the task description
+holds up exactly.
+
+**(c) Threshold or penalty? — HALF WRONG, and the half that was wrong is worth
+more than the half that was right.** The threshold text did reach the page:
+Run A's 法律明文 quotes 社維法§72 **including「不聽禁止者」** and 民法§793
+**including the 但書**「但其侵入輕微,或按土地形狀、地方習慣,認為相當者,不在此
+限」, verbatim. Run B quotes §72's 「不聽禁止者」 and 公寓大廈§16's 喧囂 prohibition.
+But no run uses any of them AS a threshold. The 但書 is never connected to him,
+and 「不聽禁止」 is never named as something the other side must still establish
+— in Run A the analysis takes the two facts that would go toward satisfying it
+(the committee came, the police came) and reads them as evidence that 「對方的說
+法站得住」. Retrieved, quoted, and not read: the distinction the prediction was
+written to test.
+
+An unpredicted result belongs here too. Run B's 實務見解 surfaced the 新北市
+police handling principle verbatim: 「必須有舉發人具名指證並製作筆錄…如經相鄰住戶
+具名指證確有妨害安寧情事,始得以社維法移送法辦」. That is a procedural threshold
+on his side, it was found without any vocabulary being added for him, and it is
+the single most useful line either run produced.
+
+**(d) A deadline that only means something to the asserting party? — RIGHT, for
+the predicted structural reason.** No period appears anywhere in either run.
+`build_solution_ladder` never calls `_deadline_rung`; the noise path ignores
+`retrieved` entirely. Nothing decided this was inappropriate for a respondent —
+the noise path simply has no deadline code at all. The model also stated no
+period, which is the system prompt's ban holding.
+
+**Secondary — both right, and both worth nothing on their own.**
+`flagged_count` 0 in both runs, tier `marginal` / `normal`, never
+`insufficient`. Exactly as expected, and exactly as uninformative: on the 24
+externally-coded cases `flagged_count` was 0 on all five direction inversions.
+The verification line was green here while the ladder pointed him at mediation
+against his own complainant.
 
 ## Why this case is never allowed to be a ruler
 
