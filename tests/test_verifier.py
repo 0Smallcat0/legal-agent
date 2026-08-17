@@ -15,7 +15,11 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from legal_agent.anti_hallucination.verifier import verify_answer  # noqa: E402
+from legal_agent.anti_hallucination.verifier import (  # noqa: E402
+    VERIFIED_SCOPE_NOTE,
+    verification_status_line,
+    verify_answer,
+)
 from legal_agent.data.database import connect, init_db  # noqa: E402
 from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
 
@@ -394,6 +398,24 @@ def test_cross_reference_quoted_from_a_retrieved_source_is_not_called_recall(rea
     assert results["第8條"].flagged is False and "交叉引用" in results["第8條"].reason
     assert results["第9條"].flagged is False        # written 第九條 in the source
     assert results["第99條"].flagged is True        # not in the quoted text -> recall
+    # B4 fix: a citation resolved ONLY via the retrieved source's own quoted
+    # text was never independently checked against the corpus, so it must read
+    # as "not verified" (unverified=True) rather than as "verified clean" —
+    # today nothing sets this field, so getattr (not a plain attribute access)
+    # turns the gap into a readable assertion message instead of a bare
+    # AttributeError until verifier.py adds it.
+    assert getattr(results["第8條"], "unverified", None) is True, (
+        "VerificationResult.unverified not yet implemented (verifier.py A2/B4 pending)")
+    assert getattr(results["第9條"], "unverified", None) is True, (
+        "VerificationResult.unverified not yet implemented (verifier.py A2/B4 pending)")
+    # 第99條 is a genuine miss (exists=False, flagged=True) — not merely
+    # unverified — and that distinction must survive the A2 rewrite too.
+    assert getattr(results["第99條"], "unverified", False) is False
+    line = verification_status_line(list(results.values()))
+    assert "全數可回溯至資料庫" not in line, line
+    assert line == (
+        "引用查核:3 筆引用中 1 筆有疑慮,逐筆如下。" + VERIFIED_SCOPE_NOTE
+    ), line
 
 
 def test_bracketed_and_spaced_citation_forms_are_extracted(real_conn):
@@ -418,6 +440,421 @@ def test_amount_before_its_citation_is_still_checked(real_conn):
     ans = "違者可處新臺幣999999元罰鍰,依社會秩序維護法第72條辦理。"
     [r] = verify_answer(ans, [], conn=real_conn, corpus_conn=real_conn)
     assert r.flagged is True and "999999" in r.reason
+
+
+def test_status_line_still_claims_full_traceability_when_every_citation_is_verified_clean(
+    real_conn,
+):
+    # Positive control for the A2 status-line rewrite: it only narrows WHEN
+    # the green line prints (flagged AND unverified must both be empty), it
+    # must not stop printing it for the case that genuinely earns it.
+    ans = "民法第793條規定,土地所有人對於他人土地散發的喧囂、振動侵入,得予禁止。"
+    results = verify_answer(ans, [], conn=real_conn)
+    line = verification_status_line(results)
+    assert line == (
+        f"引用查核:{len(results)} 筆引用全數可回溯至資料庫。{VERIFIED_SCOPE_NOTE}"
+    ), line
+
+
+# ── A1 qualifier-gate regressions ────────────────────────────────────────────
+# _resolve_id's plain `matches = [kid for kid in known_ids if
+# name_run.endswith(kid)]` accepts the LONGEST suffix match unconditionally,
+# which launders any country/era/region prefix in front of a real statute
+# name (「德國民法」 -> 民法) — and a gate strict enough to reject those must not
+# also reject ordinary Chinese legal prose (「房東依民法」、「查民法」…), which a
+# verb-character allowlist design was measured to do on 24/31 real sentences.
+@pytest.fixture
+def particle_collision_conn(tmp_path):
+    """INVENTED corpus: a law and the 「違反…辦法」 that is its OWN enforcement
+    measure — both real corpus statute_ids (違反社會秩序維護法案件處理辦法 is
+    the actual MOJ name of the 社會秩序維護法 enforcement measure). 「違反」 is
+    itself one of the leading particles _strip_particle knows how to peel off,
+    so a resolver that keeps stripping past a match already found (instead of
+    short-circuiting the moment the CURRENT string is a known id) can shear
+    違反社會秩序維護法案件處理辦法 down into 社會秩序維護法. real_conn (9 住宅噪音
+    rows) does not carry the 辦法, hence this dedicated fixture."""
+    db = tmp_path / "pcol.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    conn.executemany(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("社會秩序維護法", "第72條", "測試用條文內容一。", "2010-01-01", None, "法律", None),
+            ("違反社會秩序維護法案件處理辦法", "第3條", "測試用條文內容二。",
+             "2010-01-01", None, "法律", None),
+        ],
+    )
+    conn.commit()
+    yield conn
+    conn.close()
+
+
+def test_particle_collision_statute_and_its_own_processing_measure_do_not_launder(
+    particle_collision_conn,
+):
+    a = verify_answer("依社會秩序維護法第72條,規定內容。", [], conn=particle_collision_conn)[0]
+    assert a.citation.statute_id == "社會秩序維護法"
+    assert a.exists is True and a.flagged is False
+
+    b = verify_answer(
+        "依違反社會秩序維護法案件處理辦法第3條,規定內容。", [], conn=particle_collision_conn,
+    )[0]
+    assert b.citation.statute_id == "違反社會秩序維護法案件處理辦法"
+    assert b.exists is True and b.flagged is False
+
+
+@pytest.fixture
+def prefix_gate_conn(tmp_path):
+    """INVENTED corpus for the qualifier-gate battery: 民法/噪音管制法/中華民國
+    刑法/勞動基準法, each carrying an article a fabricated country/era/region
+    prefix is planted against. 第440條 is the exact article number the A1 spec
+    text uses for its 「民法 第440條」 spaced-citation regression form, so the
+    prose-prefix cases below reuse the same row."""
+    db = tmp_path / "pgate.db"
+    init_db(db)
+    conn = connect(db)
+    seed_source_hierarchy(conn)
+    conn.executemany(
+        "INSERT INTO statutes(statute_id, article_no, content, effective_from, "
+        "effective_to, hierarchy_level, source_url) VALUES (?, ?, ?, ?, ?, ?, ?)",
+        [
+            ("民法", "第440條", "測試用條文內容(440)。", "2000-01-01", None, "法律", None),
+            ("民法", "第441條", "測試用條文內容(441)。", "2000-01-01", None, "法律", None),
+            ("噪音管制法", "第1條", "測試用條文內容(噪音)。", "2000-01-01", None, "法律", None),
+            ("中華民國刑法", "第1條", "測試用條文內容(刑法)。", "2000-01-01", None, "法律", None),
+            ("勞動基準法", "第24條", "測試用條文內容(勞基)。", "2000-01-01", None, "法律", None),
+        ],
+    )
+    conn.commit()
+    yield conn
+    conn.close()
+
+
+_PREFIX_LAUNDERING_CASES = [
+    ("德國民法", "依德國民法第440條,規定內容。"),
+    ("舊民法", "舊民法第440條,規定內容。"),
+    ("中國民法", "中國民法第440條,規定內容。"),
+    ("臺北市噪音管制法", "臺北市噪音管制法第1條,規定內容。"),
+    ("美國中華民國刑法", "美國中華民國刑法第1條,規定內容。"),
+]
+
+
+@pytest.mark.parametrize(
+    "label,answer", _PREFIX_LAUNDERING_CASES, ids=[c[0] for c in _PREFIX_LAUNDERING_CASES],
+)
+def test_country_era_region_prefixed_statute_names_are_flagged(label, answer, prefix_gate_conn):
+    # Measured on today's unmodified _resolve_id (2026-08-17): all five
+    # launder into the real statute via plain endswith and come back
+    # flagged=False, exists=True — a fabricated statute name presented as if
+    # the corpus actually had it. The planted article number is one that IS
+    # real for the base statute (民法 第440條 / 噪音管制法 第1條 / 中華民國刑法
+    # 第1條), so a laundering bug would ALSO get exists=True here — that is
+    # what makes flagged=True below a genuine signal of the qualifier gate,
+    # not an accident of citing an article nobody has.
+    r = verify_answer(answer, [], conn=prefix_gate_conn)[0]
+    assert r.flagged is True, (label, r.citation.statute_id, r.exists, r.reason)
+
+
+_PREFIX_GATE_TRUE_POSITIVES = [
+    ("依民法", "依民法第440條,規定內容。", "民法", "第440條"),
+    ("按民法", "按民法第440條,規定內容。", "民法", "第440條"),
+    ("根據《民法》", "根據《民法》第440條,規定內容。", "民法", "第440條"),
+    ("民法 第440條(空格)", "民法 第440條 規定內容。", "民法", "第440條"),
+    ("前開民法", "前開民法第440條,規定內容。", "民法", "第440條"),
+    ("揆諸民法", "揆諸民法第440條,規定內容。", "民法", "第440條"),
+    ("並依民法", "並依民法第440條,規定內容。", "民法", "第440條"),
+    ("並依據民法", "並依據民法第440條,規定內容。", "民法", "第440條"),
+    ("業依勞動基準法", "業依勞動基準法第24條,規定內容。", "勞動基準法", "第24條"),
+]
+
+
+@pytest.mark.parametrize(
+    "label,answer,expected_id,expected_ano", _PREFIX_GATE_TRUE_POSITIVES,
+    ids=[c[0] for c in _PREFIX_GATE_TRUE_POSITIVES],
+)
+def test_prose_prefixes_before_a_real_statute_name_still_resolve(
+    label, answer, expected_id, expected_ano, prefix_gate_conn,
+):
+    # These forms exist ONLY to make sure a qualifier gate strict enough to
+    # catch the five 「德國民法」-style cases above does not also reject
+    # ordinary Chinese legal prose. Includes the original six 正例 forms
+    # (依/按/根據《》/空格/前開/同法-in-a-dedicated-test-below) plus 揆諸 and the
+    # 並依/並依據 multi-particle-stack cases the Tier2 check-after-each-strip
+    # design exists to solve.
+    r = verify_answer(answer, [], conn=prefix_gate_conn)[0]
+    assert r.citation.statute_id == expected_id, (label, r.citation.statute_id)
+    assert r.exists is True, (label, r.reason)
+    assert r.flagged is False, (label, r.reason)
+
+
+_REAL_CONN_PREFIX_TRUE_POSITIVES = [
+    ("房東依民法", "房東依民法第184條,負損害賠償責任。", "民法", "第184條"),
+    ("房客依民法", "房客依民法第184條,負損害賠償責任。", "民法", "第184條"),
+    ("管委會依公寓大廈管理條例",
+     "管委會依公寓大廈管理條例第16條,住戶不得任意棄置垃圾。", "公寓大廈管理條例", "第16條"),
+    ("警察依社會秩序維護法",
+     "警察依社會秩序維護法第72條,得依法處理。", "社會秩序維護法", "第72條"),
+    ("本件民法", "本件民法第184條規定,負損害賠償責任。", "民法", "第184條"),
+    ("系爭民法", "系爭民法第184條規定,負損害賠償責任。", "民法", "第184條"),
+    ("被告依民法", "被告依民法第184條,負損害賠償責任。", "民法", "第184條"),
+    ("查民法", "查民法第184條,負損害賠償責任。", "民法", "第184條"),
+    ("爰依民法", "爰依民法第184條,負損害賠償責任。", "民法", "第184條"),
+    ("被害人因具民法", "被害人因具民法第184條情事,得請求。", "民法", "第184條"),
+    ("包括民法", "包括民法第184條,規定內容。", "民法", "第184條"),
+    ("上開情形涉及社會秩序維護法",
+     "上開情形涉及社會秩序維護法第72條,得依法處理。", "社會秩序維護法", "第72條"),
+]
+
+
+@pytest.mark.parametrize(
+    "label,answer,expected_id,expected_ano", _REAL_CONN_PREFIX_TRUE_POSITIVES,
+    ids=[c[0] for c in _REAL_CONN_PREFIX_TRUE_POSITIVES],
+)
+def test_prose_prefixes_found_in_real_corpus_text_still_resolve(
+    label, answer, expected_id, expected_ano, real_conn,
+):
+    # 「被害人因具」 and 「包括」 are not invented for this test: they are the
+    # actual prefixes in front of a 民法 cross-reference inside 家庭暴力防治法
+    # 第58-2條 and 消費者保護法第50條's own text. CONTRIBUTING.md requires
+    # verbatim statute text in answers ("Verbatim or nothing"), so sentences
+    # exactly like these WILL reach the verifier unchanged — a qualifier gate
+    # that rejects them turns a correct, verbatim answer into a false
+    # 「corpus 查無此法源」 warning.
+    r = verify_answer(answer, [], conn=real_conn)[0]
+    assert r.citation.statute_id == expected_id, (label, r.citation.statute_id)
+    assert r.citation.article_no == expected_ano, (label, r.citation.article_no)
+    assert r.exists is True, (label, r.reason)
+    assert r.flagged is False, (label, r.reason)
+
+
+def test_anaphoric_same_law_reference_after_a_named_citation_resolves(real_conn):
+    # 「同法第X條」 — the sixth of the six original 正例 forms. inferred_id must
+    # be True (its content is not graded against the wrong sentence) and it
+    # must still resolve to the SAME statute as the citation named before it.
+    ans = "依民法第184條,負損害賠償責任;同法第195條,情節重大者得請求非財產上損害賠償。"
+    results = verify_answer(ans, [], conn=real_conn)
+    assert [r.citation.article_no for r in results] == ["第184條", "第195條"]
+    named, anaphoric = results
+    assert named.citation.inferred_id is False
+    assert anaphoric.citation.statute_id == "民法"
+    assert anaphoric.citation.inferred_id is True
+    assert not any(r.flagged for r in results), [r.reason for r in results]
+
+
+# ── A7 bare penalty amount scanner (masked scan) ─────────────────────────────
+def _bare_penalty_amounts_fn():
+    from legal_agent.anti_hallucination import verifier as _v
+
+    if not hasattr(_v, "_bare_penalty_amounts"):
+        pytest.skip("_bare_penalty_amounts not implemented yet (verifier.py A7 pending)")
+    return _v._bare_penalty_amounts
+
+
+def test_bare_penalty_amounts_does_not_swallow_article_numbers_or_fractions():
+    # The literal A7 spec example, kept as the reviewed (not the originally
+    # proposed) expected value: reusing _YUAN_RE's comma-bearing character
+    # class for the masked scan turns the isolated clause commas this sentence
+    # leaves behind into a phantom {0} — the fix must anchor on a
+    # 罰鍰/罰金/科處/併科 keyword and a numeral class WITHOUT the comma.
+    bare = _bare_penalty_amounts_fn()
+    result = bare("依中華民國刑法第七十七條規定,累犯逾三分之二,得許假釋出獄,另可處罰鍰十萬。")
+    assert result == {100000}, result
+
+
+def test_bare_penalty_amounts_does_not_treat_a_lone_comma_as_a_zero_amount():
+    # Reviewed evidence: masking citations out of 「依中華民國刑法第223條,其規範
+    # 內容如條文所示。」 leaves an isolated 「,」 behind; scanning it with _YUAN_RE's
+    # comma-bearing character class parses that comma as a bare 0-yuan amount.
+    # 169/2921 real corpus control sentences false-positive this way if the
+    # scanner is not keyword-anchored. Must be empty.
+    bare = _bare_penalty_amounts_fn()
+    assert bare("依中華民國刑法第223條,其規範內容如條文所示。") == set()
+
+
+def test_bare_penalty_amounts_still_catches_a_real_bare_penalty():
+    bare = _bare_penalty_amounts_fn()
+    assert 1000000 in bare("違者處罰鍰最高一百萬,並得按次處罰。")
+
+
+# ── A8 period-direction / fraction axes, against the LIVE shipped corpus ────
+# 消保法§19 and 民法§1144 are not in the small real_conn fixture (9 住宅噪音
+# rows) — these are regressions against the actual corpus, same skip-if-absent
+# guard every other live-DB test in this suite already uses.
+@pytest.fixture
+def live_conn():
+    from legal_agent.config import DB_PATH
+
+    if not Path(DB_PATH).exists():
+        pytest.skip("no corpus in this checkout")
+    conn = connect(DB_PATH)
+    yield conn
+    conn.close()
+
+
+def test_correct_seven_day_restatement_of_consumer_protection_act_19_not_flagged(live_conn):
+    # Real corpus text: 「…得於收受商品或接受服務後七日內…解除契約…」
+    answer = "依消費者保護法第19條,消費者得於收受商品後七日內解除契約。"
+    r = verify_answer(answer, [], conn=live_conn)[0]
+    assert r.exists is True and r.content_match is True and r.flagged is False
+
+
+def test_period_direction_axis_flags_a_flipped_seven_day_window(live_conn):
+    from legal_agent.anti_hallucination import verifier as _v
+
+    if not hasattr(_v, "_period_directions"):
+        pytest.skip("_period_directions not implemented yet (verifier.py A8 pending)")
+    # Measured on today's verifier (2026-08-17): flagged=False — _periods()
+    # only ever compares the NUMBER (7), never the direction word, so 七日內
+    # flipped to 七日以上 passes silently. Period-axis twin of the amount
+    # direction_flip check that already exists.
+    answer = "依消費者保護法第19條,消費者得於收受商品後七日以上始得解除契約。"
+    r = verify_answer(answer, [], conn=live_conn)[0]
+    assert r.flagged is True, r.reason
+
+
+def test_correct_inheritance_fraction_restatement_of_civil_code_1144_not_flagged(live_conn):
+    # Real corpus text: 「…其應繼分為遺產二分之一。…其應繼分為遺產三分之二。」
+    answer = "依民法第1144條,與第二順序繼承人同為繼承時,應繼分為遺產二分之一。"
+    r = verify_answer(answer, [], conn=live_conn)[0]
+    assert r.exists is True and r.content_match is True and r.flagged is False
+
+
+def test_fraction_axis_flags_a_share_the_article_never_states(live_conn):
+    from legal_agent.anti_hallucination import verifier as _v
+
+    if not hasattr(_v, "_fractions"):
+        pytest.skip("_fractions not implemented yet (verifier.py A8 pending)")
+    # 四分之三 appears NOWHERE in 民法第1144條 (only 二分之一 and 三分之二 do) —
+    # chosen specifically so this is not the 三分之一<->三分之二-style equivalent
+    # mutant the fraction-tamper generator has to guard against (that article
+    # states BOTH of those values, so swapping one for the other is still
+    # "supported" and proves nothing about the axis).
+    answer = "依民法第1144條,與第二順序繼承人同為繼承時,應繼分為遺產四分之三。"
+    r = verify_answer(answer, [], conn=live_conn)[0]
+    assert r.flagged is True, r.reason
+
+
+# ── evals/blindspots_v1.json — the 25-case blind-spot suite (Stage 0
+# workstream: legal_agent/evaluation/blindspots.py) runs inside the normal
+# test suite too, not only via `python -m legal_agent.evaluation.blindspots`.
+# Uses that module's OWN loader/dataclass directly (BlindspotCase.id/
+# category/answer/expect_flag) now that it exists in this checkout, rather
+# than guessing a schema. A missing module or file skips cleanly instead of
+# erroring collection or passing silently.
+def _load_blindspots_cases() -> list:
+    try:
+        from legal_agent.evaluation.blindspots import load_blindspot_cases
+    except ModuleNotFoundError:
+        return []
+    try:
+        return load_blindspot_cases()
+    except (OSError, ValueError, KeyError):
+        return []
+
+
+_BLINDSPOTS_CASES = _load_blindspots_cases()
+
+# The four cases the structural axes still cannot see, measured 2026-08-17.
+# Twelve of the sixteen original misses are now caught; these are not. All four
+# are the same shape: the citation is real, the article exists, the quote is
+# close enough, and what changed is a modal or a proviso -- "得" to "應",
+# "得禁止" to "不得禁止", a proviso inverted, an anaphoric reference to a
+# different article. Nothing in a structural check (amount, direction word,
+# period, article existence) can see any of them; catching them needs a
+# semantic axis, and the one this repo has misfires on 43% of correct citations.
+#
+# strict=True on purpose: if a later change does catch one of these, this test
+# goes red and says so rather than silently passing. That is how the published
+# 21/25 stays honest in both directions.
+_STILL_BLIND = {
+    "modal_de_to_ying",
+    "modal_full_negation",
+    "proviso_reversal",
+    "anaphora_tong_fa_20",
+}
+
+
+def _blindspot_param(case):
+    if case is None:
+        return case
+    if case.id in _STILL_BLIND:
+        return pytest.param(
+            case,
+            marks=pytest.mark.xfail(
+                strict=True,
+                reason=(
+                    f"{case.id}: structurally invisible (modal/proviso semantics). "
+                    "Counted as a miss in the published 21/25."
+                ),
+            ),
+        )
+    return case
+
+
+_BLINDSPOTS_PARAMS = [_blindspot_param(c) for c in _BLINDSPOTS_CASES] or [None]
+_BLINDSPOTS_IDS = (
+    [f"{c.id}-{c.category}" for c in _BLINDSPOTS_CASES] if _BLINDSPOTS_CASES
+    else ["blindspots-not-available-yet"]
+)
+
+
+@pytest.mark.parametrize("case", _BLINDSPOTS_PARAMS, ids=_BLINDSPOTS_IDS)
+def test_blindspots_case_agrees_with_the_frozen_json(case, live_conn):
+    if case is None:
+        pytest.skip(
+            "legal_agent.evaluation.blindspots / evals/blindspots_v1.json "
+            "not available in this checkout"
+        )
+    # Same calling convention blindspots.py._run_one uses: full-corpus conn,
+    # empty retrieved_context. The 16 "miss" cases are EXPECTED to fail here
+    # on an unrepaired verifier.py — that is the frozen 16/25 階段0 baseline;
+    # the 9 "control" cases must already pass today.
+    results = verify_answer(case.answer, [], conn=live_conn)
+    flagged = any(r.flagged for r in results) if results else False
+    assert flagged == case.expect_flag, (
+        f"{case.id} [{case.category}]: expected flag={case.expect_flag}, got "
+        f"{flagged} — reasons={[r.reason for r in results]}"
+    )
+
+
+# ── evals/blindspots_positive_control_v1.json — the 4-case "must not be
+# flagged" control set, same treatment. 3 of the 4 (must_not_regress) are
+# clean today; the 4th (must_stop_being_flagged — 家庭暴力防治法§61 verbatim)
+# is today's known false positive and is EXPECTED to fail here until fixed.
+def _load_positive_control_cases() -> list:
+    try:
+        from legal_agent.evaluation.blindspots import load_positive_control_cases
+    except ModuleNotFoundError:
+        return []
+    try:
+        return load_positive_control_cases()
+    except (OSError, ValueError, KeyError):
+        return []
+
+
+_POSITIVE_CONTROL_CASES = _load_positive_control_cases()
+_POSITIVE_CONTROL_PARAMS = _POSITIVE_CONTROL_CASES or [None]
+_POSITIVE_CONTROL_IDS = (
+    [f"{c.id}-{c.label}" for c in _POSITIVE_CONTROL_CASES] if _POSITIVE_CONTROL_CASES
+    else ["positive-control-not-available-yet"]
+)
+
+
+@pytest.mark.parametrize("case", _POSITIVE_CONTROL_PARAMS, ids=_POSITIVE_CONTROL_IDS)
+def test_positive_control_case_agrees_with_the_frozen_json(case, live_conn):
+    if case is None:
+        pytest.skip(
+            "legal_agent.evaluation.blindspots / "
+            "evals/blindspots_positive_control_v1.json not available in this checkout"
+        )
+    results = verify_answer(case.answer, [], conn=live_conn)
+    flagged = any(r.flagged for r in results) if results else False
+    assert flagged is False, (
+        f"{case.id} [{case.label}]: expected flag=False, got {flagged} — "
+        f"reasons={[r.reason for r in results]}"
+    )
 
 
 if __name__ == "__main__":

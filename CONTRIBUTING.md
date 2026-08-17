@@ -14,6 +14,10 @@ behind it that you can run:
 
 ```bash
 python -m legal_agent.evaluation.mutation                          # verifier recall
+python -m legal_agent.evaluation.mutation --retrieval-first        # same, retrieval-shaped
+python -m legal_agent.evaluation.blindspots                        # structural blind spots (frozen 25-case set)
+python -m legal_agent.evaluation.qualifier_audit                   # Tier-3 name-qualifier gate, standing check
+python -m legal_agent.evaluation.paragraph_bounds_audit             # 款 upper-bound upgrade path, not a judging criterion
 python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # statute coverage
 python -m legal_agent.evaluation.real_recall                       # 168 real sessions
 python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
@@ -38,18 +42,37 @@ Three consequences people run into:
 - **Verbatim or nothing.** Statute text and 主文 slices are never paraphrased,
   summarised, or masked. If a transformation would help, it belongs beside the
   verbatim text, not instead of it.
+- **`qualifier_audit` is a standing gate, not a one-off.** Any change to
+  `_resolve_id` or the Tier-3 name-qualifier set must be re-swept with
+  `python -m legal_agent.evaluation.qualifier_audit` before it ships, and the
+  false-reject count (expected: 0) gets logged in RESULTS.md either way — a
+  gate tuned against today's probes can still launder tomorrow's prefix shape
+  (「涉嫌X」「疑似X」「當地」…), and a rerun is the only thing that would
+  catch it. CI runs it on every push, but CI catching it later is not a
+  substitute for running it yourself first.
 
 ## Running it
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                 # 573 tests, no network, no API key
+python -m pytest -q                 # 641 tests, no network, no API key
 python app.py                       # web demo, builds the corpus on first run
 ```
 
 Tests run against a fake model, so nothing here needs Ollama, a GPU, or a key.
 Lint with `ruff check .` — the rules live in `pyproject.toml` and CI enforces
 them.
+
+**Windows: one-off scripts need UTF-8 output set explicitly.** Every harness
+above prints Chinese text — mutation type names, verifier reasons, statute
+content — and a default Windows console is on a legacy codepage (cp950 /
+cp1252) that turns that into `UnicodeEncodeError` or silent mojibake, which
+then reads like a program bug rather than a console setting. `mutation.py`,
+`blindspots.py`, `qualifier_audit.py`, and `paragraph_bounds_audit.py` all
+call `legal_agent.evaluation.enable_utf8_stdout()` at the top of their
+`__main__` already — call the same function at the top of any new one-off
+verification script you write, or set `PYTHONIOENCODING=utf-8` before running
+an existing one.
 
 ## What is welcome
 

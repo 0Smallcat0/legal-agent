@@ -56,11 +56,62 @@ Last full run: 2026-07-25.
 **Closed-world caveat**: "not traceable to the corpus" is exactly the promise the
 system makes — it never means "this statute does not exist."
 
+## What 11,904/11,904 did and did not cover
+
+That figure was one number over eight seeded-error kinds. It read as "the checker
+catches everything", and what it actually measured was "the checker catches
+everything the generator knows how to break". Errors the generator could not
+express were not in the denominator, so they could not lower it.
+
+The generator now covers seventeen kinds. Every one is still at 100%, and the
+per-kind denominators are what the claim is now allowed to mean — the recall
+number for a kind that is not listed here does not exist.
+
+| seeded error kind | caught | what it plants |
+|---|---|---|
+| `nonexistent_article` | **2,513/2,513** | an article number the statute does not have |
+| `ghost_suffix` | **2,513/2,513** | a 之N suffix on an article that has none |
+| `prefixed_statute` | **48/48** | a real statute name behind a qualifier prefix |
+| `verbatim_crossref` | **15/15** | a cross-reference quoted from another article |
+| `ghost_paragraph` | **1,433/1,433** | a 項 the article does not have |
+| `real_paragraph_ref` | **1,433/1,433** | a 項 that exists (must NOT be flagged) |
+| `ghost_item` | **392/392** | a 款 beyond the article's last one |
+| `real_item_ref` | **392/392** | a 款 that exists (must NOT be flagged) |
+| `period_swap` | **707/707** | a deadline replaced with a different one |
+| `period_direction_flip` | **454/454** | 內 flipped to 後, or the reverse |
+| `real_period_direction` | **457/457** | the direction as written (must NOT be flagged) |
+| `anaphora_period` | **707/707** | a deadline attributed to the wrong article |
+| `direction_flip` | **326/326** | 以上 flipped to 以下 on a penalty |
+| `real_bare_amount` | **345/345** | the amount as written (must NOT be flagged) |
+| `anaphora_amount` | **345/345** | an amount attributed to the wrong article |
+| `fraction_tamper` | **63/63** | 三分之二 altered |
+| `real_fraction` | **82/82** | the fraction as written (must NOT be flagged) |
+
+The `real_*` kinds are the half that makes the other half mean anything: they
+plant nothing and must come back unflagged, which is where a false-positive rate
+of 0/2,921 comes from rather than from a checker that simply flags less.
+
+**Still not covered.** The 項 axis is verifiable for 1,433 of 2,921 articles;
+the other 1,488 are marked unverified because the official two-space indentation
+was flattened during ingestion, so paragraph existence cannot be derived. The 款
+axis is verifiable for 392 and steps aside for 24 whose 款 numbering restarts.
+Those are not failures being hidden — they are articles this claim does not
+speak for.
+
+**Blindspots: 21/25.** Twelve of sixteen originally-missed cases are now caught.
+The four that are not — `modal_de_to_ying`, `modal_full_negation`,
+`proviso_reversal`, `anaphora_tong_fa_20` — are all the same shape: the citation
+is real, the article exists, the quote is close, and what moved is a modal (得 to
+應, 得禁止 to 不得禁止) or an inverted proviso. No structural axis can see them.
+They are marked `xfail(strict=True)` in `tests/test_verifier.py`, so if a later
+change catches one the suite goes red and says so.
+
 ## Current numbers
 
 | what | number | harness |
 |---|---|---|
-| seeded defects caught, every article | **11,904/11,904 (100%), 0/2,921 false positives** | `evaluation/mutation.py` |
+| seeded defects caught, every article | **100% in every category below, 0/2,921 false positives** — see "What 11,904/11,904 did and did not cover" | `evaluation/mutation.py` |
+| blindspot cases the checker catches | **21/25** — 4 named misses, all modal/proviso semantics | `evaluation/blindspots.py`, `evals/blindspots_v1.json` |
 | semantic 4th axis — the only thing that catches a subject swap | catches **9/9**, and flags **1,259/2,921 (43%)** of CORRECT citations, so it stays off | `evaluation/mutation.py --semantic`, llama3.1, `semantic_unreached` 0 |
 | statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `evaluation/golden_set.py`, grader at temperature 0, k=8 |
 | honesty tier | **29/32 (91%)** | same run (decided from retrieval scores, so model-independent) |

@@ -3,12 +3,13 @@
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 ![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Tests](https://img.shields.io/badge/tests-573%20passing-brightgreen)
+![Tests](https://img.shields.io/badge/tests-641%20passing-brightgreen)
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
 **A RAG pipeline where every citation is checked by code, and the checker is
-itself graded by planting errors in correct answers: 11,904/11,904 caught,
-0 false positives.**
+itself graded by planting errors in correct answers: 100% caught across
+seventeen error kinds, 0/2,921 false positives — with the kinds it cannot plant
+named rather than left out of the denominator.**
 
 The usual defence against a hallucinated citation is a better prompt. This one
 is a separate program that runs after the model and compares each citation
@@ -66,7 +67,7 @@ must be right are not left to it.</sub>
 
 | | |
 |---|---|
-| seeded defects caught (whole corpus) | **11,904/11,904, 0 false positives** |
+| seeded defects caught | **100% in each of 17 kinds, 0/2,921 false positives** ([per-kind table](evals/RESULTS.md)) |
 | statute coverage, 32-case golden set | **100% pass+partial, 0 miss** (73% strict) |
 | retrieval recall, real user wording | **348/356**, 5.9 unexpected articles per session |
 | honesty tier / wrong-premise detection | **91% / 100%** |
@@ -111,7 +112,7 @@ RESULTS.md §7 has the full breakdown.
 
 The verifier stayed green through all of it, and that is not a malfunction:
 **green means the cited article exists, is in force, and was not misquoted — it
-has never meant the article governs your problem.** 11,904/11,904 measures the
+has never meant the article governs your problem.** The seeded-defect figure measures the
 first sentence. The second now has a number of its own, blind-coded and
 re-runnable: over the 24 ended disputes, the answer points the OPPOSITE way to
 the recorded outcome in **3 of 16** on the externally-labelled set and **2 of 8**

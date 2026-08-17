@@ -232,7 +232,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">573 項測試通過 · 植入錯誤抓取率 11,904/11,904(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">641 項測試通過 · 植入錯誤抓取率 17 類全數 100%(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -614,7 +614,7 @@ def compare_timeslice(query: str) -> str:
 # ── 評測結果 ─────────────────────────────────────────────────────────────────
 STATS = """
 <div class="statgrid">
-  <div class="stat"><div class="num">11,904/11,904</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
+  <div class="stat"><div class="num">17 類 100%</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">法條涵蓋率(含部分命中;嚴格 73%)</div></div>
   <div class="stat"><div class="num">386</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(32/32)</div></div>
