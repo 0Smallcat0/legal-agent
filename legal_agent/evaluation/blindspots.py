@@ -19,11 +19,17 @@ Two files:
         newly-discovered gap goes into tests/test_verifier.py as its own
         regression test, never into this file (spec C1).
     evals/blindspots_positive_control_v1.json
-        4 cases run the OTHER direction: text that is CORRECT and must never
-        be flagged. Three are today already clean and guard against the
-        Tier-3 qualifier gate (and the 前開/上開/揆諸 particle list) turning
-        legitimate prose prefixes into false positives; one (家庭暴力防治法
-        第61條 verbatim) is today's real false positive.
+        6 cases run the OTHER direction: text that is CORRECT and must never
+        be flagged. Five are today already clean (label "must_not_regress")
+        and guard against the Tier-3 qualifier gate turning legitimate prose
+        prefixes into false positives — 前開/上開/揆諸 particles, plus two
+        verbatim real articles (消費者保護法第50條, 家庭暴力防治法第58-2條)
+        found in a second review pass specifically because their prose
+        prefixes ("包括", "被害人因具") would be rejected by an ALLOW-list
+        design for the Tier-3 gate, which is why the gate must be a DENY-list
+        of national/era/regional qualifiers instead. One case (label
+        "must_stop_being_flagged": 家庭暴力防治法第61條 verbatim) is today's
+        real false positive.
 
 Two scoring conventions live side by side in `BlindspotReport`, because they
 answer different questions at different times:
@@ -39,8 +45,8 @@ answer different questions at different times:
 
 Run:  python -m legal_agent.evaluation.blindspots
       On the unmodified verifier.py this must print exactly 16/25 (16
-      confirmed miss + 9 confirmed clean) for the main suite, and a 1/4 clean
-      count for the positive control (3 already clean + 1 known false
+      confirmed miss + 9 confirmed clean) for the main suite, and a 5/6 clean
+      count for the positive control (5 already clean + 1 known false
       positive). If it does not, the case TEXT is wrong for the corpus this
       process is reading — fix the case, never the verifier, so a baseline
       reading agrees with itself (spec 階段0's explicit instruction).
@@ -64,7 +70,7 @@ POSITIVE_CONTROL_PATH = _EVALS_DIR / "blindspots_positive_control_v1.json"
 EXPECTED_MISS_TOTAL = 16
 EXPECTED_CONTROL_TOTAL = 9
 FROZEN_DENOMINATOR = EXPECTED_MISS_TOTAL + EXPECTED_CONTROL_TOTAL
-EXPECTED_POSITIVE_CONTROL_TOTAL = 4
+EXPECTED_POSITIVE_CONTROL_TOTAL = 6
 
 
 @dataclass(frozen=True)
