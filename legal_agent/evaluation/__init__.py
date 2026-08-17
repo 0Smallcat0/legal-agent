@@ -32,6 +32,33 @@ def enable_utf8_stdout() -> None:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
 
 
+def assert_nonzero_scan(count: int, label: str) -> None:
+    """Abort when a scan found ZERO of what it was looking for.
+
+    Every harness added for the blind-spot round walks some corpus / answer /
+    journal text and counts a token — citations, paragraph markers, item
+    markers, rejected Tier-3 qualifiers, mutants generated for a new class...
+    A regex or a generation condition that quietly breaks does not raise; it
+    just returns nothing, and an empty result renders as a perfect, if
+    fictitious, 100%/0-false-positive scorecard. This project already lost one
+    measurement to exactly that shape of silence (see `require_floor` above,
+    and the mutation-test docstring's note on `semantic_unreached`), so zero
+    is never read as "no anomalies" here — it is read as "the scan itself is
+    broken" and must stop the run, not pass it.
+
+    Args:
+        count: how many tokens the scan found.
+        label: what was being scanned, for the error message.
+
+    Raises:
+        ValueError: if `count` is 0.
+    """
+    if count == 0:
+        raise ValueError(
+            f"{label}: 掃到 0 個 token — 一律視為腳本或正則壞掉,不得當成無異常通過"
+        )
+
+
 def print_corpus_fingerprint(db_path=None):
     """Say which corpus this run reads, and ABORT if it is below the floor.
 

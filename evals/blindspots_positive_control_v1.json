@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "description": "獨立正控制組(spec C3)：4 案全部 expect_flag=false，但今天的實際狀態不是均質的。審查階段已用實跑推翻了原計畫『四案今天都會被誤標』的假設——實測只有 1 案(家暴法61條逐字原文)今天真的是誤報；另外 3 案(違反社會秩序維護法案件處理辦法第2條、揆諸民法第184條、上開情形涉及社會秩序維護法第72條)今天已經乾淨，它們的角色是本輪新增 Tier3 gate 與 _LEADING_PARTICLES 擴充的『回歸守門』樣本，不是『既有缺陷』樣本。label 欄位把這兩種角色明確分開，避免下一個實作者把乾淨的基線誤判成腳本壞掉去追一個不存在的鬼。",
+  "labels": {
+    "must_not_regress": "今天已經 flagged=false(乾淨)，本輪修改(尤其是 A1 的 Tier3 字元集/限定詞判斷、_LEADING_PARTICLES 擴充)之後仍必須是 flagged=false。任何一案在修改後變成 flagged=true 就是新增的誤報，必須修掉 Tier3 規則，不是接受它。",
+    "must_stop_being_flagged": "今天已經是 flagged=true 的真實誤報，是本輪要修的對象。是否能在本輪實際修好取決於 A3/A5 對回指層級號跨法規解析與『bare 交叉引用』分流的實作，屬於另一個工作流(verifier.py)的範圍；這裡只負責誠實標定『今天的狀態』與『目標狀態』，不預判哪個工作流最終是否達成。"
+  },
+  "cases": [
+    {
+      "id": "pc_hdva61_verbatim",
+      "label": "must_stop_being_flagged",
+      "description": "家庭暴力防治法第61條的逐字條文原文，未加任何法規名稱前綴。內含四個裸交叉引用片段(第十四條第一項、第十六條第三項、準用…、第十三款至第十五款及…)與同句金額(新臺幣十萬元以下罰金)。CONTRIBUTING.md 明訂『Verbatim or nothing』，所以這段原文會在真實答案中逐字出現。",
+      "answer": "違反法院依第十四條第一項、第十六條第三項或依第六十三條之一第一項準用第十四條第一項第一款、第二款、第四款、第十款、第十三款至第十五款及第十六條第三項所為之下列裁定者,為違反保護令罪,處三年以下有期徒刑、拘役或科或併科新臺幣十萬元以下罰金。",
+      "expect_flag": false,
+      "anchor_statute_id": "家庭暴力防治法",
+      "anchor_article_no": "第61條",
+      "note": "實測 2026-08-17：verify_answer 抽出四筆引用，statute_id 分別是散文碎片『法院依』、『第十六條第三項或依』、『準用』、『第十三款至第十五款及』——因為句首沒有任何具名法規、last_named 為 None，所以這四筆的 inferred_id 全部是 False，走的是 `if not slices:` 分支(未查核也非造假的一般『查無法源』路徑)而非 anaphora 分支，也都不符合 _STATUTE_SHAPE_RE(不像法規名稱)。四筆全部 flagged=True，reason 為『未出現在本次檢索結果中,且 corpus 查無此法源:法院依第14條』等。整體 flagged=True。這是逐字條文被錯誤當成造假法源的個案，A3/A5 原計畫鎖定的是 `citation.inferred_id` 分支，對這四個 inferred_id=False 的碎片不生效——修復需要另一條路徑(例如讓找不到具名法規、且候選字串明顯是散文而非法規名的裸數字條號引用也進入 unverified，而不是直接 flagged)，記錄在案供 verifier.py 工作流參考，不在本檔案自行判定是否已修好。"
+    },
+    {
+      "id": "pc_violation_handling_measures_art2",
+      "label": "must_not_regress",
+      "description": "以「依」引出完整、逐字未剝離的 corpus 真實 statute_id(違反社會秩序維護法案件處理辦法)，是 spec A1 特別點名『剝掉「違反」前綴會斷裂成不存在名稱』的案例。",
+      "answer": "依違反社會秩序維護法案件處理辦法第2條規定,解散命令、檢查命令、禁止或勸阻,由警察機關或該管公務員為之。",
+      "expect_flag": false,
+      "anchor_statute_id": "違反社會秩序維護法案件處理辦法",
+      "anchor_article_no": "第2條",
+      "note": "實測 2026-08-17：flagged=False(今天已乾淨——現行 _resolve_id 的裸 endswith 直接吃下完整合法 statute_id)。此案不是『今天的缺陷』，而是本輪新增 Tier3 gate 的回歸守門樣本：Tier1(原始整串未剝離先查 known_ids)必須先於任何剝離/限定詞判斷之前短路，否則這個真實合法引用會被新規則誤殺。"
+    },
+    {
+      "id": "pc_kuizhu_civil184",
+      "label": "must_not_regress",
+      "description": "用「揆諸」這個 _LEADING_PARTICLES 目前沒有收錄的助詞引出真實法規名稱。",
+      "answer": "揆諸民法第184條規定,因故意或過失,不法侵害他人之權利者,負損害賠償責任。",
+      "expect_flag": false,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第184條",
+      "note": "實測 2026-08-17：flagged=False(今天已乾淨——現行 _resolve_id 的裸 endswith 直接命中「民法」後綴，不需要助詞剝離就能解析)。此案是本輪新增 Tier3『前綴限定詞』判斷上線後的回歸守門樣本：若只看 Tier3 而不同時把「揆諸」加進 _LEADING_PARTICLES，前綴長度與字元組成可能被新規則誤判為需要拒絕的限定詞，導致這個原本乾淨的案例變成誤報。"
+    },
+    {
+      "id": "pc_shangkai_socialorder72",
+      "label": "must_not_regress",
+      "description": "用「上開情形涉及」這個複合散文前綴引出真實法規名稱，是本專案自己的產出(legal_agent/dialogue/solution.py 與 journal 皆有先例)。",
+      "answer": "上開情形涉及社會秩序維護法第72條,行為人製造噪音,妨害公眾安寧,不聽禁止。",
+      "expect_flag": false,
+      "anchor_statute_id": "社會秩序維護法",
+      "anchor_article_no": "第72條",
+      "note": "實測 2026-08-17：flagged=False(今天已乾淨——裸 endswith 直接命中「社會秩序維護法」後綴)。回歸守門樣本，理由同 pc_kuizhu_civil184：Tier3 上線後若「上開」沒有被妥善處理(不論是進 _LEADING_PARTICLES 或被 Tier3 的限定詞判斷正確放行)，這個案例會從乾淨變成誤報。"
+    }
+  ]
+}

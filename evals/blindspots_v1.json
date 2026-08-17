@@ -1,0 +1,283 @@
+{
+  "schema_version": 1,
+  "frozen_denominator": 25,
+  "description": "階段0 盲點基線(spec workstream「引用檢查器的種子錯誤測試涵蓋不到的錯誤類型」)。25 案 = 16 個結構軸目前抓不到但事後可被結構規則捕捉的『該標未標』+ 9 個必須維持乾淨的對照。這 25 案不是 mutation.py 的替代品——mutation.py 的植入錯誤全部由 SQL 對真實條文列做代換生成，其對照組(2,921 條)沒有任何一句含『第X項』『第X款』、分數、期間方向詞、無「元」裸金額、同法/本法回指，或帶散文前綴的法規名，所以這裡列的形狀在 mutation.py 的種子空間中結構上不可能出現。分母凍結為 25：本輪任何新發現的迴歸案例一律進 tests/test_verifier.py 的個別測試，不得擴增這份檔案。",
+  "scoring_note": "每案的 expect_flag 是『verifier.py 修好之後』的目標值(miss=true、control=false)。在尚未修改的 verifier.py 上重跑本檔，所有 16 個 miss 案都必須是 flagged=false(該標未標，即『miss_confirmed_blind』)，所有 9 個 control 案都必須是 flagged=false(對照不誤標)。baseline headline 因此是『miss_confirmed_blind/總數』= 16/25，而不是『flagged==expect_flag 的相符數』(那個算法在今天會是 9/25，因為 16 個 miss 案的 flagged 目前全部是 false≠true)。verifier.py 修好後，同一份資料改看『target』算法(miss 案 flagged==true 的數量 + control 案 flagged==false 的數量)，理論上限是 25/25。",
+  "cases": [
+    {
+      "id": "prefix_foreign_de",
+      "category": "miss",
+      "mechanism": "name_prefix_whitewash",
+      "description": "法規名稱前面掛一個外國國名前綴，應被拒絕解析為本庫法源，卻被洗成真法源。",
+      "answer": "依德國民法第793條規定,其規範內容如條文所示。",
+      "expect_flag": true,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "_resolve_id 現行寫法 `[kid for kid in known_ids if name_run.endswith(kid)]` 直接接受最長後綴：「德國民法」.endswith(「民法」) 為真，於是被解析成 statute_id=民法、exists=True、content_match=True(claim 未主張任何可查核的金額/期間)，flagged=False。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "prefix_old",
+      "category": "miss",
+      "mechanism": "name_prefix_whitewash",
+      "description": "法規名稱前面掛時代版本詞前綴(舊法)，應被拒絕，卻被洗成現行法源。",
+      "answer": "依舊民法第793條規定,其規範內容如條文所示。",
+      "expect_flag": true,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "同 prefix_foreign_de 的機制：「舊民法」.endswith(「民法」) 為真。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "prefix_china",
+      "category": "miss",
+      "mechanism": "name_prefix_whitewash",
+      "description": "法規名稱前面掛另一法域國名前綴(中國)，應被拒絕，卻被洗成台灣現行法源。",
+      "answer": "依中國民法第793條規定,其規範內容如條文所示。",
+      "expect_flag": true,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "同一機制：「中國民法」.endswith(「民法」) 為真。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "prefix_local_taipei_noise",
+      "category": "miss",
+      "mechanism": "name_prefix_whitewash",
+      "description": "法規名稱前面掛地方自治團體前綴(臺北市)，應被拒絕，卻被洗成全國性現行法源。",
+      "answer": "依臺北市噪音管制法第8條規定,其規範內容如條文所示。",
+      "expect_flag": true,
+      "anchor_statute_id": "噪音管制法",
+      "anchor_article_no": "第8條",
+      "note": "同一機制，換一個 anchor 法規以確認不是單一法源的巧合：「臺北市噪音管制法」.endswith(「噪音管制法」) 為真。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "ghost_paragraph_civil793",
+      "category": "miss",
+      "mechanism": "ghost_paragraph_item",
+      "description": "引用一個不存在的項次(民法793條全文只有一個未分項的段落，沒有第99項)。",
+      "answer": "依民法第793條第99項規定,土地所有人得禁止之。",
+      "expect_flag": true,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "_slices() 只用 (statute_id, article_no) 查表，Citation.paragraph 完全不參與查核；793條 content 換行數為 0(僅一個未分項段落)，『第99項』純屬捏造仍會 exists=True、flagged=False。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "ghost_item_socialorder72",
+      "category": "miss",
+      "mechanism": "ghost_paragraph_item",
+      "description": "引用一個不存在的款次(社會秩序維護法第72條只有一、二、三款，沒有第9款)。",
+      "answer": "依社會秩序維護法第72條第9款規定,其規範內容如條文所示。",
+      "expect_flag": true,
+      "anchor_statute_id": "社會秩序維護法",
+      "anchor_article_no": "第72條",
+      "note": "同一機制：Citation.item 完全不參與查核。72條實際只有三款(一/二/三)，『第9款』可證明為偽，今天卻 exists=True、flagged=False。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "bare_amount_socialorder72",
+      "category": "miss",
+      "mechanism": "bare_penalty_amount",
+      "description": "聲稱的罰鍰金額是真實金額的十倍，但故意省略「元」字，讓金額完全不被抽取。",
+      "answer": "依社會秩序維護法第72條規定,違者處罰鍰十萬。",
+      "expect_flag": true,
+      "anchor_statute_id": "社會秩序維護法",
+      "anchor_article_no": "第72條",
+      "note": "真實金額為新臺幣一萬元以下罰鍰。_YUAN_RE 要求數字後緊接「元」字：`([0-9...]+)\\s*元`；「十萬」後面接的是句號，不是「元」，_amounts() 完全抓不到這個聲稱值，claimed=∅，content_match 對空集合恆真通過。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "bare_amount_noise24",
+      "category": "miss",
+      "mechanism": "bare_penalty_amount",
+      "description": "聲稱的罰鍰上限遠高於真實條文規定的上限，但同樣省略「元」字。",
+      "answer": "依噪音管制法第24條規定,經限期未改善者,罰鍰最高一百萬。",
+      "expect_flag": true,
+      "anchor_statute_id": "噪音管制法",
+      "anchor_article_no": "第24條",
+      "note": "真實條文各款罰鍰上限最高為新臺幣十八萬元(營建工程)。「一百萬」無「元」字尾，同樣完全繞過 _amounts()。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "modal_de_to_ying",
+      "category": "miss",
+      "mechanism": "modal_negation_flip",
+      "description": "把條文的裁量權「得」改寫成義務「應」，法律效果從可以變成必須。",
+      "answer": "依民法第793條規定,土地所有人應禁止之。",
+      "expect_flag": true,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "真實條文為「得禁止之」(裁量權)。verifier 的 _content_consistent 只比對金額/方向詞/期間三種數值，完全不比對模態詞(得/應/不得)，此類語意錯誤在結構軸上不可見。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "modal_full_negation",
+      "category": "miss",
+      "mechanism": "modal_negation_flip",
+      "description": "把條文的權利「得禁止」改寫成完全相反的「不得禁止」。",
+      "answer": "依民法第793條規定,土地所有人不得禁止之。",
+      "expect_flag": true,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "同一機制，語意翻轉幅度更大(可以→不可以，而非可以→必須)，同樣不在結構軸的檢查範圍內。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "proviso_reversal",
+      "category": "miss",
+      "mechanism": "modal_negation_flip",
+      "description": "條文有「但侵入輕微...不在此限」的除外規定，聲稱卻用「無論...一律」把除外規定抹除。",
+      "answer": "依民法第793條規定,無論侵入輕微與否,土地所有人一律得禁止之。",
+      "expect_flag": true,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "真實條文但書：「但其侵入輕微，或按土地形狀、地方習慣，認為相當者，不在此限。」聲稱用全稱量詞(無論/一律)把但書排除的情形也納入禁止範圍，等同刪除但書。verifier 不解析但書結構，此類反轉不可見。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "fraction_1to3_to_2to3",
+      "category": "miss",
+      "mechanism": "fraction_tamper",
+      "description": "條文分數「三分之一」被竄改成「三分之二」。",
+      "answer": "依中華民國刑法第83條規定,追訴權時效停止原因於期間已達所定期間三分之二時視為消滅。",
+      "expect_flag": true,
+      "anchor_statute_id": "中華民國刑法",
+      "anchor_article_no": "第83條",
+      "note": "錨點條文原文含「三分之一」兩次(第二項第一款、第二款)，不含「三分之二」、不含「二分之一」——實測 2026-08-17 用全庫掃描確認。verifier 完全沒有分數擷取邏輯(無 _FRACTION_RE)，_amounts()/_periods() 都抓不到「三分之二」這個字串，此聲稱不會被任何一軸看見。實測：flagged=False。"
+    },
+    {
+      "id": "fraction_1to3_to_1to2",
+      "category": "miss",
+      "mechanism": "fraction_tamper",
+      "description": "條文分數「三分之一」被竄改成「二分之一」。",
+      "answer": "依中華民國刑法第83條規定,追訴權時效停止原因於期間已達所定期間二分之一時視為消滅。",
+      "expect_flag": true,
+      "anchor_statute_id": "中華民國刑法",
+      "anchor_article_no": "第83條",
+      "note": "同一機制，另一個竄改方向。錨點與 fraction_1to3_to_2to3 相同，刻意共用同一條文以便將來用同一個 unambiguous-guard 規則檢查兩案。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "period_direction_flip_consumer19",
+      "category": "miss",
+      "mechanism": "period_direction_flip",
+      "description": "把條文的「七日內」(期限內)反轉成「七日以上」(期限之後)，數值相同但方向相反。",
+      "answer": "依消費者保護法第19條規定,消費者得於收受商品後七日以上解除契約。",
+      "expect_flag": true,
+      "anchor_statute_id": "消費者保護法",
+      "anchor_article_no": "第19條",
+      "note": "真實條文為「得於收受商品或接受服務後七日內...解除契約」。verifier 既有的 _periods()/_content_consistent 只比對期間的數值是否同時出現在來源(claim_values - source_values)，完全不比對方向詞；「七日以上」與「七日內」的數值同為 7，日單位相同，比對通過。這與既有的 _amount_directions 機制(金額方向詞)形成對照——金額有方向檢查，期間沒有。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "anaphora_ben_fa_794",
+      "category": "miss",
+      "mechanism": "anaphora_whitewash",
+      "description": "用「本法」回指到上一個具名法規，並在回指的引用後面編造與該條文完全無關的罰鍰金額。",
+      "answer": "依民法第793條,土地所有人得禁止之。本法第794條規定,違者處新臺幣九十九萬元罰鍰。",
+      "expect_flag": true,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第794條",
+      "note": "spec A5 的驗收目標句，逐字採用。「本法」解析為 793 條之前最後具名的「民法」，inferred_id=True；verify_answer 現行寫法對 inferred_id 為真的引用一律 `claim_scope=\"\"; content_match=True`，完全不比對周圍聲稱的內容。民法第794條真實內容是「開掘土地不得使鄰地地基動搖」，與罰鍰金額無關，但因為內容從未被比對，「九十九萬元罰鍰」的捏造完全不會被看見。實測 2026-08-17：兩筆引用皆 flagged=False。"
+    },
+    {
+      "id": "anaphora_tong_fa_20",
+      "category": "miss",
+      "mechanism": "anaphora_whitewash",
+      "description": "用「同法」回指到上一個具名法規，並編造與該條文完全無關的繳納期限與強制執行敘述。",
+      "answer": "依社會秩序維護法第72條規定,處新臺幣一萬元以下罰鍰。同法第20條規定,經處罰後逾三年未繳納者,得移送強制執行。",
+      "expect_flag": true,
+      "anchor_statute_id": "社會秩序維護法",
+      "anchor_article_no": "第20條",
+      "note": "同一機制的第二個樣本，換用「同法」而非「本法」，並換一個回指目標(社會秩序維護法第20條)。第20條真實內容是「十日內完納，得延三個月分期」，與「逾三年」「強制執行」無關，但同樣因 inferred_id=True 而完全不比對。實測 2026-08-17：兩筆引用皆 flagged=False。"
+    },
+    {
+      "id": "control_prefix_none",
+      "category": "control",
+      "guards": "name_prefix_whitewash",
+      "description": "沒有任何前綴的正常法規名稱引用，內容與條文完全一致，必須保持乾淨。",
+      "answer": "依民法第793條規定,土地所有人得禁止之。",
+      "expect_flag": false,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "Tier3 gate 上線後最基本的陽性對照——沒有任何名稱型限定詞前綴，必須永遠可以解析成功且不誤標。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "control_paragraph_within_bounds",
+      "category": "control",
+      "guards": "ghost_paragraph_item",
+      "description": "引用一個真實存在的項次(消保法19條第2項確實存在)，日後項存在性軸上線後必須仍判定為合法。",
+      "answer": "依消費者保護法第19條第2項規定,前項但書合理例外情事,由行政院定之。",
+      "expect_flag": false,
+      "anchor_statute_id": "消費者保護法",
+      "anchor_article_no": "第19條",
+      "note": "逐字引用第19條第2項原文(「前項但書合理例外情事，由行政院定之。」)。第19條有多個換行(多項)，屬於 A3 規劃中『有換行者暫列 unverified』的桶，不論日後項軸如何實作，都不應該把一個真實存在的項次判定為造假。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "control_item_within_bounds",
+      "category": "control",
+      "guards": "ghost_paragraph_item",
+      "description": "引用一個真實存在的款次(社維法72條第2款確實存在)並正確複述其內容與金額，日後款存在性軸上線後必須仍判定為合法。",
+      "answer": "依社會秩序維護法第72條第2款規定,製造噪音或深夜喧嘩,妨害公眾安寧,不聽禁止者,處新臺幣一萬元以下罰鍰。",
+      "expect_flag": false,
+      "anchor_statute_id": "社會秩序維護法",
+      "anchor_article_no": "第72條",
+      "note": "逐字引用第72條第2款原文加上該條的罰鍰金額(一萬元、以下)。72條屬於 A4 規劃中『一、恰出現一次』的可查核桶(392條)，第2款是真實存在的款次，必須通過。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "control_amount_with_yuan",
+      "category": "control",
+      "guards": "bare_penalty_amount",
+      "description": "正確金額且帶「元」字尾的聲稱，必須保持乾淨——與 bare_amount_socialorder72 用同一個錨點條文，供未來直接比對修復前後行為。",
+      "answer": "依社會秩序維護法第72條規定,違者處新臺幣一萬元以下罰鍰。",
+      "expect_flag": false,
+      "anchor_statute_id": "社會秩序維護法",
+      "anchor_article_no": "第72條",
+      "note": "金額(一萬元)與方向詞(以下)皆與條文相符，_amounts()/_amount_directions() 現行邏輯本來就會判定通過。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "control_modal_and_proviso_correct",
+      "category": "control",
+      "guards": "modal_negation_flip",
+      "description": "正確複述模態詞(得禁止)與但書(侵入輕微不在此限)，必須保持乾淨。",
+      "answer": "依民法第793條規定,土地所有人於他人土地、建築物有喧囂、振動等侵入情形時,得禁止之;但侵入輕微或按土地形狀、地方習慣認為相當者,不在此限。",
+      "expect_flag": false,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第793條",
+      "note": "同時對應 modal_de_to_ying/modal_full_negation/proviso_reversal 三個 miss 案的正確版本，一次覆蓋語氣與但書兩個子機制。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "control_fraction_correct",
+      "category": "control",
+      "guards": "fraction_tamper",
+      "description": "正確複述條文分數(三分之一)，必須保持乾淨——與兩個 fraction miss 案用同一個錨點條文。",
+      "answer": "依中華民國刑法第83條規定,其期間已達所定期間三分之一者,追訴權時效停止原因視為消滅。",
+      "expect_flag": false,
+      "anchor_statute_id": "中華民國刑法",
+      "anchor_article_no": "第83條",
+      "note": "「三分之一」與條文原文相符。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "control_period_direction_correct",
+      "category": "control",
+      "guards": "period_direction_flip",
+      "description": "正確複述期間方向(七日內)，必須保持乾淨——與 period_direction_flip_consumer19 用同一個錨點條文。",
+      "answer": "依消費者保護法第19條規定,消費者得於收受商品後七日內解除契約。",
+      "expect_flag": false,
+      "anchor_statute_id": "消費者保護法",
+      "anchor_article_no": "第19條",
+      "note": "「七日內」與條文原文相符。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "control_anaphora_correct",
+      "category": "control",
+      "guards": "anaphora_whitewash",
+      "description": "用「本法」回指且回指後的內容是真的(逐字複述794條)，必須保持乾淨——與 anaphora_ben_fa_794 用同一組法規/條號。",
+      "answer": "依民法第793條規定,土地所有人得禁止之。本法第794條規定,不得因開掘土地而使鄰地地基動搖。",
+      "expect_flag": false,
+      "anchor_statute_id": "民法",
+      "anchor_article_no": "第794條",
+      "note": "回指內容與794條真實條文(「不得因此使鄰地之地基動搖」)一致。今天因 inferred_id 完全不比對內容而通過；日後 A5 把 explicit 回指升級為要內容比對時，這筆必須因為內容真的相符而繼續通過，用來和 anaphora_ben_fa_794(內容捏造)做對照。實測 2026-08-17：flagged=False。"
+    },
+    {
+      "id": "control_alias_resolution",
+      "category": "control",
+      "guards": "name_prefix_whitewash",
+      "description": "用既有別名(刑法→中華民國刑法)引用，必須保持乾淨，確保 Tier1/Tier2 重寫不破壞既有別名機制。",
+      "answer": "依刑法第83條規定,追訴權時效因起訴而停止進行。",
+      "expect_flag": false,
+      "anchor_statute_id": "中華民國刑法",
+      "anchor_article_no": "第83條",
+      "note": "「刑法」透過 _ALIASES 解析為「中華民國刑法」(整串比對，非後綴比對)。實測 2026-08-17：flagged=False。"
+    }
+  ]
+}
