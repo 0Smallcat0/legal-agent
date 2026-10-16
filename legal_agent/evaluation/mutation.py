@@ -1,73 +1,42 @@
-"""Verifier mutation test — measure the citation verifier's catch rate on
-KNOWN-planted errors (SPEC §2.3 / §4.2 Tier 2 hardening).
+"""Verifier mutation test — the citation verifier's recall on KNOWN-planted
+errors, and its false-positive rate on correct restatements.
 
-Rationale: the verifier is the load-bearing gate ("when the system errs, the
-user knows"), so its own recall must be MEASURED, not assumed. This module
-builds answers from real corpus rows with one planted defect each, runs
-`verify_answer`, and reports catch rate per mutation type plus the
-false-positive rate on correct controls. Fully deterministic — no LLM, no
-network.
+Builds answers from real corpus rows with one planted defect each, runs
+`verify_answer`, and reports catch rate per kind. Deterministic: no LLM, no
+network. It grades the VERIFIER, not a model; per-kind figures are in
+evals/RESULTS.md §4. A kind not generated here has no recall number.
 
-Mutation types (one citation per generated answer), 「原 8 類」(2026-07/08):
-    control              correct citation, correct amount   -> must NOT flag
-    nonexistent_article  real statute, article_no shifted    -> must flag (exists)
-    fake_statute         invented statute name               -> must flag (exists)
-    ghost_suffix         real article + 之99 suffix           -> must flag (exists)
-    wrong_amount         real citation, amount x10           -> must flag (content)
-    direction_flip       real amount, 以下<->以上 flipped     -> must flag (content)
-    out_of_force         real citation, as_of before 生效日   -> must flag (in-force)
-    subject_swap         right article, wrong 行為主體        -> must flag (semantic)
-                         (generated ONLY when a semantic_llm is provided — the
-                         structural axes provably cannot catch this class)
-    alias_typo           suffix-shaped alias, omitted part corrupted -> must flag
+Must-flag kinds: nonexistent_article, ghost_suffix, fake_statute,
+wrong_amount, bare_penalty_amount, docnum_adjacent_amount, direction_flip,
+period_swap, period_direction_flip, fraction_tamper, out_of_force,
+ghost_paragraph, ghost_item(_multilist), anaphora_amount, anaphora_period,
+prefixed_statute, alias_typo, and subject_swap (only with a semantic_llm —
+the structural axes cannot see it).
 
-「新 8 類」(2026-08-17, structural-axis hardening — SPEC §"blindspots"):
-    prefixed_statute        德國/舊/臺北市 + real id           -> must flag (A1)
-    ghost_paragraph         zero-newline article + 第2項        -> must flag (A3)
-    ghost_item               single-list article + max+1 款      -> must flag (A4)
-    anaphora_amount          explicit 同法 back-ref, wrong 元    -> must flag (A5+A7)
-    anaphora_period          explicit 同法 back-ref, wrong 期間   -> must flag (A5)
-    bare_penalty_amount      real citation, wrong AMOUNT, no 元   -> must flag (A7)
-    period_direction_flip    real period, 以上/以下/內 flipped    -> must flag (A8)
-    fraction_tamper          real citation, unsupported 分數      -> must flag (A8)
+Must-NOT-flag kinds: `control` (the headline false-positive denominator) and
+the axis-specific positive controls (real_paragraph_ref, real_item_ref(_multilist),
+real_fraction, real_period_direction, real_bare_amount, real_positional_amount,
+verbatim_crossref, prose_prefix, prefixed_statute_control). Each positive
+control has its OWN denominator and is never averaged into `control`.
 
-Each new "must-flag" axis above gets a matching, corpus-derived POSITIVE
-CONTROL — restating the article's own real paragraph/item/fraction/period/
-amount correctly must never be flagged either, and each has ITS OWN
-denominator (never averaged into the headline "0/2,921", which would hide
-false positives the same way the original 11,904 number hid this file's own
-uncovered classes — see RESULTS.md §4):
-    real_paragraph_ref, real_item_ref, real_fraction, real_period_direction,
-    real_bare_amount, verbatim_crossref, prose_prefix, prefixed_statute_control
-
-retrieval_miss_quoted is generated ONLY under --retrieval-first: a citation
-quoted verbatim inside a RETRIEVED source's own text, whose own article was
-NOT retrieved. flagged is correctly False for this case either way (a model
-quoting material it was given is not hallucinating) — what must change is
-whether the status line is still allowed to claim "全數可回溯至資料庫" while
-that citation's own content was never checked. Graded on the STATUS LINE, not
-on .flagged (verify_answer's `_quoted_in_retrieved` branch is deliberately
-untouched by this file — that would be a verifier.py change).
-
-NOTE ON SEQUENCING: the eight NEW "must-flag" classes above test axes
-(A1/A3/A4/A5/A7/A8) that ship in legal_agent/anti_hallucination/verifier.py —
-a SEPARATE file, out of this module's remit. Until those land, this file
-correctly and honestly reports those classes as MISSES (see RESULTS.md for
-the measured per-class numbers) — that is the verifier under-catching, not a
-bug in the mutant generator. Every new class here was hand-probed against the
-CURRENT verifier.py before being written down, specifically so a miss here
-never gets mis-attributed to a mutation.py defect.
+retrieval_miss_quoted (only under --retrieval-first): a citation quoted
+verbatim inside a RETRIEVED source whose own article was NOT retrieved.
+.flagged is correctly False either way (quoting supplied material is not
+hallucinating); it is graded on whether the STATUS LINE stops claiming
+"全數可回溯至資料庫".
 
 Run:  python -m legal_agent.evaluation.mutation [--semantic] [--retrieval-first]
       --semantic wires a local Ollama (fmt=json) as the 4th-axis checker and
-      plants the subject_swap cases, so the LLM axis is GRADED, not trusted.
-      --retrieval-first re-runs EVERY class through
+      plants subject_swap, so the LLM axis is GRADED, not trusted.
+      --retrieval-first re-runs every kind through the production call shape,
       verify_answer(answer, retrieved_context=[Statute(*row)], conn=None,
-      corpus_conn=conn) — the production call shape (dialogue/stage3.py:377)
-      — and additionally plants retrieval_miss_quoted, which is structurally
-      unreachable when a class builds retrieved_context by SQL-selecting the
-      target row (every other class here still does exactly that, by design:
-      it is testing the axis, not the retriever).
+      corpus_conn=conn). Every other kind still puts its own target row in
+      retrieved_context on purpose: it tests the axis, not the retriever.
+
+Exit 1 (default mode) if catch rate < 100%, control FP > 0, any positive
+control FP > 0, or a kind in _ALWAYS_NONEMPTY_ON_FULL_CORPUS produced 0 cases.
+Exit 1 (--retrieval-first) only if retrieval_miss_quoted is missing or missed;
+positive-control FPs are printed but not gated in that mode.
 """
 from __future__ import annotations
 
@@ -95,73 +64,50 @@ _AMOUNT_DIR_RE = re.compile(
 )
 _DOWNWARD = {"以下", "以內", "未滿"}
 
-# Full 7-column row shape (legal_agent.data.models.Statute field order) — the
-# precondition for building Statute(*row) objects for --retrieval-first
-# (B1). Kept as one constant so the SELECT used by _condition_articles() and
-# the ad hoc lookups below (alias_typo's base row, prefixed_statute_control's
-# regression rows) can never drift out of column-order sync with each other.
+# Full 7-column row shape (Statute field order), shared by every SELECT here
+# so Statute(*row) for --retrieval-first never drifts out of column order.
 _ROW_COLS = "statute_id, article_no, content, effective_from, effective_to, hierarchy_level, source_url"
 
-# ── B2 generation-side helpers ────────────────────────────────────────────
-# Local to mutation.py on purpose: verifier.py owns the CHECKING regexes for
-# these same shapes (or will, once A3/A4/A7/A8 land there); these are only
-# used to pick WHICH mutant to plant. Keeping them independent means a future
-# change to the checking axis's internals cannot silently disable the mutant
-# generator that is supposed to be testing it — the same reason the existing
-# _AMOUNT_DIR_RE above is already a separate copy from verifier.py's.
+# ── generation-side helpers ───────────────────────────────────────────────
+# Independent copies of shapes verifier.py also checks, used only to pick
+# WHICH mutant to plant — so a change to the checking axis cannot silently
+# disable the generator that tests it (same reason as _AMOUNT_DIR_RE).
 #
-# Item-list marker. MEASURED on the shipped corpus (2,921 current articles):
-# 416 rows contain at least one 「一、」-shaped item marker; of those, 392 rows
-# contain the token 「一」 EXACTLY ONCE (a single, trustworthy numbered list —
-# its highest item number is a real upper bound) and 24 contain it 2+ times
-# (two or more SEPARATE lists in one article body — 民法§129, 中華民國刑法
-# §10/§74, 道路交通管理處罰條例§7-2 among them — no single "max item" is safe
-# to trust there, so ghost_item/real_item_ref never touch that population).
+# Item-list marker. On the shipped corpus 392 articles have exactly one list
+# (「一」 once — its max item is a real upper bound) and 24 have 2+ separate
+# lists (民法§129, 刑法§10/§74, 道交條例§7-2 among them); 416 have any.
 _ITEM_RE = re.compile(r"(?:^|\n)([一二三四五六七八九十百]+)、", re.MULTILINE)
-# 「X分之Y」— MEASURED: 82 current articles state at least one fraction.
+# 「X分之Y」— 82 current articles state at least one fraction.
 _FRACTION_RE = re.compile(
     r"([0-9０-９零〇一二三四五六七八九十百千兩]+)分之([0-9０-９零〇一二三四五六七八九十百千兩]+)"
 )
-# Period + direction word, WITHOUT requiring 元 (money has no bare-內 form;
-# periods commonly do — 「七日內」 — so 內 is its own alternative, tried after
-# 以內 so the longer match wins first). MEASURED: 842 matches / 457 articles.
+# Period + direction word, no 元 required (periods have a bare-內 form —
+# 「七日內」 — tried after 以內 so the longer match wins). 842 matches / 457 articles.
 _PERIOD_DIR_RE = re.compile(
     r"([0-9０-９零〇一二三四五六七八九十百千兩]+)\s*(個月|小時|星期|週|日|天|年)(以上|以下|以內|未滿|內)"
 )
 _PERIOD_DOWNWARD = {"以下", "以內", "未滿", "內"}
 _PERIOD_UNIT_NORM = {"天": "日", "星期": "週", "個月": "月"}
-# An article whose OWN text anaphorically cites 本法/同法 (a 辦法/母法 pair —
-# 違反社會秩序維護法案件處理辦法 quoting 「本法第八條」 meaning its own parent
-# 社會秩序維護法). MEASURED: 15 current articles. Quoting one of these
-# VERBATIM must never be flagged just because the back-reference's article
-# number cannot be pinned to a statute of its own (verbatim_crossref, B2/B4).
+# An article whose OWN text cites 本法/同法 (e.g. a 辦法 quoting its 母法).
+# 15 current articles; quoting one verbatim must not be flagged.
 _CROSSREF_ANAPHORA_RE = re.compile(r"本法第|同法第")
 
-# Name-prefix shapes A1 exists to close: foreign (德國), old-law (舊), and
-# local-government (臺北市) prefixes glued onto a REAL corpus statute name.
-# Naive endswith-suffix resolution launders all three into the real statute
-# (measured directly against today's verifier: 「依德國民法第1條」 resolves to
-# statute_id="民法", exists=True, flagged=False).
+# Foreign / old-law / local-government prefixes glued onto a REAL statute
+# name. Naive endswith resolution launders 「德國民法第1條」 into 民法.
 _PREFIX_VARIANTS = (("德國", "foreign"), ("舊", "old-law"), ("臺北市", "local-gov"))
 
-# The 3 hand-picked regression sentences A1/blindspots use as the "this must
-# NOT become collateral damage" anchor — genuine prose particles (依/揆諸/上開
-# 情形涉及) in front of a REAL corpus statute name. Existence is checked at
-# generation time (see run_mutation_test) so a smaller/different corpus (the
-# test-suite's 9-article noise fixture) degrades to fewer regression cases
-# instead of a spurious false positive for a statute it never loaded.
+# Genuine prose particles before a REAL statute name — must not become
+# collateral damage of the prefix check. Existence-checked at generation time
+# so a smaller corpus yields fewer cases instead of a spurious false positive.
 _PREFIXED_STATUTE_REGRESSIONS = (
     ("依", "違反社會秩序維護法案件處理辦法", "第2條"),
     ("揆諸", "民法", "第184條"),
     ("上開情形涉及", "社會秩序維護法", "第72條"),
 )
 
-# ≥30 real Traditional-Chinese ways an answer names its own subject before
-# citing a statute (prose_prefix). Tier3's name-resolution gate must resolve
-# every one of these to the SAME statute a plain 「依」 would — this list
-# doubles as the regression net for the two false-reject shapes a structural
-# audit of this repo's own corpus text turned up (「包括民法…」 in 消費者保護
-# 法§50, 「被害人因具民法…」 in 家庭暴力防治法§58-2).
+# Real ways an answer names its subject before citing a statute (prose_prefix).
+# Each must resolve to the same statute a plain 「依」 would; the last two are
+# false-reject shapes found in the corpus itself (消保法§50, 家暴法§58-2).
 _PROSE_PREFIXES = (
     "房東依", "房客依", "警察依", "管委會依", "本件", "系爭", "查", "爰依",
     "經查", "被告依", "原告依", "承租人依", "出租人依", "住戶依", "業者依",
@@ -170,14 +116,9 @@ _PROSE_PREFIXES = (
     "聲請人依", "義務人依", "權利人依", "包括", "被害人因具",
 )
 
-# retrieval_miss_quoted's fixed anchor (B4): the ONE corpus row whose own
-# text quotes 噪音管制法第8條/第9條 verbatim while itself being a 文號-style
-# (article_no == '') 行政實務見解. Excluding 噪音管制法第8條's own row from
-# retrieved_context is the whole point — that is what makes the citation
-# "quoted in a retrieved source, but its own article unretrieved" instead of
-# "the target article was itself retrieved" (which every OTHER class below
-# builds, and which structurally cannot reach the _quoted_in_retrieved
-# branch this class exists to exercise).
+# retrieval_miss_quoted's anchor: a 文號-style row (article_no == '') whose
+# text quotes 噪音管制法第8條 verbatim. Only that row is retrieved — never
+# 第8條's own — which is the only way to reach _quoted_in_retrieved.
 _RETRIEVAL_MISS_STATUTE_ID = "噪音案件主管機關分工及警察受理處理原則（新北市政府警察局）"
 _RETRIEVAL_MISS_ANSWER = "依噪音管制法第8條,主管機關應處新臺幣九十萬元以下罰鍰。"
 
@@ -190,28 +131,21 @@ class MutationOutcome:
     as_of_date: str | None
     flagged: bool
     expect_flag: bool
-    ok: bool                # flagged == expect_flag (or the status-line criterion — see below)
+    ok: bool                # flagged == expect_flag (or the status-line criterion)
     reason: str             # verifier's reason (or extraction failure note)
 
 
 @dataclass
 class MutationReport:
     outcomes: list[MutationOutcome]
-    # Semantic-axis verdicts that were never rendered by a model (server down,
-    # unparseable reply). The axis answers 「consistent」 on every failure path,
-    # so an outage looks exactly like a clean run — and on 2026-08-06 it did:
-    # 0 flags on 9 planted swaps read as a perfect false-positive record until
-    # the connection error surfaced. Reported, never silently absorbed.
+    # Semantic-axis verdicts never rendered by a model (server down, unparseable
+    # reply). The axis answers 「consistent」 on every failure path, so an outage
+    # looks like a clean run; this count is reported, never absorbed.
     semantic_unreached: int = 0
 
-    # "control" is the ONLY kind folded into the headline false-positive bar.
-    # Every OTHER expect_flag=False kind — the seven axis-specific positive
-    # controls added 2026-08-17, plus prefixed_statute_control's 3 parse-only
-    # regressions — gets its OWN denominator, on its OWN report line, and is
-    # NEVER silently averaged into "0/2,921". Doing that would have re-created
-    # exactly the blind spot this file exists to close: a new axis with zero
-    # cases run against it still reads as "0/0 clean" if it shares control's
-    # bucket, which is indistinguishable on screen from "2,921/2,921 clean".
+    # "control" is the ONLY kind in the headline false-positive bar. Every
+    # other expect_flag=False kind gets its own denominator and report line:
+    # sharing control's bucket would let an axis with zero cases read "clean".
     CONTROL_KIND = "control"
     RETRIEVAL_STATUS_KIND = "retrieval_miss_quoted"
 
@@ -265,9 +199,7 @@ class MutationReport:
         return sum(1 for o in self.outcomes if o.kind == self.RETRIEVAL_STATUS_KIND and o.ok)
 
     def positive_control_kinds(self) -> list[str]:
-        """Every expect_flag=False kind OTHER than 'control' — the axis-
-        specific populations that give the new structural axes something
-        real to be measured against, not just planted errors to catch."""
+        """Every expect_flag=False kind other than 'control'."""
         seen: list[str] = []
         for o in self.outcomes:
             if not o.expect_flag and o.kind != self.CONTROL_KIND and o.kind not in seen:
@@ -275,23 +207,17 @@ class MutationReport:
         return seen
 
     def positive_control_false_positives(self) -> dict[str, tuple[int, int]]:
-        """kind -> (false_positive_count, population), one entry per axis-
-        specific positive control actually generated this run."""
+        """kind -> (false_positive_count, population) per positive control."""
         return {
             kind: (sum(1 for o in self._bucket(kind) if not o.ok), len(self._bucket(kind)))
             for kind in self.positive_control_kinds()
         }
 
     def zero_population_kinds(self, expected_kinds: tuple[str, ...]) -> list[str]:
-        """Kinds this run was expected to be able to generate but produced
-        ZERO outcomes for — the failure mode that let a mis-flagged regex
-        run silently disabled behind a clean-looking scorecard (0/0 reads
-        identical to "no cases exist" and "the generator is broken"). Only
-        meaningful against a corpus with the population this file measured
-        (the shipped 2,921-article corpus); a small/synthetic conn (e.g. the
-        test suite's 9-article noise fixture) legitimately produces zero
-        cases for several axes, so callers using such a conn should not
-        treat this as fatal — see __main__ for the one caller that does."""
+        """Expected kinds that produced ZERO outcomes — a silently disabled
+        generator otherwise reads as a clean 0/0. Only meaningful on the
+        shipped corpus; small test fixtures legitimately lack several
+        populations, so only __main__ treats this as fatal."""
         present = set(self.kinds)
         return [k for k in expected_kinds if k not in present]
 
@@ -346,12 +272,7 @@ def _condition_articles(conn: sqlite3.Connection) -> list[sqlite3.Row]:
     article_no and use a different citation grammar — out of scope here).
     One row per article: historical slices are capped, so effective_to IS NULL
     is unique per (statute_id, article_no) — the ingest guard enforces it.
-
-    Full 7-column shape (B1): the precondition for Statute(*row) under
-    --retrieval-first. The first 3 columns are unchanged from before this
-    revision, so every existing `row[0], row[1], row[2]` read downstream
-    still lines up — this widened the SELECT, not the column order.
-    """
+    Rows are the full _ROW_COLS shape, so Statute(*row) works."""
     return conn.execute(
         f"SELECT {_ROW_COLS} FROM statutes "
         "WHERE article_no != '' AND effective_to IS NULL ORDER BY statute_id, article_no"
@@ -359,12 +280,8 @@ def _condition_articles(conn: sqlite3.Connection) -> list[sqlite3.Row]:
 
 
 def _single_list_max_item(content: str) -> int | None:
-    """The max item number IF `content` contains exactly one item list (the
-    token 「一」 occurs exactly once via _ITEM_RE) — the same 392-article
-    population verifier.py's item-existence axis (A4) trusts. None for a
-    zero- or multi-list article: ghost_item/real_item_ref must never plant or
-    restate a claim the axis itself would refuse to judge (the 24-article
-    ambiguous population stays untouched, same as the axis's own design)."""
+    """The max item number IF `content` has exactly one item list (「一」 once);
+    None otherwise — a multi-list article has no single trustworthy max."""
     hits = _ITEM_RE.findall(content)
     if hits.count("一") != 1:
         return None
@@ -375,8 +292,8 @@ def _single_list_max_item(content: str) -> int | None:
 
 
 def _multi_list_max_item(content: str) -> int | None:
-    """The max item number over ALL lists when `content` has two or more (the
-    24 articles the single-list axis refuses); None otherwise."""
+    """The max item number over ALL lists when `content` has two or more;
+    None otherwise."""
     hits = _ITEM_RE.findall(content)
     if hits.count("一") < 2:
         return None
@@ -389,8 +306,7 @@ def _multi_list_max_item(content: str) -> int | None:
 def _period_directions_local(content: str) -> dict[tuple[str, int], set[str]]:
     """(unit, value) -> the suffix direction words bound to it in `content`,
     unit-normalized (天->日, 星期->週, 個月->月) so 「七天」 and 「七日」 group
-    together. Mirrors _amount_directions' shape in verifier.py, kept as an
-    independent copy for the reason given in the B2 helpers' header comment."""
+    together. Independent of verifier.py's copy (see the helpers' header)."""
     directions: dict[tuple[str, int], set[str]] = {}
     for m in _PERIOD_DIR_RE.finditer(content):
         value = _parse_number(m.group(1))
@@ -430,7 +346,7 @@ def _judge(
 
     expect_status_line_catch: grade `ok` on whether
     verification_status_line(results) stops claiming full traceability rather
-    than on .flagged (the retrieval_miss_quoted kind; see module docstring).
+    than on .flagged (the retrieval_miss_quoted kind).
     """
     ctx = retrieved_context or []
     if retrieval_first:
@@ -458,25 +374,13 @@ def _judge(
 
 # Subject swaps: the cited article is REAL and every structural axis passes —
 # only the 主體 is wrong. Hand-written against hand-verified corpus rows.
-#
-# Widened 2026-08-06 (3 -> 9 cases: actor swaps + object swaps whose NUMBER
-# attaches to the wrong thing). Widened again 2026-08-17 (9 -> 32) as SC#9 of
-# the structural-axis hardening — modal-negation flips, proviso deletions,
-# and MORE number/fraction-wrong-object cases. Every added case keeps the
-# article's real numbers, periods and fractions untouched and swaps only
-# WHO/WHAT they attach to or WHETHER the sentence is an obligation or a
-# permission — that is deliberate: A8 gave the structural axes a fraction and
-# a period-direction check, and a genuinely wrong VALUE in either is no
-# longer this axis's job to catch (see fraction_tamper / period_direction_flip
-# above). A rule that only fires when the number itself is real is a rule
-# this axis's numbers can never accidentally take credit for.
-#
-# Each case was run through `verify_answer` with the semantic axis OFF and
-# had to return flagged=False before being written down — a case
-# the structural axes already catch would credit this axis with work it
-# never did.
+# Every case keeps the article's real numbers, periods and fractions and
+# swaps only WHO/WHAT they attach to, or obligation vs permission — a wrong
+# VALUE belongs to the structural axes, so this axis cannot take credit for it.
+# Each case returned flagged=False with the semantic axis OFF before being
+# written down, so a structural catch is never credited to this axis.
 _SUBJECT_SWAPS = [
-    # ── actor swaps (existing, 2026-08-06) ──
+    # ── actor swaps ──
     ("民法", "第793條",
      "依民法第793條,承租人於他人土地之喧囂侵入時,得禁止之。"),      # 條文主體:土地所有人
     ("公寓大廈管理條例", "第16條",
@@ -489,15 +393,14 @@ _SUBJECT_SWAPS = [
      "依消費者保護法第19條,企業經營者得於交付商品後七日內解除契約。"),  # 七日解約權屬消費者
     ("家庭暴力防治法", "第14條",
      "依家庭暴力防治法第14條,警察機關於審理終結後,應核發通常保護令。"),  # 核發者:法院
-    # ── object swaps: the number is right, what it attaches to is not (existing) ──
+    # ── object swaps: the number is right, what it attaches to is not ──
     ("租賃住宅市場發展及管理條例", "第7條",
      "依租賃住宅市場發展及管理條例第7條,出租人自押金扣除之金額,不得逾二個月之租金總額。"),
     ("勞動基準法", "第24條",
      "依勞動基準法第24條,休息日工作在二小時以內者,按平日每小時工資額加給三分之一以上。"),
     ("公寓大廈管理條例", "第10條",
      "依公寓大廈管理條例第10條,專有部分之修繕費用,由公共基金支付。"),
-    # ── modal-negation flips (added 2026-08-17): 得/應/不得 swapped, numbers
-    # untouched (mostly absent) ──
+    # ── modal-negation flips: 得/應/不得 swapped ──
     ("民法", "第796條",
      "依民法第796條,鄰地所有人如知其越界而不即提出異議,得請求移去或變更其房屋。"),  # 條文:不得
     ("民法", "第774條",
@@ -513,8 +416,7 @@ _SUBJECT_SWAPS = [
      "予以歧視。"),  # 條文:不得
     ("中華民國刑法", "第320條",
      "依中華民國刑法第320條,意圖為自己或第三人不法之所有而竊取他人之動產者之未遂犯,不罰。"),  # 條文:罰之
-    # ── proviso deletions (added 2026-08-17): asserts the OPPOSITE of the
-    # article's own 但書, numbers untouched ──
+    # ── proviso deletions: asserts the OPPOSITE of the article's own 但書 ──
     ("消費者保護法", "第7條",
      "依消費者保護法第7條,企業經營者違反前二項規定,致生損害於消費者或第三人時,應負連帶賠償責任,"
      "即使企業經營者能證明其無過失,法院亦不得減輕其賠償責任。"),  # 條文但書:法院得減輕
@@ -523,8 +425,7 @@ _SUBJECT_SWAPS = [
      "縱有法律明文規定之情形,亦不得為特定目的外之利用。"),  # 條文但書列舉:法律明文規定得為特定目的外利用
     ("勞動基準法", "第38條",
      "依勞動基準法第38條,特別休假期日,由勞工排定之,雇主不得以任何理由與勞工協商調整。"),  # 條文但書:雇主得協商調整
-    # ── numbers attached to the wrong condition (added 2026-08-17): every
-    # number is REAL and taken from the article itself, cross-wired ──
+    # ── numbers attached to the wrong condition: real numbers, cross-wired ──
     ("中華民國刑法", "第284條",
      "依中華民國刑法第284條,因過失傷害人者,處三年以下有期徒刑、拘役或三十萬元以下罰金;"
      "致重傷者,處一年以下有期徒刑、拘役或十萬元以下罰金。"),  # 條文:傷害=1年/10萬,重傷=3年/30萬(對調)
@@ -542,8 +443,7 @@ _SUBJECT_SWAPS = [
      "其租賃契約對於受讓人仍繼續存在;但經公證之不動產租賃契約,其期限逾五年者,不適用之。"),  # 條文:未經公證者不適用
     ("租賃住宅市場發展及管理條例", "第9條",
      "依租賃住宅市場發展及管理條例第9條,出租人應於轉租人簽訂轉租契約後三十日內,以書面通知轉租人。"),  # 條文:轉租人通知出租人
-    # ── fraction attached to the wrong condition (added 2026-08-17): every
-    # fraction value is REAL and taken from the article itself, cross-wired ──
+    # ── fractions attached to the wrong condition: real values, cross-wired ──
     ("民法", "第1144條",
      "依民法第1144條,配偶與第一千一百三十八條所定第二順序或第三順序之繼承人同為繼承時,"
      "其應繼分為遺產三分之二;與第四順序之繼承人同為繼承時,其應繼分為遺產二分之一。"),  # 條文:二分之一/三分之二(對調)
@@ -559,7 +459,7 @@ _SUBJECT_SWAPS = [
     ("中華民國刑法", "第77條",
      "依中華民國刑法第77條,受徒刑之執行而有悛悔實據者,有期徒刑逾三分之二、累犯逾二分之一,"
      "由監獄報請法務部,得許假釋出獄。"),  # 條文:二分之一/三分之二(對調)
-    # ── more actor swaps (added 2026-08-17) ──
+    # ── more actor swaps ──
     ("家庭暴力防治法", "第21條",
      "依家庭暴力防治法第21條,其他保護令之執行,由被害人自行為之。"),  # 條文:由警察機關為之
     ("噪音管制法", "第9條",
@@ -578,9 +478,8 @@ def run_mutation_test(
 ) -> MutationReport:
     """Run the seeded-error suite. With `semantic_llm` set, the 4th axis is on
     and the subject_swap cases are planted (grading the LLM checker itself).
-    With `retrieval_first` set (B3), every class runs through the production
-    retrieval-first call shape, and retrieval_miss_quoted (B4) is additionally
-    planted."""
+    With `retrieval_first` set, every kind runs through the production
+    retrieval-first call shape, and retrieval_miss_quoted is also planted."""
     from legal_agent.anti_hallucination.semantic_check import reset_semantic_unreached
 
     reset_semantic_unreached()
@@ -597,11 +496,8 @@ def run_mutation_test(
     }
 
     condition_rows = _condition_articles(conn)
-    # (statute_id, article_no) -> full 7-col row, and statute_id -> every
-    # article_no it has among the condition rows — used by prefixed_statute
-    # (one representative article per statute) and anaphora_amount/period
-    # (needs a SECOND, different article_no of the same statute to name
-    # explicitly before the 同法 back-reference).
+    # Lookups for prefixed_statute (one article per statute) and
+    # anaphora_* (needs a second article of the same statute).
     rows_by_key: dict[tuple[str, str], sqlite3.Row] = {}
     articles_by_statute: dict[str, list[str]] = {}
     for r in condition_rows:
@@ -683,11 +579,9 @@ def run_mutation_test(
             retrieval_first=retrieval_first, retrieved_context=ctx,
         ))
 
-        # bare_penalty_amount (NEW, A7 target) — the SAME unsupported amount as
-        # wrong_amount, just without the 元 character («處罰鍰十萬», «罰鍰最高
-        # 一百萬»-shaped). _amounts()/_YUAN_RE require a trailing 元, so today's
-        # verifier is blind to this class until A7's masked bare-amount scanner
-        # ships — see module docstring.
+        # bare_penalty_amount — the same unsupported amount as wrong_amount,
+        # with no trailing 元 («處罰鍰十萬»-shaped), which a 元-anchored
+        # amount scan cannot see.
         outcomes.append(_judge(
             "bare_penalty_amount", ref,
             f"依{ref},違者得處罰鍰{bad_amt}。", expect_flag=True, conn=conn,
@@ -701,10 +595,9 @@ def run_mutation_test(
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
 
-        # docnum_adjacent_amount — wrong_amount with a 文號 written right after
-        # the citation. The 文號 pattern admits CJK, so it used to swallow the
-        # 條 citation and collapse its claim scope to nothing: the amount went
-        # unchecked.
+        # docnum_adjacent_amount — wrong_amount with a 文號 right after the
+        # citation; a CJK-admitting 文號 pattern can swallow the 條 citation
+        # and leave the amount unchecked.
         outcomes.append(_judge(
             "docnum_adjacent_amount", ref,
             f"依{ref}及內政部台內警字第1號函,違者可處新臺幣{bad_amt}元罰鍰。",
@@ -747,9 +640,8 @@ def run_mutation_test(
 
         # period_swap — real citation, real unit, wrong count (「七日」 claimed
         # as 「十四日」). An amounts-only content match is provably blind to
-        # this class — the demo copy almost advertised the catch before it
-        # existed (2026-07-19). Planted only when the article states a period,
-        # and the fake value is verified absent from that unit's values.
+        # this class. Planted only when the article states a period, and the
+        # fake value is verified absent from that unit's values.
         if period_unit is not None:
             fake_period = max(source_periods[period_unit]) * 2
             while fake_period in source_periods[period_unit]:
@@ -761,10 +653,8 @@ def run_mutation_test(
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
 
-        # period_direction_flip (NEW, A8 target) — mirrors direction_flip's
-        # unambiguous guard exactly, for period+direction phrases instead of
-        # amounts (「七日內」/「一個月以上」-shaped; MEASURED 457 articles carry
-        # at least one such phrase, 842 total matches — see _PERIOD_DIR_RE).
+        # period_direction_flip — direction_flip's unambiguous-direction
+        # guard, applied to period phrases (「七日內」/「一個月以上」).
         period_dirs = _period_directions_local(content)
         unique_pd = next(((k, d) for k, d in period_dirs.items() if len(d) == 1), None)
         if unique_pd is not None:
@@ -776,11 +666,8 @@ def run_mutation_test(
                 expect_flag=True, conn=conn,
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
-        # real_period_direction (positive control) — the FIRST real
-        # period+direction phrase in the article, restated correctly. Broader
-        # population than the flip above on purpose (not gated on
-        # unambiguity): restating a TRUE value+direction pair is safe even
-        # when the article states the same unit more than once.
+        # real_period_direction (positive control) — the first real period
+        # phrase restated. Not gated on unambiguity: a TRUE pair is always safe.
         first_pd = _PERIOD_DIR_RE.search(content)
         if first_pd is not None:
             pdv = _parse_number(first_pd.group(1))
@@ -793,12 +680,9 @@ def run_mutation_test(
                     retrieval_first=retrieval_first, retrieved_context=ctx,
                 ))
 
-        # fraction_tamper (NEW, A8 target) — unambiguous guard: only when the
-        # article states EXACTLY ONE distinct (denom, numer) pair (82 articles
-        # carry >=1 fraction; a 2-distinct-value article like 勞動基準法§24
-        # {(3,1),(3,2)} is EXCLUDED here on purpose — tampering "三分之一" into
-        # "三分之二" there would be an equivalent mutant, not an error, since
-        # both values are genuinely stated).
+        # fraction_tamper — only when the article states EXACTLY ONE distinct
+        # fraction: in 勞基法§24 {1/3, 2/3} turning 三分之一 into 三分之二
+        # would be an equivalent mutant, not an error.
         frac_values = _fractions_local(content)
         if len(frac_values) == 1:
             (fr_denom, fr_numer), = frac_values
@@ -811,9 +695,8 @@ def run_mutation_test(
                 expect_flag=True, conn=conn,
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
-        # real_fraction (positive control) — one REAL fraction restated
-        # correctly. Broader population than the tamper above (any article
-        # with >=1 fraction, not just the unambiguous single-value ones).
+        # real_fraction (positive control) — one REAL fraction restated, for
+        # any article with >=1 fraction.
         if frac_values:
             fr_denom, fr_numer = sorted(frac_values)[0]
             outcomes.append(_judge(
@@ -833,10 +716,9 @@ def run_mutation_test(
             retrieval_first=retrieval_first, retrieved_context=ctx,
         ))
 
-        # ghost_paragraph (NEW, A3 target) — only articles with ZERO newlines
-        # (MEASURED 1,433/2,921 — a single, unambiguous paragraph; verifier.py
-        # ignores Citation.paragraph entirely today, so this class is a MISS
-        # until A3 ships — see module docstring).
+        # ghost_paragraph / real_paragraph_ref — only articles with ZERO
+        # newlines (unambiguously one paragraph), so 第2項 is a ghost and
+        # 第1項 is real.
         if content.count("\n") == 0:
             outcomes.append(_judge(
                 "ghost_paragraph", f"{ref}第2項",
@@ -849,8 +731,8 @@ def run_mutation_test(
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
 
-        # ghost_item / real_item_ref (NEW, A4 target) — only the 392-article
-        # single-list population (see _single_list_max_item).
+        # ghost_item / real_item_ref — single-list articles only (max+1 is a
+        # ghost, max is real).
         max_item = _single_list_max_item(content)
         if max_item is not None:
             outcomes.append(_judge(
@@ -880,56 +762,27 @@ def run_mutation_test(
                 conn=conn, retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
 
-        # verbatim_crossref (positive control, B2/B4 prerequisite) — an
-        # article whose OWN text anaphorically cites 本法/同法 (a 辦法/母法
-        # pair). Quoting it VERBATIM must never be flagged just because the
-        # back-reference's article number belongs to a DIFFERENT statute than
-        # the one being quoted (MEASURED 15 such articles, all 12 in
-        # 違反社會秩序維護法案件處理辦法 plus 消費者保護法§9/勞動基準法§69/
-        # 噪音管制法§24 — see module docstring).
-        #
-        # PRE-EXISTING FINDING (not introduced by this file, not fixable
-        # here): 2/15 already fail under TODAY's unpatched verifier — 違反
-        # 社會秩序維護法案件處理辦法第11條 (「本法第七十二條…」) and 第13條
-        # (「本法第八十四條…」). `_iter_citations`' last_named inheritance
-        # resolves 「本法」 to the 辦法 ITSELF (the statute this answer names
-        # explicitly), not its 母法 社會秩序維護法 — the 辦法 has no 第72條/
-        # 第84條 of its own (MEASURED), so exists=False and the verbatim quote
-        # is wrongly flagged. The OTHER 10 辦法 cross-references pass today
-        # only by COINCIDENCE (the 辦法 happens to also have an article at
-        # that same number, which existence-only checking cannot tell apart
-        # from the correct one) — under --retrieval-first, that coincidental
-        # rescue disappears entirely (retrieved_context has no article but
-        # this one), so 14/15 fail there instead of 2/15. Fix belongs to
-        # verifier.py (_resolve_id / _is_anaphoric would need to try
-        # stripping a 辦法/細則/規則/準則 suffix to find the 母法 before
-        # falling back to the 辦法 itself), out of this file's remit — left
-        # as a real, reproducible finding for that workstream.
+        # verbatim_crossref (positive control) — quoting an article that
+        # itself cites 本法/同法 must not be flagged because the back-reference
+        # points into another article (15 articles: 12 in 違反社會秩序維護法
+        # 案件處理辦法, plus 消保法§9, 勞基法§69, 噪音管制法§24).
+        # Known gap: 15/15 in default mode, but 1/15 under --retrieval-first
+        # (measured 2026-10-16) — the quoted articles' targets are not in
+        # retrieved_context, and 辦法§11/§13's 「本法第72/84條」 resolve to the
+        # 辦法 itself, which has no such article.
         if _CROSSREF_ANAPHORA_RE.search(content):
             outcomes.append(_judge(
                 "verbatim_crossref", ref, f"依{ref},{content}", expect_flag=False,
                 conn=conn, retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
 
-        # anaphora_amount / anaphora_period (NEW, A5+A7/A5 targets) — an
-        # EXPLICIT 同法 back-reference (never a bare cross-reference template —
-        # a bare template would plant a false positive of its own kind, see
-        # module docstring's anaphora_kind note) naming a DIFFERENT article of
-        # the SAME statute first, then citing THIS article's number via 同法
-        # with an unsupported amount/period. Today's verifier treats every
-        # inferred_id citation as content_match=True unconditionally (A5 not
-        # yet shipped), so this is a MISS until then — see module docstring.
-        #
-        # retrieved_context carries BOTH articles (other_ano AND ano) under
-        # --retrieval-first — every other class in this file isolates the
-        # axis under test by SQL-selecting exactly its target row(s), and
-        # this pair is no different: with only `ano` in context, the FIRST
-        # citation ({sid}{other_ano}) would itself come back "not retrieved
-        # this time" and flag the answer for a reason that has nothing to do
-        # with the wrong amount/period this class exists to plant — a catch
-        # for the wrong reason is not a catch (MEASURED 2026-08-17: omitting
-        # other_ano's row inflated anaphora_amount/period's retrieval-first
-        # catch rate through exactly that side door).
+        # anaphora_amount / anaphora_period — name a DIFFERENT article of the
+        # same statute explicitly, then cite THIS article via 同法 with an
+        # unsupported amount/period. Always an explicit 同法, never a bare
+        # cross-reference template (that would plant a false positive).
+        # Under --retrieval-first BOTH articles go in retrieved_context: with
+        # only `ano`, the first citation would flag as "not retrieved" — a
+        # catch for the wrong reason, which once inflated this kind's rate.
         other_ano = next((a for a in articles_by_statute[sid] if a != ano), ano)
         other_row = rows_by_key[(sid, other_ano)]
         anaphora_ctx = (
@@ -957,10 +810,8 @@ def run_mutation_test(
                 retrieval_first=retrieval_first, retrieved_context=anaphora_ctx,
             ))
 
-    # prefixed_statute (NEW, A1 target) — one representative real article per
-    # statute_id, prefixed 3 ways (德國/舊/臺北市). Population is EVERY
-    # statute_id this corpus has a condition article for — dynamic, never
-    # hardcoded (16 on the shipped corpus).
+    # prefixed_statute — one real article per statute_id, prefixed 3 ways
+    # (德國/舊/臺北市). Population is every statute_id in the corpus.
     for psid, anos in articles_by_statute.items():
         prow = rows_by_key[(psid, anos[0])]
         pctx = [Statute(prow[0], prow[1], prow[2], prow[3], prow[4], prow[5], prow[6])] \
@@ -973,10 +824,8 @@ def run_mutation_test(
                 conn=conn, retrieval_first=retrieval_first, retrieved_context=pctx,
             ))
 
-    # prefixed_statute_control (positive control / A1 regression anchor) —
-    # existence-checked at generation time so a smaller/different corpus
-    # degrades to fewer cases instead of a spurious false positive for a
-    # statute it never loaded (see _PREFIXED_STATUTE_REGRESSIONS docstring).
+    # prefixed_statute_control (positive control) — skipped when the statute
+    # is absent from this corpus (see _PREFIXED_STATUTE_REGRESSIONS).
     for particle, rsid, rano in _PREFIXED_STATUTE_REGRESSIONS:
         rrow = conn.execute(
             f"SELECT {_ROW_COLS} FROM statutes WHERE statute_id = ? AND article_no = ? "
@@ -993,14 +842,9 @@ def run_mutation_test(
             conn=conn, retrieval_first=retrieval_first, retrieved_context=rctx,
         ))
 
-    # prose_prefix (positive control, Tier3-gate regression net) — ≥30 real
-    # ways an answer names its own subject before 「依」-ing a statute, cycled
-    # across every statute_id this corpus has a condition article for. Passes
-    # the cited article as retrieved_context under --retrieval-first for the
-    # same reason anaphora_amount/period does above: this class tests NAME
-    # RESOLUTION (Tier1/2/3), not retrieval completeness — without its target
-    # row in context every case would fail on "not retrieved" instead, which
-    # is a different axis than the one this class exists to regress-test.
+    # prose_prefix (positive control) — each _PROSE_PREFIXES entry, cycled
+    # across statute_ids. Tests NAME RESOLUTION, so the cited row is in
+    # retrieved_context under --retrieval-first.
     statute_cycle = list(articles_by_statute.items())
     if statute_cycle:
         for i, prefix in enumerate(_PROSE_PREFIXES):
@@ -1023,11 +867,9 @@ def run_mutation_test(
         retrieval_first=retrieval_first,
     ))
 
-    # alias_typo — the blind spot the live demo exposed on 2026-08-04. An alias
-    # that is a SUFFIX of its canonical name (大廈管理條例 ⊂ 公寓大廈管理條例)
-    # used to be matched as a suffix, so misspelling the part the alias omits
-    # resolved the invented name into the real statute and passed all three
-    # axes. One case per suffix-shaped alias, corrupting the omitted prefix.
+    # alias_typo — an alias that is a SUFFIX of its canonical name
+    # (大廈管理條例 ⊂ 公寓大廈管理條例): misspelling the omitted part must not
+    # resolve to the real statute. One case per suffix-shaped alias.
     for short, canonical in sorted(_ALIASES.items()):
         if short == canonical or not canonical.endswith(short):
             continue                   # 刑法/勞基法-style abbreviations, not suffixes
@@ -1048,13 +890,9 @@ def run_mutation_test(
             retrieval_first=retrieval_first, retrieved_context=actx,
         ))
 
-    # retrieval_miss_quoted (NEW, B4 — ONLY under --retrieval-first) — the one
-    # case in this whole file where retrieved_context is built to DELIBERATELY
-    # EXCLUDE the cited article's own row. Every other class above builds
-    # retrieved_context BY SELECTING the target row, which makes the
-    # _quoted_in_retrieved false-greenlight branch structurally unreachable —
-    # this is the sole case that reaches it. Graded on the status line via
-    # expect_status_line_catch, not on .flagged (see module docstring).
+    # retrieval_miss_quoted (--retrieval-first only) — the one case whose
+    # retrieved_context deliberately EXCLUDES the cited article's row; graded
+    # on the status line, not on .flagged.
     if retrieval_first:
         miss_row = conn.execute(
             f"SELECT {_ROW_COLS} FROM statutes WHERE statute_id = ? AND article_no = ''",
@@ -1088,12 +926,8 @@ def run_mutation_test(
     return MutationReport(outcomes, semantic_unreached=semantic_unreached_count())
 
 
-# Kinds this file can ALWAYS generate at least one case for, against a corpus
-# with the shape the shipped one has (every population measured in this
-# file's comments is non-zero). Used ONLY by __main__'s zero-population check
-# against the real production DB — NOT a general assertion, since a small or
-# synthetic conn (e.g. the test suite's 9-article noise fixture) legitimately
-# produces zero cases for several of these and that is not a bug.
+# Kinds that always have >=1 case on the shipped corpus. Used ONLY by
+# __main__'s zero-population gate; small test fixtures legitimately lack some.
 _ALWAYS_NONEMPTY_ON_FULL_CORPUS = (
     "control", "nonexistent_article", "ghost_suffix", "wrong_amount",
     "bare_penalty_amount", "out_of_force", "period_swap", "direction_flip",

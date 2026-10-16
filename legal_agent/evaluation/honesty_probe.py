@@ -1,9 +1,7 @@
-"""Honesty tier, both directions (evals/RESULTS.md, 2026-08-06).
+"""Honesty tier, both directions.
 
-The golden set carries 5 out-of-scope cases. That is enough to notice the tier
-is over-confident and far too few to decide anything: a signal tuned to separate
-5 cases is fitted, and this project retracted a published number the day before
-for exactly that. So the probe is a purpose-built ruler with both error
+The golden set carries only 5 out-of-scope cases — too few to tune against
+without fitting. So the probe is a purpose-built ruler with both error
 directions in it:
 
     20 out-of-scope   — each governed by a statute verified ABSENT from the
@@ -13,9 +11,8 @@ directions in it:
                         Refusing is a false refusal: the answer was there and
                         the reader was turned away.
 
-Two numbers come out, and they trade against each other. Reporting only the
-first is how the floor at 70 spent a week refusing 勞基法§11 資遣 (top 39.19)
-while answering 15 of 20 questions the corpus cannot support.
+Two numbers come out, and they trade against each other; reporting only the
+first once hid a floor that falsely refused in-scope questions (HISTORY.md).
 
 Deliberately narrow, like real_recall:
   * retrieval only — the tier is decided from scores BEFORE the LLM, so this

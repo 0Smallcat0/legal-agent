@@ -1,70 +1,32 @@
 """paragraph_bounds_audit.py -- upgrade path for the 款 (item) existence
-axis, NOT this round's judging criterion (D2; A4's own note in
-verifier.py makes the same point about its 392/24 split).
+axis, NOT a judging criterion. It changes nothing in verifier.py.
 
-A4 ships a coarse, hand-verified split over the 2,921 in-force articles:
-「一、」 occurs exactly once in an article's content -> that article is
-trusted at ONE global max item number (392 articles); 「一、」 occurs two or
-more times -> the article is held back entirely as unverified, because a
-single global max would let a citation into the FIRST 項's list validate
-against the LAST 項's (possibly higher) max (24 articles). This script
-explores whether those 24 can be split more precisely -- one upper bound
-per 項-level block instead of one per article -- and cross-checks the
-result against every item-numbered reference the corpus makes to ITSELF.
+The verifier trusts one max 款 number for the 392 single-list articles; on
+the 24 with two or more lists it flags only a 款 above every list and marks
+the rest unverified (a single max would let a citation into the first 項's
+list validate against a later, higher one). This script explores bounding
+those 24 per block, and cross-checks against every item-numbered reference
+the corpus makes to itself.
 
-WHAT "區塊" MEANS HERE
------------------------
-A 款 list restarts at 一 every time a NEW 項 (or unnumbered paragraph)
-begins its own enumeration. Given the marker sequence for an article
-(一,二,三 then 一,二,三,四,五 for 民法第129條, say), a block boundary is
-placed wherever the sequence fails to keep increasing -- i.e. NOT a fixed
-"款 token count", a running comparison against the previous marker. Each
-block's own upper bound is its own max, so a reference into the SECOND 項
-is never validated against the first 項's (possibly higher, possibly
-lower) max.
+A block boundary is placed wherever the 款 marker sequence stops increasing
+(民法第129條: 一,二,三 | 一,…,五); each block's bound is its own max.
 
-WHAT THE CROSS-CHECK MEANS, AND WHAT IT DOES NOT
---------------------------------------------------
-"矛盾" here means: some OTHER article's own text cites this one with a 款
-number that exceeds every block this script derived for it. That is
-INTERNAL consistency only -- corpus text agreeing with itself. There is no
-external structured feed this round to compare against (see RESULTS.md,
-"下一輪候選"), so an article with zero contradictions is a CANDIDATE for
-upgrade, not a proof. Nothing here changes A4's 392/24 split THIS round --
-verifier.py is out of this script's scope and the split stays frozen
-either way until a human reads this output and a future round acts on it.
+"矛盾" = another article's text cites this one with a 款 above every derived
+block. That is INTERNAL consistency only (no external feed), so zero
+contradictions makes an article a CANDIDATE for upgrade, not a proof.
 
-Cross-referencing also makes two assumptions about what an unnamed
-reference means, stated here so a flagged contradiction can be read
-correctly:
+Reference resolution heuristics (read a contradiction as "worth a human
+look", not a proven defect):
+  * A BARE unnamed continuation (道交條例第7-2條's 「…及第九十二條第七項第六
+    款」) is attributed to the citing article's own statute.
+  * An explicit anaphora (「同法」「本法」「該法」…) is attributed to the
+    citing statute, UNLESS its name contains exactly one other corpus id
+    (違反社會秩序維護法案件處理辦法 ⊃ 社會秩序維護法): then that enabling law.
+    E.g. that 辦法's §14 「本法第四十三條第一項第一款」 means 社會秩序維護法§43,
+    not the 辦法's own §43. On the 17-id corpus exactly one such pair exists.
 
-  * A BARE, unnamed continuation -- 道路交通管理處罰條例第7-2條's own
-    「…及第九十二條第七項第六款之行為」 never names a statute at all -- is
-    attributed to THAT article's own statute_id. Ordinary drafting
-    convention for an unnamed continuation, and the same self-reference a
-    reader would supply.
-  * An EXPLICIT anaphora word (「同法」「本法」「該法」…) is attributed to
-    the article's own statute_id UNLESS that statute_id itself textually
-    CONTAINS a different, real corpus statute id as a substring -- e.g.
-    違反社會秩序維護法案件處理辦法 contains 社會秩序維護法 -- in which case
-    the contained id is used instead. A 辦法/細則/規則/準則 whose own name is
-    built by wrapping around its enabling law's name conventionally means
-    THAT law when it says 「本法」, not itself; this was not a theoretical
-    worry, it is exactly what 違反社會秩序維護法案件處理辦法第14條's own
-    text does (「本法第四十三條第一項第一款」 means 社會秩序維護法第43條, a
-    5-item list, NOT the 辦法's own, unrelated 第43條) -- first observed as
-    a false contradiction in this script's own first run, fixed by adding
-    this rule.
-
-Both are heuristics, not proofs -- a VERBATIM quotation of a different
-statute's text that itself ends in an unnamed continuation could still
-fool the first rule, and a coincidental substring match could in principle
-fool the second (checked: across all 17 corpus ids today, exactly one pair
-has this containment relationship, so the second rule is unambiguous on
-this corpus, but it is a structural check, not a hardcoded pair). A
-contradiction this script reports should be read as "worth a human look",
-not as a proven defect -- exactly why this script is an upgrade path and
-not a judging criterion.
+Exit code: 0 unless the scan finds zero 款 markers (assert_nonzero_scan);
+contradictions and heuristic mismatches are reported, never gated.
 
 Run:  python -m legal_agent.evaluation.paragraph_bounds_audit
 """
@@ -85,16 +47,12 @@ from legal_agent.anti_hallucination.verifier import (
 from legal_agent.config import DB_PATH
 from legal_agent.evaluation import assert_nonzero_scan
 
-# 款 marker at the start of a line: 「一、」「二、」… `re.MULTILINE` is kept for
-# what it documents (「^」 = line start) even though it is, measured, a no-op
-# for this exact pattern: `(?:^|\n)` already covers the newline case
-# MULTILINE would add. Confirmed on the full 2,923-row corpus and again on
-# the 2,921 in-force rows this script scans -- identical hit/row counts with
-# the flag on or off either way. Kept for clarity, not load-bearing.
+# 款 marker at the start of a line: 「一、」「二、」… (re.MULTILINE is redundant
+# with `(?:^|\n)` -- same counts either way -- and kept only for readability.)
 _ITEM_MARKER_RE = re.compile(r"(?:^|\n)([一二三四五六七八九十百]+)、", re.MULTILINE)
 _ONE_MARKER_RE = re.compile(r"(?:^|\n)一、", re.MULTILINE)
 
-# The four articles the task calls out for a full, human-readable derivation.
+# Multi-list articles printed with a full, human-readable derivation.
 _FULL_DERIVATION_TARGETS: tuple[tuple[str, str], ...] = (
     ("民法", "第129條"),
     ("中華民國刑法", "第10條"),
@@ -147,24 +105,15 @@ def _context(text: str, start: int, end: int, radius: int = 24) -> str:
 
 
 def _derive_blocks(content: str) -> list[Block]:
-    """Split the 款 marker sequence wherever it fails to keep increasing.
-
-    民法第129條 has two 項, one capped at 三 and the next at 五 -- one block
-    per article (treating it as a single running list) would let a 「第五
-    款」 reference validate against the FIRST 項, which does not go past
-    三. Splitting on non-increase, and taking each block's OWN max, is what
-    avoids that.
-    """
+    """Split the 款 marker sequence wherever it fails to keep increasing, so
+    民法第129條's first 項 (max 三) is not bounded by the second's 五."""
     blocks: list[Block] = []
     current: list[int] = []
     prev: int | None = None
     for raw in _ITEM_MARKER_RE.findall(content):
         n = _parse_number(raw)
         if n is None:
-            continue  # the marker character class ([一二三四五六七八九十百]) is a
-                       # strict subset of _parse_number's own CN_DIGIT/CN_SMALL
-                       # tables, so this never actually fires -- kept as a
-                       # guard, not a reachable path.
+            continue  # unreachable for this marker class; kept as a guard
         if prev is not None and n <= prev:
             blocks.append(Block(len(blocks) + 1, tuple(current)))
             current = []
@@ -177,16 +126,9 @@ def _derive_blocks(content: str) -> list[Block]:
 
 def _anaphora_parent(statute_id: str, known_ids: set[str]) -> str:
     """What 「本法/同法/該法…」 means inside an article belonging to
-    `statute_id` -- usually `statute_id` itself, but NOT when `statute_id`
-    is a subordinate instrument whose own name textually wraps around its
-    enabling law's name (違反社會秩序維護法案件處理辦法 contains
-    社會秩序維護法): such a 辦法/細則/規則/準則 conventionally means the
-    enabling law when it says 「本法」, not itself. Detected structurally --
-    does `statute_id` CONTAIN a different known id as a substring -- not by
-    a hardcoded pair, so it generalises to any future 辦法/母法 pair the
-    corpus grows without another edit here. Falls back to `statute_id`
-    itself when no such unambiguous parent exists, or when more than one
-    candidate is found (ambiguous -- do not guess)."""
+    `statute_id`: the one other known id its name contains (a 辦法 wrapping
+    its enabling law's name), else `statute_id` itself -- including when
+    two or more candidates make it ambiguous."""
     parents = [kid for kid in known_ids if kid != statute_id and kid in statute_id]
     return parents[0] if len(parents) == 1 else statute_id
 
@@ -195,13 +137,9 @@ def _extract_cross_refs(
     statute_id: str, article_no: str, content: str, known_ids: set[str]
 ) -> list[CrossRef]:
     """Every item-numbered citation inside one article's own text, resolved
-    to (target_statute_id, target_article_no, item). See the module
-    docstring's caveat for what "bare" vs "explicit anaphora" resolve to.
-    A reference that NAMES a different, real corpus statute uses that name.
-    A reference naming something that resolves to neither (an out-of-corpus
-    name, or a fabricated one) is dropped: this script checks item BOUNDS
-    on articles it already has a block derivation for, it does not
-    re-litigate existence.
+    to (target_statute_id, target_article_no, item) per the module
+    docstring's heuristics. A name resolving to no corpus statute is dropped:
+    this checks item BOUNDS, not existence.
     """
     out: list[CrossRef] = []
     for m in _CITATION_RE.finditer(content):
@@ -249,9 +187,8 @@ def run_audit(conn: sqlite3.Connection) -> AuditReport:
             report.rows_with_markers += 1
         report.bounds[(sid, ano)] = _derive_blocks(content)
 
-        # Cross-check against A4's own coarser heuristic (「一、」 occurrence
-        # count) -- informational only, per the module docstring;
-        # disagreement is surfaced, never auto-resolved.
+        # Cross-check against the verifier's coarser 「一、」-count split --
+        # informational; disagreement is surfaced, never auto-resolved.
         n_one = len(_ONE_MARKER_RE.findall(content))
         n_blocks = len(report.bounds[(sid, ano)])
         if n_one == 1 and n_blocks != 1:

@@ -1,58 +1,28 @@
 """qualifier_audit.py -- standing audit of the citation-NAME resolver's
-Tier-3-style qualifier gate (D1; not a one-shot script -- wire it into CI
-and re-run it after every change to `_resolve_id` or its prefix-rejection
-logic, per CONTRIBUTING.md's checklist).
+qualifier gate. Re-run after every change to `_resolve_id` or its
+prefix-rejection logic.
 
-WHAT THIS MEASURES
--------------------
-`_resolve_id` (legal_agent/anti_hallucination/verifier.py) turns a raw
-citation prefix such as 「依民法」 or 「德國民法」 into a corpus statute_id.
-Accepting ANY name_run that merely *ends with* a known id is also how
-「德國民法」/「舊民法」/「臺北市噪音管制法」 get laundered into real statutes --
-so a gate that rejects suffix-only matches on suspicious prefixes exists to
-close that hole. But real generated prose routinely cites a statute through
-an everyday prefix that no exact-match/alias path covers（「因為公寓大廈管理
-條例」,「他可以向警察機關主張噪音管制法」）-- those citations can ONLY resolve
-through the very suffix test the gate exists to police. Tightening the gate
-can therefore trade one failure mode for its opposite.
+`_resolve_id` (anti_hallucination/verifier.py) turns a citation prefix such
+as 「依民法」 into a corpus statute_id. Accepting any name_run that merely
+ENDS WITH a known id launders 「德國民法」/「臺北市噪音管制法」 into real
+statutes; but real prose also cites through everyday prefixes
+（「因為公寓大廈管理條例」）that only that suffix test resolves. Tightening the
+gate can trade one failure for its opposite, so this measures both, every
+run, against two pools with unambiguous ground truth (no frozen target):
 
-This script does not grade the resolver against a number frozen in a task
-document -- a hardcoded 1,552 / 67 / 43 target was checked against the four
-files it was said to come from and did not reproduce (rescan on any given
-day is authoritative, and is what gets written to RESULTS.md). It instead
-measures itself, every run, against two independently-labelled pools with
-their own, unambiguous ground truth:
+  1. NATURAL sources -- every string leaf in evals/*.json (minus
+     expect_flag=true fixtures), every journal/*.txt, every statutes.content
+     row. None was written to attack the gate, so a citation that
+     endswith-matches a corpus id but the live resolver REJECTS is a FALSE
+     reject.
+  2. ADVERSARIAL probes -- five hand-built laundering strings (德國民法/
+     舊民法/中國民法/臺北市噪音管制法/美國中華民國刑法), which MUST be rejected.
 
-  1. NATURAL sources -- every string leaf in evals/*.json, every
-     journal/*.txt transcript, and every row of statutes.content. None of
-     this text was written to attack the gate: it is either a real model
-     answer from a real evaluation run, a hand-authored expected-statutes
-     fixture, or the corpus's own verbatim legal text. Any citation here
-     that endswith-matches a real corpus id but the LIVE resolver REJECTS
-     is therefore, by construction, a FALSE reject.
-  2. ADVERSARIAL probes -- five hand-built name-laundering strings, the
-     exact ones this project's mutation/blindspot suites use as the
-     headline catch (德國民法/舊民法/中國民法/臺北市噪音管制法/
-     美國中華民國刑法). Ground truth here is the opposite: the live
-     resolver MUST reject every one of them.
+A "candidate" is a name_run that is not itself a corpus id but ends with one
+-- defined by behaviour, not by how `_resolve_id` is staged internally.
 
-A citation counts as a "candidate" for this audit when its name_run is NOT
-itself an exact corpus id, but DOES end with one -- i.e. it is exactly the
-shape the pre-gate, naive `endswith` rule alone would have resolved. That
-definition is behavioural, not structural: it never assumes how many tiers
-the live `_resolve_id` has or what they are called, so this script keeps
-working (and keeps meaning the same thing) whichever way that function
-happens to be implemented on the day it runs -- including today, before
-any Tier-3 gate has landed, when it correctly reports 0 rejections because
-there is nothing yet to reject.
-
-PASS CONDITION (what CI checks -- see the qualifier_audit review fix):
-    false_rejects == 0
-    assert_nonzero_scan(total_citations, ...)   # 0 scanned = script/regex broken
-The 5-adversarial-probes-rejected count is reported and folds into the
-process exit code too, but it is EXPECTED to read 0/5 until the name-
-qualifier gate itself ships in verifier.py -- a 0/5 run today is this
-script doing its job, not a bug in it.
+Exit 0 only if: total_citations > 0 (assert_nonzero_scan; 0 = regex/script
+broken), false_rejects == 0, and all 5 probes are rejected (5/5).
 
 Run:  python -m legal_agent.evaluation.qualifier_audit
 """
@@ -69,11 +39,8 @@ from legal_agent.evaluation import assert_nonzero_scan
 EVALS_DIR = PROJECT_ROOT / "evals"
 JOURNAL_DIR = PROJECT_ROOT / "journal"
 
-# Five hand-built name-laundering probes: the exact shapes this project's
-# blindspot/mutation suites use as the headline "did the gate catch a fake
-# law" case. They do not occur naturally in evals/ or journal/ (nobody
-# generating a real answer writes 「德國民法」), so they are exercised here on
-# their own, with a hardcoded ground truth: MUST be rejected.
+# Name-laundering probes (shared shapes with blindspots/mutation). They do not
+# occur naturally in evals/ or journal/, so they are planted: MUST be rejected.
 _LAUNDERING_PROBES: tuple[tuple[str, str], ...] = (
     ("德國民法", "依德國民法第1條規定,應負損害賠償責任。"),
     ("舊民法", "依舊民法第1條規定,應負損害賠償責任。"),
@@ -119,21 +86,15 @@ class AuditReport:
 
     @property
     def ok(self) -> bool:
-        """The two hard pass conditions this script enforces (its exit
-        code): no natural citation wrongly blocked, no laundering probe
-        wrongly let through. (`assert_nonzero_scan` is a third, but it
-        raises before this is ever constructed, so it is not repeated
-        here.)"""
+        """No natural citation wrongly blocked, no laundering probe let
+        through. (__main__ also calls `assert_nonzero_scan` before using
+        this.)"""
         return not self.false_rejects and not self.laundering_missed
 
 
 def _classify(name_run: str, known_ids: set[str]) -> tuple[list[str], bool, str, bool]:
     """(naive suffix candidates, exact-id hit, live resolution, accepted).
-
-    Purely behavioural: never assumes how `_resolve_id` is staged
-    internally (one tier or three), only compares its OUTPUT against
-    known_ids.
-    """
+    Compares only `_resolve_id`'s OUTPUT against known_ids."""
     naive = [kid for kid in known_ids if name_run.endswith(kid)]
     exact = name_run in known_ids
     live = _resolve_id(name_run, known_ids)
@@ -143,24 +104,13 @@ def _classify(name_run: str, known_ids: set[str]) -> tuple[list[str], bool, str,
 
 def _iter_json_strings(obj, path: str = ""):
     """Yield (breadcrumb, string) for every non-empty string leaf in a
-    loaded JSON value -- evals/*.json mixes lists-of-dicts and
-    dicts-of-dicts, and the breadcrumb is what lets a rejected-candidate
-    line be traced back to one record without re-opening the file.
+    loaded JSON value; the breadcrumb traces a hit back to one record.
 
-    A dict carrying `"expect_flag": true` is a DELIBERATELY adversarial
-    fixture case -- this project's own vocabulary (mutation.py's
-    MutationOutcome and evals/blindspots_v1.json's "miss" cases both use
-    the same field). blindspots_v1.json's prefix_foreign_de case's
-    `answer`, for instance, is literally 「依德國民法第793條規定…」, planted
-    so the verifier is EXPECTED to reject it. Scanning that text as if it
-    were natural, ground-truth-legitimate prose would corrupt the
-    false_rejects signal the moment a qualifier gate correctly starts
-    rejecting it -- so such a case is skipped ENTIRELY (not just its
-    `answer` field, in case the adversarial shape is echoed in a
-    `description`/`note` field too). A case with `expect_flag: false`
-    (blindspots_v1.json's "control" cases, every case in
-    blindspots_positive_control_v1.json) is exactly the natural,
-    should-always-resolve text this scan wants, and is walked as normal.
+    A dict with `"expect_flag": true` is a deliberately adversarial fixture
+    (e.g. blindspots_v1.json's 「依德國民法第793條…」) and is skipped ENTIRELY
+    -- every field, in case a description echoes it -- or a correct
+    rejection would count as a false reject. `expect_flag: false` cases are
+    natural text and are walked.
     """
     if isinstance(obj, dict) and obj.get("expect_flag") is True:
         return
@@ -183,9 +133,7 @@ def _context(text: str, start: int, end: int, radius: int = 24) -> str:
 
 def _scan_sources() -> list[tuple[str, str]]:
     """(source_label, text) for every eval-json string leaf and every
-    journal transcript. Corpus content is added separately by
-    `_corpus_sources` (it needs the DB connection this function does not
-    take)."""
+    journal transcript. Corpus rows come from `_corpus_sources`."""
     for directory in (EVALS_DIR, JOURNAL_DIR):
         if not directory.is_dir():
             raise SystemExit(f"[qualifier_audit] {directory} not found — run from a repo checkout")
@@ -205,10 +153,8 @@ def _scan_sources() -> list[tuple[str, str]]:
 
 
 def _corpus_sources(conn: sqlite3.Connection) -> list[tuple[str, str]]:
-    """Every statute row's own verbatim content -- corpus-internal
-    cross-references (公寓大廈管理條例's own text citing 民法, a 辦法 citing
-    its 本法) are exactly the natural, non-adversarial shape this gate must
-    not break, same as the eval/journal text."""
+    """Every statute row's verbatim content -- its cross-references are
+    natural citations the gate must not break."""
     rows = conn.execute("SELECT statute_id, article_no, content FROM statutes").fetchall()
     return [(f"corpus:{sid}{ano}", content or "") for sid, ano, content in rows]
 
@@ -248,10 +194,9 @@ def run_audit(conn: sqlite3.Connection) -> AuditReport:
         name_run = m.group("name")
         naive, exact, live, accepted = _classify(name_run, known_ids)
         if not naive and not exact:
-            # The probe is built as <fake prefix> + <real corpus base name>,
-            # so it should ALWAYS land in the endswith-only pool. If it does
-            # not, the corpus no longer has the base name this probe assumes
-            # -- a probe-integrity failure, not a "true reject".
+            # <fake prefix> + <real base name> must land in the endswith pool;
+            # if not, the corpus lost the base name -- a broken probe, not a
+            # true reject.
             raise RuntimeError(
                 f"洗白探針 {label!r} 的基底法規名已不在 corpus 中,探針需要更新:"
                 f"name_run={name_run!r}"

@@ -20,9 +20,11 @@ Golden file schema (a JSON list of cases):
       "expected_premise_flag": bool,      # optional, auto-scored (Mechanism 5)
       "notes": str                        # optional
     }
-The real ~20-30 cases are authored separately (human-verified) and dropped in as
-a JSON file; a tiny INVENTED fixture lives under tests/fixtures/ for this
-harness's own tests.
+The human-verified set is evals/golden_v2.json (32 cases); a tiny INVENTED
+fixture lives under tests/fixtures/ for this harness's own tests.
+
+Run at temperature 0 (the __main__ entry does so for ollama): at 0.2 the
+same code spanned 73.1–80.8% across five runs.
 """
 from __future__ import annotations
 
@@ -260,12 +262,8 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.golden_set <golde
     from legal_agent import config
     from legal_agent.run import build_runtime_llm  # reuses the model/key config checks
 
-    # A GRADER samples at temperature 0, or it measures the dice. ollama_llm's
-    # own docstring has said exactly that since it gained the parameter — and
-    # this entry point went on using build_runtime_llm()'s 0.2 default, which is
-    # how the Tier-1 scorecard came to swing 73.1–80.8% strict coverage across
-    # five runs of identical code. At 0.0, consecutive runs are identical.
-    # Measured 2026-08-05; see RESULTS.md.
+    # A grader samples at temperature 0, or it measures the dice (see module
+    # docstring). build_runtime_llm() would use its 0.2 default.
     if config.LLM_PROVIDER == "ollama":
         from legal_agent.dialogue.ollama_llm import ollama_llm
 

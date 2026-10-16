@@ -4,8 +4,7 @@ The judgment layer's correctness was never in doubt: `related_judgments` JOINs
 on articles the pipeline already retrieved, so a case cannot appear unless it
 cites the same law. That is relevance to an ARTICLE, guaranteed by code.
 
-Relevance to the reader's DISPUTE was never measured. RESULTS.md carried it as
-a debt with n=1 evidence. This harness supplies the number.
+This harness measures relevance to the reader's DISPUTE.
 
 What the reader actually sees
 ─────────────────────────────
@@ -26,10 +25,9 @@ Honest about what it cannot say. Same family is a NECESSARY condition, not a
 sufficient one: two 租賃 cases can still be different situations, so the match
 rate is a CEILING on usefulness, the way `real_recall.precision` is a floor.
 And 「損害賠償」 — the single commonest 案由 — names no dispute at all; those are
-reported as UNLABELLED rather than scored either way, because the field the
-reader would have to judge by is empty. Counting them as hits would flatter the
-number; counting them as misses would blame the layer for the court's filing
-vocabulary.
+reported as UNLABELLED rather than scored either way: counting them as hits
+would flatter the number, as misses would blame the layer for the court's
+filing vocabulary.
 
 Run:  python -m legal_agent.evaluation.judgment_relevance [evals/real_sessions.json]
 """

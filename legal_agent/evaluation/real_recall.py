@@ -3,11 +3,9 @@
 The golden set scores the pipeline on cases written FOR the pipeline. This
 harness scores retrieval on 168 problems typed into the assistant as ordinary
 people type them — by the AUTHOR, not by outside users (`evals/HISTORY.md` §A6
-and §A7 name the first twelve), and vocabulary rows were curated against them
-through 2026-07-31, so this is a tuned-on number in the sense RESULTS.md §7
-spells out for 25/27. This line said 「nine」 for weeks after the file passed a
-hundred, and it was the only place the provenance was written down — the transcripts that exposed most of the 2026-07-25 defect
-list (evals/HISTORY.md §A6).
+and §A7 name the first twelve). Vocabulary rows were curated against them
+through 2026-07-31, so this is a TUNED-ON number (in the sense RESULTS.md
+uses for 25/27).
 
 Deliberately narrow:
   * input is the user's own turns, so the number does not depend on how well
@@ -19,6 +17,9 @@ Deliberately narrow:
 It measures RECALL, not legal correctness. A hit means the article reached the
 window the model may cite from; what the model then does with it is graded by
 the golden set and, for the parts that must be right, by the gates.
+
+Confirm the printed dense_fallbacks is 0 before comparing to a published
+number: without dense retrieval the hybrid silently degrades to pure BM25.
 
 Run:  python -m legal_agent.evaluation.real_recall [evals/real_sessions.json]
 """
@@ -50,8 +51,6 @@ class CaseRecall:
 class RecallReport:
     cases: list[CaseRecall]
     # Queries whose dense half silently failed and fell back to pure BM25.
-    # Without this the harness prints a number and never says which retriever
-    # produced it — see render() and RESULTS.md, 2026-08-05.
     dense_fallbacks: int = 0
 
     @property
@@ -66,17 +65,10 @@ class RecallReport:
     def rate(self) -> float:
         return (self.hit_total / self.expected_total) if self.expected_total else 0.0
 
-    # ── the other half of the trade ──────────────────────────────────────────
-    # Every figure in this project asked whether the right article REACHED the
-    # window; none asked what the reader had to wade through to find it. So a
-    # wider window could only ever look free. It is not: k=8 -> 12 puts 50% more
-    # articles in front of a person and into the model's prompt.
-    #
-    # Honest about what this can and cannot say. `expected_statutes` is not an
-    # exhaustive relevance label — an article outside it is not proven noise — so
-    # the ABSOLUTE precision below is a floor, not a verdict on quality. What IS
-    # valid is comparing settings on a fixed case set: if the window grows and
-    # the hit count does not, those seats went to something nobody asked for.
+    # ── window cost: what the reader wades through ──────────────────────────
+    # Without this a wider window always looks free. `expected_statutes` is not
+    # an exhaustive relevance label, so absolute precision is a FLOOR; only a
+    # comparison of settings on a fixed case set is meaningful.
     @property
     def window_total(self) -> int:
         return sum(len(c.window) for c in self.cases)

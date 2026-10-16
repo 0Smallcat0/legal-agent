@@ -1,7 +1,8 @@
 """Evaluation harnesses — every published number in evals/RESULTS.md has one here.
 
-Deterministic, no model: mutation, blindspots, qualifier_audit, real_recall,
-honesty_probe, judgment_relevance, realworld, calibrate (stub answers).
+Deterministic, no model: mutation, blindspots, qualifier_audit,
+paragraph_bounds_audit, real_recall, honesty_probe, judgment_relevance,
+realworld, calibrate (stub answers).
 Call a real model: golden_set, ablation, mutation --semantic, realworld --answers.
 """
 from __future__ import annotations
@@ -33,16 +34,10 @@ def assert_nonzero_scan(count: int, label: str) -> None:
 def print_corpus_fingerprint(db_path=None):
     """Say which corpus this run reads, and ABORT if it is below the floor.
 
-    Every harness here prints a number, and a number is only as good as the
-    corpus behind it. Two agents have already published figures computed
-    against the wrong database, in both cases with nothing on screen naming
-    which one they had opened.
-
-    Below the floor aborts rather than warns, for the same reason
-    `realworld.check_labels` does: a corpus that cannot hold the article and a
-    label the corpus cannot match are one failure, and it renders as a
-    confident wrong number, not as an error. Above the floor is fine and
-    prints as-is — an overnight harvest legitimately accumulates judgments.
+    A number is only as good as the corpus behind it, and figures have been
+    published against the wrong database with nothing on screen naming it.
+    Below the floor aborts rather than warns (it would render as a confident
+    wrong number); above the floor is fine — judgments legitimately accumulate.
     """
     from legal_agent.data.bootstrap import corpus_fingerprint, ensure_corpus
 

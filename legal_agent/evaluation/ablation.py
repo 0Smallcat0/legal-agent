@@ -1,6 +1,6 @@
 """Ablation — the same questions asked BARE (model answers from memory) vs
-GATED (full five-gate pipeline), per local model. Produces the project's
-headline numbers (SPEC §2.1: "when it errs, the user knows").
+GATED (full five-gate pipeline), per local model. Calls a real model, so it
+is not deterministic.
 
 Conditions
     bare   the golden question is sent straight to the model, which is asked to
@@ -12,9 +12,15 @@ Conditions
            verifier -> sections -> premise check). Citations the model
            over-reaches on are FLAGGED to the user.
 
-Closed-world caveat (stated wherever numbers are shown): the corpus is the
-11-entry hand-verified noise corpus, so "unverifiable" means NOT TRACEABLE to
-the corpus — the system's actual promise — not "fabricated in the real world".
+Closed-world caveat (stated wherever numbers are shown): "unverifiable" means
+NOT TRACEABLE to the corpus — the system's actual promise — not "fabricated in
+the real world".
+
+The 未回溯 column is NOT comparable across rows: bare verifies with conn= and
+an empty window (baseline = the whole corpus); gated inherits run_stage3's
+corpus_conn= call (baseline = the retrieved window, so an existing but
+unretrieved article lands there and is correctly not flagged). Only
+`flagged` is measured identically in both.
 
 Reasoning models (deepseek-r1, qwen3) emit <think>…</think>; it is stripped
 before verification so citations inside chain-of-thought don't count.
@@ -121,12 +127,7 @@ class AblationReport:
             "* 未回溯的比較基準兩列不同 —— bare 對「整個語料庫」,gated 對"
             "「這次的檢索視窗」。只有 flagged 兩列同義,可直接相比。",
             "",
-            # The old header said 「corpus查無」 for both rows and that was wrong.
-            # bare verifies with conn= and an empty window, so its baseline is the
-            # WHOLE CORPUS. gated inherits run_stage3's call, which passes only
-            # corpus_conn=, so its baseline is the RETRIEVED WINDOW — an article
-            # that exists but was not retrieved lands in this column and is
-            # correctly NOT flagged. Only `flagged` is measured identically.
+            # 未回溯* differs in baseline per row; see module docstring.
             f"{'model':<20}{'cond.':<7}{'citations':<10}{'未回溯*':<10}"
             f"{'金額不符':<9}{'非現行':<8}{'flagged'}",
         ]
