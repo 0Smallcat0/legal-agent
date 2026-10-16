@@ -689,6 +689,26 @@ def run_mutation_test(
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
 
+        # docnum_adjacent_amount — wrong_amount with a 文號 written right after
+        # the citation. The 文號 pattern admits CJK, so it used to swallow the
+        # 條 citation and collapse its claim scope to nothing: the amount went
+        # unchecked.
+        outcomes.append(_judge(
+            "docnum_adjacent_amount", ref,
+            f"依{ref}及內政部台內警字第1號函,違者可處新臺幣{bad_amt}元罰鍰。",
+            expect_flag=True, conn=conn,
+            retrieval_first=retrieval_first, retrieved_context=ctx,
+        ))
+        # real_positional_amount (positive control) — the REAL amount written
+        # digit by digit (10000 -> 一〇〇〇〇), as dates and amounts often are.
+        if source_amounts and max(source_amounts) >= 10:
+            positional = "".join("〇一二三四五六七八九"[int(d)] for d in str(max(source_amounts)))
+            outcomes.append(_judge(
+                "real_positional_amount", ref,
+                f"依{ref},法定金額為新臺幣{positional}元。", expect_flag=False, conn=conn,
+                retrieval_first=retrieval_first, retrieved_context=ctx,
+            ))
+
         # direction_flip — keep a REAL amount, flip its suffix direction word
         # (「六千元以下罰鍰」 -> claim 「六千元以上」). The amount itself checks
         # out, so an amounts-only content match is blind to this. Only amounts
@@ -1053,6 +1073,7 @@ _ALWAYS_NONEMPTY_ON_FULL_CORPUS = (
     "verbatim_crossref", "prefixed_statute", "prefixed_statute_control",
     "prose_prefix", "fake_statute", "alias_typo",
     "anaphora_amount", "anaphora_period", "real_bare_amount",
+    "docnum_adjacent_amount", "real_positional_amount",
     "period_direction_flip", "real_period_direction",
     "fraction_tamper", "real_fraction",
 )

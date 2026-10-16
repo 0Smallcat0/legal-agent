@@ -55,7 +55,7 @@ sdk_version: 6.20.0
 app_file: app.py
 pinned: false
 license: mit
-short_description: Legal RAG with a citation verifier graded at 11,904/11,904.
+short_description: Legal RAG with a citation verifier graded on 19 error kinds
 ---
 ```
 
@@ -124,10 +124,9 @@ deletion that never crossed. `git rm` it.
 
 Then:
 
-> The frontmatter's `short_description` and the README's tests badge both carry
-> NUMBERS, so they go stale on their own schedule — check them against
-> `evals/RESULTS.md` during the sync rather than copying the old block forward.
-> Both were stale on 2026-08-06 (10,437/10,437 and 433 tests).
+> The frontmatter's `short_description` carries a NUMBER, so it goes stale on its
+> own schedule — check it against `evals/RESULTS.md` during the sync rather than
+> copying the old block forward. It was stale on 2026-08-06 (10,437/10,437).
 >
 > **Do not guard the shim re-apply on the string `spaces.GPU`.** That phrase now
 > appears in `main`'s own `app.py` docstring describing this requirement, so a

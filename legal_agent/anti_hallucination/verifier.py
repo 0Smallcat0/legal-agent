@@ -164,15 +164,22 @@ def _parse_number(text: str) -> int | None:
     ):
         return None
     total = section = number = 0
+    prev_digit = False
     for ch in s:
-        if ch.isdigit():
-            number = number * 10 + int(ch)
-        elif ch in _CN_DIGIT:
-            number = _CN_DIGIT[ch]
-        elif ch in _CN_SMALL:
+        if ch.isdigit() or ch in _CN_DIGIT:
+            digit = int(ch) if ch.isdigit() else _CN_DIGIT[ch]
+            # Two digits in a row are positional (一〇〇〇〇, 二〇二三), not a
+            # replacement; after a unit (一千零五) `number` is 0 and this is a no-op.
+            number = number * 10 + digit if prev_digit else digit
+            prev_digit = True
+            continue
+        prev_digit = False
+        if ch in _CN_SMALL:
             section += (number or 1) * _CN_SMALL[ch]
             number = 0
         elif ch in _CN_BIG:
+            if not (total or section or number):
+                return None       # a bare 「萬」/「億」 (數萬元) states no amount
             total += (section + number) * _CN_BIG[ch]
             section = number = 0
         else:
@@ -899,10 +906,12 @@ def _iter_citations(answer_text: str, known_ids: set[str]):
     「corpus 查無此法源」 warnings on a correct answer in a real session.
     """
     last_named: str | None = None
+    article_spans: list[tuple[int, int]] = []
     for m in _CITATION_RE.finditer(answer_text):
         article_no = _canonical_article(m.group("article"), m.group("suffix"))
         if article_no is None:
             continue
+        article_spans.append(m.span())
         name_run = m.group("name")
         statute_id = _resolve_id(name_run, known_ids)
         kind = _anaphora_kind(name_run, statute_id, known_ids)
@@ -933,10 +942,17 @@ def _iter_citations(answer_text: str, known_ids: set[str]):
             m.start(),
         )
     for m in _DOCNUM_RE.finditer(answer_text):
-        raw = m.group(0)
+        # The 文號 class admits CJK, so 「…法第72條及內政部…第123號」 matches from
+        # the statute name onward. Start it after any 條 citation it swallowed,
+        # or that citation's claim scope collapses to nothing and goes unchecked.
+        start = max([end for s, end in article_spans if s < m.end() and end > m.start()],
+                    default=m.start())
+        raw = answer_text[start:m.end()]
+        if start != m.start() and not _DOCNUM_RE.fullmatch(raw):
+            continue
         yield (
             Citation(raw=raw, statute_id=_resolve_id(raw, known_ids), article_no=""),
-            m.start(),
+            start,
         )
 
 
@@ -975,11 +991,12 @@ def verify_answer(
     # neighbours (the two extractors below run in separate passes, so document
     # order is not the yield order).
     found = sorted(_iter_citations(answer_text, known), key=lambda cp: cp[1])
-    for index, (citation, pos) in enumerate(found):
-        prev_end = (
-            found[index - 1][1] + len(found[index - 1][0].raw) if index else None
-        )
-        next_start = found[index + 1][1] if index + 1 < len(found) else None
+    # Only 條 citations clip each other's claim scope: a 文號 carries no amount
+    # or period to grade, so 「第72條及某函第123號,處九萬元」 still belongs to 第72條.
+    article_positions = [(pos, pos + len(c.raw)) for c, pos in found if c.article_no]
+    for citation, pos in found:
+        prev_end = max((e for s, e in article_positions if s < pos), default=None)
+        next_start = min((s for s, _ in article_positions if s > pos), default=None)
 
         # A5/C3: an anaphoric citation (bare OR explicit 「同法/本法…」) that
         # never inherited a real statute_id — no NAMED citation preceded it

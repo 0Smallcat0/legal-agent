@@ -761,5 +761,35 @@ def test_positive_control_case_agrees_with_the_frozen_json(case, live_conn):
     )
 
 
+# ── numerals and 文號 adjacency (found by audit, 2026-10-16) ──────────────────
+@pytest.mark.parametrize("text, value", [
+    ("一〇〇〇〇", 10000),     # positional digits used to read as 0
+    ("二〇二三", 2023),
+    ("一〇五", 105),
+    ("一千零五", 1005),       # a 零 after a unit is still a placeholder
+    ("三萬零五百", 30500),
+    ("萬", None),             # 「數萬元」 states no amount (used to read as 0)
+    ("十", 10),
+    ("壹拾萬伍仟伍佰伍拾陸", 105556),
+])
+def test_parse_number_reads_positional_digits_and_refuses_a_bare_big_unit(text, value):
+    from legal_agent.anti_hallucination.verifier import _parse_number
+
+    assert _parse_number(text) == value
+
+
+def test_a_positional_amount_that_matches_the_article_is_not_flagged(live_conn):
+    r = verify_answer("依社會秩序維護法第72條,最高處新臺幣一〇〇〇〇元罰鍰。", [], conn=live_conn)[0]
+    assert r.flagged is False, r.reason
+
+
+def test_a_docnum_after_the_citation_does_not_switch_off_the_amount_check(live_conn):
+    answer = "依社會秩序維護法第72條及內政部台內警字第123號函,處九萬元以下罰鍰。"
+    by_raw = {r.citation.raw: r for r in verify_answer(answer, [], conn=live_conn)}
+    assert by_raw["依社會秩序維護法第72條"].flagged is True
+    assert "90000" in by_raw["依社會秩序維護法第72條"].reason
+    assert "及內政部台內警字第123號" in by_raw      # the 文號 is still extracted on its own
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

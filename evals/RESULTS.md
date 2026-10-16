@@ -4,10 +4,10 @@
 > screen, read this one.
 >
 > **Three numbers that matter.**
-> 1. **11,904/11,904 seeded defects caught, 0/2,921 false positives.** Not the
->    model's accuracy — the *verifier's* recall, measured by planting errors in
->    otherwise-correct answers over every article in the corpus. A guardrail
->    with no number on it is a wish.
+> 1. **100% of seeded defects caught in each of nineteen kinds, 0/2,921 false
+>    positives.** Not the model's accuracy — the *verifier's* recall, measured by
+>    planting errors in otherwise-correct answers over every article in the
+>    corpus. A guardrail with no number on it is a wish.
 > 2. **348/356 retrieval recall** on 168 real problems, in the wording people
 >    actually use rather than in legal vocabulary.
 > 3. **100% pass+partial, 0 miss (73% strict)** statute coverage on a fixed 32-case
@@ -63,7 +63,7 @@ catches everything", and what it actually measured was "the checker catches
 everything the generator knows how to break". Errors the generator could not
 express were not in the denominator, so they could not lower it.
 
-The generator now covers seventeen kinds. Every one is still at 100%, and the
+The generator now covers nineteen kinds. Every one is still at 100%, and the
 per-kind denominators are what the claim is now allowed to mean — the recall
 number for a kind that is not listed here does not exist.
 
@@ -83,9 +83,18 @@ number for a kind that is not listed here does not exist.
 | `anaphora_period` | **707/707** | a deadline attributed to the wrong article |
 | `direction_flip` | **326/326** | 以上 flipped to 以下 on a penalty |
 | `real_bare_amount` | **345/345** | the amount as written (must NOT be flagged) |
+| `docnum_adjacent_amount` | **2,921/2,921** | a wrong amount with a 文號 written right after the citation |
+| `real_positional_amount` | **344/344** | the amount in digit-by-digit form, 一〇〇〇〇 (must NOT be flagged) |
 | `anaphora_amount` | **345/345** | an amount attributed to the wrong article |
 | `fraction_tamper` | **63/63** | 三分之二 altered |
 | `real_fraction` | **82/82** | the fraction as written (must NOT be flagged) |
+
+The last two were added on 2026-10-16 after an audit reproduced both failures
+by hand; on the verifier before that day's fix they scored **0/2,921** caught
+and **344/344 false positives**. The 文號 pattern admits CJK, so 「依…第72條及
+內政部…第123號函,處九萬元」 swallowed the 條 citation and its claim scope
+collapsed to nothing; and positional digits replaced each other, so 一〇〇〇〇
+read as 0. A bare 「萬」 (數萬元) also read as 0 and now states no amount.
 
 The `real_*` kinds are the half that makes the other half mean anything: they
 plant nothing and must come back unflagged, which is where a false-positive rate
