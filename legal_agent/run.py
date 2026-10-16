@@ -179,69 +179,21 @@ def _format_result(result) -> str:
     return "\n".join(out)
 
 
-def run_conversation(llm, conn, as_of_date=None, input_fn=input, output_fn=print) -> None:
-    """Rule-based intake loop (used in manual mode). `llm`, `conn`, `input_fn`,
-    `output_fn` are injected so this is fully testable with a fake llm + scripted
-    input."""
+def _converse(welcome: str, turn, llm, conn, as_of_date, input_fn, output_fn) -> None:
+    """The IO loop both intakes share: read a line, hand it to `turn(state, msg)`,
+    and run Stage 3 -> 4 exactly once when the state says the intake is done."""
     state = flow.SessionState()
-    output_fn(_WELCOME)
+    output_fn(welcome)
     while True:
         try:
             msg = input_fn("\n你 > ")
         except (EOFError, KeyboardInterrupt):
+            msg = None
+        if msg is None or msg.strip().lower() in ("quit", "exit", "/quit", "/exit"):
             output_fn("\n(結束對話)")
             return
-        if msg is None:
-            output_fn("\n(結束對話)")
-            return
-        if msg.strip().lower() in ("quit", "exit", "/quit", "/exit"):
-            output_fn("(結束對話)")
-            return
 
-        reply, state = flow.handle_turn(state, msg)
-        output_fn(reply)
-
-        if state.stage is flow.Stage.READY_FOR_STAGE3:
-            output_fn("\n(資訊已足夠——開始檢索法條並診斷;這一步只檢索一次)")
-            result = flow.advance_to_stage3(state, llm=llm, as_of_date=as_of_date, conn=conn)
-            output_fn(_format_result(result))
-            return   # clinic-style: one diagnosis per session
-
-
-def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
-                           output_fn=print, intake_llm=None) -> None:
-    """LLM-driven intake loop: the model DRIVES the conversation (natural replies,
-    its own follow-ups, free-form fact extraction), then on ready runs the SAME
-    Stage 3 -> 4 pipeline. No retrieval happens during intake (spec §3.3);
-    retrieval fires exactly once inside advance_to_stage3. `intake_llm` (falls back
-    to `llm`) can be a JSON-constrained backend so a small local model extracts
-    facts reliably. Injectable IO for tests.
-
-    Triage, seeding, the done-signal and the turn cap all live in
-    `flow.handle_turn_smart` — this loop is IO. They used to be duplicated here,
-    which is how the CLI and the web demo drifted apart in the first place.
-    """
-    intake_llm = intake_llm or llm
-    output_fn(_WELCOME_SMART)
-    state = flow.SessionState()
-    history: list[dict] = []
-    while True:
-        try:
-            msg = input_fn("\n你 > ")
-        except (EOFError, KeyboardInterrupt):
-            output_fn("\n(結束對話)")
-            return
-        if msg is None:
-            output_fn("\n(結束對話)")
-            return
-        if msg.strip().lower() in ("quit", "exit", "/quit", "/exit"):
-            output_fn("(結束對話)")
-            return
-
-        history.append({"role": "user", "content": msg})
-        reply, state = flow.handle_turn_smart(state, msg, history, intake_llm)
-        history.append({"role": "assistant", "content": reply})
-
+        reply, state = turn(state, msg)
         output_fn(reply)
         if state.stage is not flow.Stage.READY_FOR_STAGE3:
             continue
@@ -250,6 +202,29 @@ def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
         result = flow.advance_to_stage3(state, llm=llm, as_of_date=as_of_date, conn=conn)
         output_fn(_format_result(result))
         return   # clinic-style: one diagnosis per session
+
+
+def run_conversation(llm, conn, as_of_date=None, input_fn=input, output_fn=print) -> None:
+    """Rule-based intake loop (used in manual mode). IO is injected for tests."""
+    _converse(_WELCOME, flow.handle_turn, llm, conn, as_of_date, input_fn, output_fn)
+
+
+def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
+                           output_fn=print, intake_llm=None) -> None:
+    """LLM-driven intake loop: the model drives the conversation and extracts
+    facts (triage, seeding, the done-signal and the turn cap live in
+    `flow.handle_turn_smart`); no retrieval happens until advance_to_stage3.
+    `intake_llm` (falls back to `llm`) can be a JSON-constrained backend."""
+    intake_llm = intake_llm or llm
+    history: list[dict] = []
+
+    def turn(state, msg):
+        history.append({"role": "user", "content": msg})
+        reply, state = flow.handle_turn_smart(state, msg, history, intake_llm)
+        history.append({"role": "assistant", "content": reply})
+        return reply, state
+
+    _converse(_WELCOME_SMART, turn, llm, conn, as_of_date, input_fn, output_fn)
 
 
 def main(argv=None) -> int:
