@@ -377,7 +377,7 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
         results = []
         for case in document["cases"]:
             query = case["initial_text"]
-            scored = retrieve_scored(query, k=k or DEFAULT_K, conn=conn)
+            scored = retrieve_scored(query, k=DEFAULT_K if k is None else k, conn=conn)
             retrieved = [s for s, _ in scored]
             scores = [sc for _, sc in scored]
             window = [f"{s.statute_id}{s.article_no}" for s in retrieved]

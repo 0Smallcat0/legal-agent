@@ -604,6 +604,15 @@ def run_mutation_test(
             expect_flag=True, conn=conn,
             retrieval_first=retrieval_first, retrieved_context=ctx,
         ))
+        # docnum_before_citation — a 文號 right BEFORE the citation. Graded on
+        # the status line: the 文號 is unverifiable here, so the answer must not
+        # be reported as fully traceable (it once vanished from extraction).
+        outcomes.append(_judge(
+            "docnum_before_citation", ref,
+            f"依內政部台內警字第1號函及{ref},其規範內容如條文所示。",
+            expect_flag=True, conn=conn, expect_status_line_catch=True,
+            retrieval_first=retrieval_first, retrieved_context=ctx,
+        ))
         # real_positional_amount (positive control) — the REAL amount written
         # digit by digit (10000 -> 一〇〇〇〇), as dates and amounts often are.
         if source_amounts and max(source_amounts) >= 10:
@@ -937,6 +946,7 @@ _ALWAYS_NONEMPTY_ON_FULL_CORPUS = (
     "anaphora_amount", "anaphora_period", "real_bare_amount",
     "docnum_adjacent_amount", "real_positional_amount",
     "ghost_item_multilist", "real_item_ref_multilist",
+    "docnum_before_citation",
     "period_direction_flip", "real_period_direction",
     "fraction_tamper", "real_fraction",
 )

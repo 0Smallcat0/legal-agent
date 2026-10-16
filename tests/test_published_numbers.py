@@ -35,7 +35,14 @@ def _corpus_counts(conn) -> tuple[int, int, int]:
         "COUNT(DISTINCT statute_id || '|' || article_no) FROM statutes "
         "WHERE hierarchy_level != '行政實務見解' AND effective_to IS NULL"
     ).fetchone()
-    (judgments,) = conn.execute("SELECT COUNT(*) FROM judgments").fetchone()
+    # The prose counts the SHIPPED judgments; a machine that has also harvested
+    # more holds extra rows, which is legal (CorpusFingerprint: above the floor).
+    from legal_agent.data.bootstrap import shipped_judgment_ids
+
+    jids = shipped_judgment_ids()
+    (judgments,) = conn.execute(
+        f"SELECT COUNT(*) FROM judgments WHERE jid IN ({','.join('?' * len(jids))})", jids
+    ).fetchone()
     return statutes, articles, judgments
 
 

@@ -145,7 +145,7 @@ _NOISE_STANCE_DETAIL = {
 }
 
 
-def stance_line(stance: str | None, problem_type: str | None = "noise") -> str:
+def stance_line(stance: str | None, problem_type: str | None = None) -> str:
     """The one visible line that makes the system's assumption correctable.
 
     Silence reads as endorsement — the same lesson the verification section

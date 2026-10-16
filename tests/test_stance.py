@@ -371,3 +371,7 @@ def test_the_stance_line_only_mentions_noise_on_a_noise_case():
     assert "太吵" in triage.stance_line("respondent", "noise")
     rent = triage.stance_line("respondent", "other:rent")
     assert "被投訴的一方" in rent and "太吵" not in rent
+
+
+def test_the_stance_line_adds_no_noise_detail_unless_told_it_is_noise():
+    assert "太吵" not in triage.stance_line("respondent")

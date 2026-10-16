@@ -133,7 +133,7 @@ def run_real_recall(path, conn=None, k: int | None = None) -> RecallReport:
         cases = []
         for case in load_cases(path):
             expected = list(case.get("expected_statutes", []))
-            found = retrieve(case["query"], k=k or DEFAULT_K, conn=conn)
+            found = retrieve(case["query"], k=DEFAULT_K if k is None else k, conn=conn)
             window = [f"{s.statute_id}{s.article_no}" for s in found]
             cases.append(CaseRecall(
                 id=case.get("id", ""),

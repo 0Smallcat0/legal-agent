@@ -106,13 +106,34 @@ def _ensure_judgments(conn: sqlite3.Connection) -> int:
 
     Harvested judgments (from `data/judicial_api.py`) live in the same table.
     The shipped file is a floor, never an overwrite: rows already present are
-    ignored. Loaded even when the table is non-empty, so a partial harvest
-    cannot keep the shipped judgments out.
+    ignored. Loaded whenever any shipped jid is missing, so a partial harvest
+    cannot keep the shipped judgments out; a complete table is only read.
     """
     shipped = config.CORPUS_DIR / JUDGMENTS
-    if shipped.exists():
+    jids = shipped_judgment_ids()
+    if jids and _present_count(conn, jids) < len(jids):
         load_judgments(shipped, conn)
     return judgment_count(conn)
+
+
+@lru_cache(maxsize=1)
+def shipped_judgment_ids() -> tuple[str, ...]:
+    """The jids the package ships (parsed once per process)."""
+    shipped = config.CORPUS_DIR / JUDGMENTS
+    if not shipped.exists():
+        return ()
+    return tuple(r["jid"] for r in json.loads(shipped.read_text(encoding="utf-8")))
+
+
+def _present_count(conn: sqlite3.Connection, jids: tuple[str, ...]) -> int:
+    """How many of `jids` the table holds — a read, so a loaded DB is not written."""
+    try:
+        marks = ",".join("?" * len(jids))
+        return conn.execute(
+            f"SELECT COUNT(*) FROM judgments WHERE jid IN ({marks})", jids
+        ).fetchone()[0]
+    except sqlite3.OperationalError:      # judgments table not created yet
+        return 0
 
 
 # ── which corpus am I reading, and is all of it there? ───────────────────────

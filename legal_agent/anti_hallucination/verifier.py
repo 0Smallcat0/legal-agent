@@ -134,6 +134,7 @@ def _parse_number(text: str) -> int | None:
         return None
     total = section = number = 0
     prev_digit = False
+    cn_run = 0      # consecutive non-zero Chinese digits
     for ch in s:
         if ch.isdigit() or ch in _CN_DIGIT:
             digit = int(ch) if ch.isdigit() else _CN_DIGIT[ch]
@@ -141,8 +142,12 @@ def _parse_number(text: str) -> int | None:
             # replacement; after a unit (一千零五) `number` is 0 and this is a no-op.
             number = number * 10 + digit if prev_digit else digit
             prev_digit = True
+            cn_run = cn_run + 1 if (ch in _CN_DIGIT and digit) else 0
             continue
         prev_digit = False
+        if cn_run >= 2:
+            return None     # 「三四千」「一兩萬」: an approximate range, not one amount
+        cn_run = 0
         if ch in _CN_SMALL:
             section += (number or 1) * _CN_SMALL[ch]
             number = 0
@@ -171,8 +176,9 @@ _CITATION_RE = re.compile(
     r"(?:第(?P<paragraph>" + _NUM + r")項)?"
     r"(?:第(?P<item>" + _NUM + r")款)?"
 )
-# (2) 文號式: ...第X號 (函釋 / 行政實務見解). Bounded by punctuation (class excludes 、,。).
-_DOCNUM_RE = re.compile(r"[一-鿿0-9０-９A-Za-z()（）]{2,40}?第" + _NUM + r"號")
+# (2) 文號式: ...第X號 (函釋 / 行政實務見解). Bounded by punctuation (class excludes
+# 、,。) and by 條, so 「…法第72條及內政部…第123號」 cannot swallow the 條 citation.
+_DOCNUM_RE = re.compile(r"(?:(?!條)[一-鿿0-9０-９A-Za-z()（）]){2,40}?第" + _NUM + r"號")
 # 「第X條」 immediately after a statute name — used to recognise a cross-reference
 # that a retrieved source states in its own text.
 _CROSSREF_RE = re.compile(r"第(" + _NUM + r")條")
@@ -475,11 +481,15 @@ def _paragraph_ceiling(content: str) -> int | None:
 
 
 def _item_upper_bound(content: str) -> int | None:
-    """The largest 款 number ANY list in `content` reaches. For an article with
-    several lists (`_item_ceiling` is None) it cannot say which list a citation
-    means, but a claimed 款 above every list is absent from all of them."""
-    numbers = [n for n in (_parse_number(g) for g in _ITEM_MARKER_RE.findall(content))
-               if n is not None]
+    """The largest 款 number ANY list reaches, for an article with two or more
+    lists (two regex-matched 「一」 markers). Which list a citation means is
+    undecidable there, but a claimed 款 above every list is absent from all of
+    them. None for zero or one list: the single-list case is `_item_ceiling`'s,
+    and an article with no 「一」 marker was never measured for this rule."""
+    markers = _ITEM_MARKER_RE.findall(content)
+    if markers.count("一") < 2:
+        return None
+    numbers = [n for n in (_parse_number(g) for g in markers) if n is not None]
     return max(numbers) if numbers else None
 
 
@@ -758,12 +768,10 @@ def _iter_citations(answer_text: str, known_ids: set[str]):
     called 「雇主依」).
     """
     last_named: str | None = None
-    article_spans: list[tuple[int, int]] = []
     for m in _CITATION_RE.finditer(answer_text):
         article_no = _canonical_article(m.group("article"), m.group("suffix"))
         if article_no is None:
             continue
-        article_spans.append(m.span())
         name_run = m.group("name")
         statute_id = _resolve_id(name_run, known_ids)
         kind = _anaphora_kind(name_run, statute_id, known_ids)
@@ -787,17 +795,10 @@ def _iter_citations(answer_text: str, known_ids: set[str]):
             m.start(),
         )
     for m in _DOCNUM_RE.finditer(answer_text):
-        # The 文號 class admits CJK, so 「…法第72條及內政部…第123號」 matches from
-        # the statute name onward. Start it after any 條 citation it swallowed,
-        # or that citation's claim scope collapses to nothing and goes unchecked.
-        start = max([end for s, end in article_spans if s < m.end() and end > m.start()],
-                    default=m.start())
-        raw = answer_text[start:m.end()]
-        if start != m.start() and not _DOCNUM_RE.fullmatch(raw):
-            continue
+        raw = m.group(0)
         yield (
             Citation(raw=raw, statute_id=_resolve_id(raw, known_ids), article_no=""),
-            start,
+            m.start(),
         )
 
 

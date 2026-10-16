@@ -274,7 +274,7 @@ def run_judgment_relevance(path, conn=None, k: int | None = None) -> RelevanceRe
             expected = list(case.get("expected_statutes", []))
             families = sorted({f for f in (statute_family(e) for e in expected)
                                if f and f not in _CROSS_CUTTING})
-            found = retrieve(case["query"], k=k or DEFAULT_K, conn=conn)
+            found = retrieve(case["query"], k=DEFAULT_K if k is None else k, conn=conn)
             focus = {(s.statute_id, s.article_no) for s in found
                      if f"{s.statute_id}{s.article_no}" in set(expected)}
             refs = related_judgments(found, conn=conn, focus=focus or None)

@@ -769,6 +769,9 @@ def test_positive_control_case_agrees_with_the_frozen_json(case, live_conn):
     ("一千零五", 1005),       # a 零 after a unit is still a placeholder
     ("三萬零五百", 30500),
     ("萬", None),             # 「數萬元」 states no amount (used to read as 0)
+    ("三四千", None),         # an approximate range, not 34,000
+    ("一兩萬", None),
+    ("二〇萬", 200000),
     ("十", 10),
     ("壹拾萬伍仟伍佰伍拾陸", 105556),
 ])
@@ -798,6 +801,15 @@ def test_a_multi_list_article_flags_only_an_item_above_every_list(live_conn):
     assert above.flagged is True and "第5款" in above.reason
     within = verify_answer("依民法第129條第4款,時效中斷。", [], conn=live_conn)[0]
     assert within.flagged is False and within.unverified is True
+
+
+def test_a_docnum_before_the_citation_is_still_extracted(live_conn):
+    """The 文號 used to vanish when a 條 citation followed it, and the status
+    line then claimed every citation traceable."""
+    results = verify_answer("依內政部台內字第1234號函及民法第184條,負損害賠償責任。", [],
+                            conn=live_conn)
+    assert "依內政部台內字第1234號" in [r.citation.raw for r in results]
+    assert "全數可回溯" not in verification_status_line(results)
 
 
 if __name__ == "__main__":

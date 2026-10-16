@@ -25,7 +25,7 @@ identically.
 
 | what | number | harness |
 |---|---|---|
-| seeded defects caught | **100% in each of 21 kinds, 0/2,921 false positives** — per-kind denominators in §4 | `mutation` |
+| seeded defects caught | **100% in each of 22 kinds, 0/2,921 false positives** — per-kind denominators in §4 | `mutation` |
 | blindspot cases the checker catches | **21/25** — 4 named misses, all modal/proviso semantics | `blindspots`, `evals/blindspots_v1.json` |
 | semantic 4th axis — the only thing that catches a subject swap | catches **9/9**, and flags **1,259/2,921 (43%)** of CORRECT citations, so it stays off | `mutation --semantic` *(model)*, llama3.1, `semantic_unreached` 0 |
 | statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `golden_set evals/golden_v2.json` *(model)*, grader at temperature 0, k=8 |
@@ -124,7 +124,7 @@ catches everything", and what it actually measured was "the checker catches
 everything the generator knows how to break". Errors the generator could not
 express were not in the denominator, so they could not lower it.
 
-The generator now covers twenty-one kinds. Every one is still at 100%, and the
+The generator now covers twenty-two kinds. Every one is still at 100%, and the
 per-kind denominators are what the claim is now allowed to mean — the recall
 number for a kind that is not listed here does not exist.
 
@@ -147,6 +147,7 @@ number for a kind that is not listed here does not exist.
 | `direction_flip` | **326/326** | 以上 flipped to 以下 on a penalty |
 | `real_bare_amount` | **345/345** | the amount as written (must NOT be flagged) |
 | `docnum_adjacent_amount` | **2,921/2,921** | a wrong amount with a 文號 written right after the citation |
+| `docnum_before_citation` | **2,921/2,921** | a 文號 written right before the citation; graded on the status line, which must not claim full traceability |
 | `real_positional_amount` | **344/344** | the amount in digit-by-digit form, 一〇〇〇〇 (must NOT be flagged) |
 | `anaphora_amount` | **345/345** | an amount attributed to the wrong article |
 | `fraction_tamper` | **63/63** | 三分之二 altered |
@@ -163,11 +164,22 @@ down entirely on the 24 articles with more than one 款 list, so a 款 above eve
 one of them went unflagged (**0/24** before, **24/24** after). A 款 within range
 there still reads as unverified, because which list it means is undecidable.
 
+`docnum_before_citation` records a regression this branch introduced and then
+caught in review. The first fix for `docnum_adjacent_amount` trimmed the 文號 to
+start after any 條 citation it overlapped; with the 文號 written FIRST, the
+following citation's name run starts inside it, the trim emptied it, and the
+文號 vanished — the status line then read 「全數可回溯」 with an unverified 函釋 on
+the page (**0/2,921** on that commit). The 文號 pattern now stops at 條 instead,
+which fixes both orders without span arithmetic (**2,921/2,921**). The same
+review found 「三四千元」「一兩萬元」 reading as 34,000 and 120,000 after the
+positional-digit fix; two non-zero Chinese digits before a unit are now an
+approximate range and state no amount.
+
 The `real_*` kinds are the half that makes the other half mean anything: they
 plant nothing and must come back unflagged, which is where a false-positive rate
 of 0/2,921 comes from rather than from a checker that simply flags less.
 
-**Also in every run, outside the twenty-one rows above:** `control` **2,921/2,921** (the correct-citation population
+**Also in every run, outside the twenty-two rows above:** `control` **2,921/2,921** (the correct-citation population
 the 0/2,921 is measured on), `wrong_amount` **2,921/2,921**,
 `bare_penalty_amount` **2,921/2,921**, `out_of_force` **2,921/2,921**,
 `prose_prefix` **32/32**, `alias_typo` **2/2**, `fake_statute` **1/1** and
