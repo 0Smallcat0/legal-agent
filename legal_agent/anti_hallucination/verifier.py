@@ -746,9 +746,7 @@ def _is_name_qualifier(prefix: str) -> bool:
         return True
     if _TIER3_ERA_PREFIX_RE.match(prefix):
         return True
-    if len(prefix) <= 4 and _TIER3_REGION_SUFFIX_RE.search(prefix):
-        return True
-    return False
+    return len(prefix) <= 4 and bool(_TIER3_REGION_SUFFIX_RE.search(prefix))
 
 
 def _strip_particle(name_run: str) -> str:
