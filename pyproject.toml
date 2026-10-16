@@ -43,7 +43,7 @@ include = ["legal_agent*"]
 # The corpus ships INSIDE the package so a fresh install can build its own
 # database — `pip install legal-agent` then works with no git clone.
 [tool.setuptools.package-data]
-legal_agent = ["corpus/*.json", "prompts/*", "data/*.sql"]
+legal_agent = ["corpus/*.json", "data/*.sql"]
 
 [tool.ruff]
 target-version = "py310"

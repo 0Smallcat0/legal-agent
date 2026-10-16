@@ -58,7 +58,6 @@ class SolutionLadder:
     note: str
     letter_template: str | None = None
     also_retrieved: str | None = None
-    specific_venue_suspected: bool = False
     # The complainant's heading is an escalation promise. A respondent is not
     # escalating anything, and the heading is the first line he reads.
     header: str = "建議處理順序(由低成本 → 高成本;打官司是最後手段):"
@@ -143,8 +142,6 @@ _TRIED_KEYWORDS = {
     "letter": ("存證",),
     "litigation": ("訴訟", "起訴", "提告", "告他"),
 }
-# §9 "特定場所" hints (near-neighbour home noise does NOT go this route).
-_SPECIFIC_VENUE = ("工廠", "娛樂", "營業", "營建", "擴音")
 
 
 def _is_apartment(building_type: str) -> bool:
@@ -157,11 +154,6 @@ def _is_apartment(building_type: str) -> bool:
 def _already_tried(key: str, actions_taken: str) -> bool:
     a = actions_taken or ""
     return any(kw in a for kw in _TRIED_KEYWORDS.get(key, ()))
-
-
-def _is_specific_venue(noise_type: str) -> bool:
-    nt = noise_type or ""
-    return any(kw in nt for kw in _SPECIFIC_VENUE)
 
 
 GENERIC_NOTE = (
@@ -720,7 +712,8 @@ def build_solution_ladder(collected_facts: dict, retrieved=None,
 
     Cheapest/lowest-effort first, litigation last; the 管委會 rung is included only
     for 公寓大廈; rungs already attempted are marked done and the first not-done rung
-    is flagged as the recommended next step. `retrieved` is unused in v1.
+    is flagged as the recommended next step. `retrieved` supplies the deadline
+    rung when it carries a time-limited article.
 
     `stance` is the seat the user is in. A respondent gets `build_respondent_ladder`
     instead — the rungs below are the complainant's actions, and handing them to
@@ -732,7 +725,6 @@ def build_solution_ladder(collected_facts: dict, retrieved=None,
     facts = collected_facts or {}
     building_type = facts.get("building_type", "")
     actions_taken = facts.get("actions_taken", "")
-    noise_type = facts.get("noise_type", "")
 
     rungs: list[Rung] = []
     for base in _BASE_RUNGS:
@@ -760,5 +752,4 @@ def build_solution_ladder(collected_facts: dict, retrieved=None,
         rungs=rungs,
         note=EPA_NOTE,
         letter_template=LETTER_TEMPLATE,
-        specific_venue_suspected=_is_specific_venue(noise_type),
     )

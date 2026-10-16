@@ -21,9 +21,8 @@ from typing import TYPE_CHECKING
 
 from legal_agent.dialogue import intake, triage
 
-if TYPE_CHECKING:   # annotations only — importing these at runtime would drag
-    from legal_agent.dialogue.solution import SolutionLadder  # the retrieval
-    from legal_agent.dialogue.stage3 import Stage3Result  # layer into Stages 1-2
+if TYPE_CHECKING:   # annotation only — a runtime import would drag the
+    from legal_agent.dialogue.stage3 import Stage3Result  # retrieval layer into Stages 1-2
 
 
 class Stage(str, Enum):
@@ -92,7 +91,6 @@ class PipelineResult:
     flagged_count: int
     premise_flag: bool             # Mechanism 5
     solution_text: str             # Stage 4: rendered escalation ladder
-    solution_ladder: SolutionLadder
     stage3: Stage3Result         # full Stage 3 result, for deeper access
     # The two things the reader cannot otherwise see: which seat this answer
     # was written for, and which checklist fields it never got. Printing only
@@ -385,7 +383,6 @@ def advance_to_stage3(state: SessionState, llm=None, as_of_date=None, conn=None)
         flagged_count=s3.flagged_count,
         premise_flag=s3.premise_flag,
         solution_text=ladder.render(),
-        solution_ladder=ladder,
         stage3=s3,
         assumptions_text=assumptions_block(state),
     )

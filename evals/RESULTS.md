@@ -2188,6 +2188,17 @@ Each of these looked obviously right and lost on the numbers:
 - **breaking lexicon ties by how MANY triggers matched** (instead of table
   position) — it recovers 民法§354 for a house-purchase case, and costs the
   golden set two strict passes (19 -> 17). One real hit is not worth two.
+- **a narrow modal / proviso contradiction rule for the four blindspots no
+  structural axis sees** (`_verb_suffix_contradiction`, which lived in
+  `mutation.py`). It compared the last 「得/應/不得…之」 clause of a claim with the
+  same-shaped clause in the source, and flagged a universal negation set against
+  a 「但…不在此限」. Every mutation run printed 「規則存活:是,可提交」 because its
+  gate was three sentences about 民法§793 that it had written itself, and its
+  corpus sweep compared each article with itself. On the four cases it was
+  written for — `modal_de_to_ying`, `modal_full_negation`, `proviso_reversal`,
+  `anaphora_tong_fa_20`, each answer against its anchor article — it fired on
+  **0 of 4**. It was never wired into the verifier; it was deleted (2026-10-16)
+  rather than left printing a pass on every run.
 
 ## More
 

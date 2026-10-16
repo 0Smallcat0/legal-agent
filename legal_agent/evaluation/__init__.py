@@ -1,16 +1,8 @@
-"""Evaluation layer (spec §4) — converts "feels about right" into numbers.
+"""Evaluation harnesses — every published number in evals/RESULTS.md has one here.
 
-Even professional legal tools hallucinate 17-33%; without measurement you cannot
-know whether YOUR rate is 20% or 60%. Fluency and correctness are uncorrelated,
-so "it answers fluently" is the most dangerous state.
-
-    Tier 1  Golden Set ............ golden_set.py          (mandatory)
-    Tier 2  Hallucination check ... hallucination_check.py (strongly recommended;
-                                     reuses anti_hallucination/verifier.py)
-    Tier 3  Red-teaming ........... ad hoc (spec §4.2), no module
-
-STATUS: Tier 1 & 2 harness implemented; the golden-set CONTENT (~20-30 verified
-Q&A) is still to be authored.
+Deterministic, no model: mutation, blindspots, qualifier_audit, real_recall,
+honesty_probe, judgment_relevance, realworld --direction.
+Call a real model: golden_set, ablation, calibrate.
 """
 from __future__ import annotations
 
@@ -19,39 +11,17 @@ import sys
 
 
 def enable_utf8_stdout() -> None:
-    """Make CJK and box-drawing output safe on a cp950/cp1252 console.
-
-    Every harness here prints Chinese, and the scorecards carry 「⚠」. On a
-    Windows console the golden-set runner completed a full ten-minute evaluation
-    and then died with `UnicodeEncodeError: 'cp950' codec can't encode character
-    '\\u26a0'` — the work done, the number lost, on a command both README and
-    CONTRIBUTING tell people to run. `cli.py` and `run.py` already did this; the
-    eval entry points did not.
-    """
+    """Make CJK and box-drawing output safe on a cp950/cp1252 Windows console,
+    which otherwise dies with UnicodeEncodeError at the end of a long run."""
     with contextlib.suppress(AttributeError, ValueError):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")  # type: ignore[union-attr]
 
 
 def assert_nonzero_scan(count: int, label: str) -> None:
-    """Abort when a scan found ZERO of what it was looking for.
+    """Raise ValueError when a scan found ZERO of what it counts.
 
-    Every harness added for the blind-spot round walks some corpus / answer /
-    journal text and counts a token — citations, paragraph markers, item
-    markers, rejected Tier-3 qualifiers, mutants generated for a new class...
-    A regex or a generation condition that quietly breaks does not raise; it
-    just returns nothing, and an empty result renders as a perfect, if
-    fictitious, 100%/0-false-positive scorecard. This project already lost one
-    measurement to exactly that shape of silence (see `require_floor` above,
-    and the mutation-test docstring's note on `semantic_unreached`), so zero
-    is never read as "no anomalies" here — it is read as "the scan itself is
-    broken" and must stop the run, not pass it.
-
-    Args:
-        count: how many tokens the scan found.
-        label: what was being scanned, for the error message.
-
-    Raises:
-        ValueError: if `count` is 0.
+    A regex that quietly breaks returns nothing, and an empty result renders as
+    a perfect 100%/0-false-positive scorecard. Zero means the scan is broken.
     """
     if count == 0:
         raise ValueError(

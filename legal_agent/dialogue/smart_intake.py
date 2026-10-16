@@ -19,17 +19,7 @@ import json
 import re
 from dataclasses import dataclass
 
-from legal_agent.dialogue.intake import (
-    CHECKLISTS,
-    checklist_for,
-    domain_of,
-)
-
-# problem_type -> checklist, shared with the rule-based intake so either path
-# hands Stage 3 an identical fact shape. It used to name only noise and generic,
-# which quietly capped the model-driven intake at the same two domains the
-# rule-based one was capped at.
-_CHECKLISTS = CHECKLISTS
+from legal_agent.dialogue.intake import checklist_for, domain_of
 
 
 def field_keys(problem_type: str = "noise") -> list[str]:
@@ -101,10 +91,6 @@ def build_system_prompt(problem_type: str = "noise") -> str:
             ptype, ", ".join(f'"{k}": "…"' for k in keys)
         ),
     )
-
-
-# Backward-compatible name: the noise prompt, byte-identical to the original.
-INTAKE_SYSTEM_PROMPT = build_system_prompt("noise")
 
 
 @dataclass

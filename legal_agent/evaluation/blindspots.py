@@ -192,9 +192,7 @@ class BlindspotReport:
 
     # ── target metric: what a REPAIRED verifier should reach ────────────────
     # A miss case now CAUGHT (flagged True, matching expect_flag) plus a
-    # control case still clean. Higher is better — this is what later rounds
-    # (mutation.py's _verb_suffix_contradiction sweep, RESULTS.md) headline,
-    # up to 25/25 (or fewer if some residual semantic-only cases are dropped).
+    # control case still clean. Higher is better; this is the published figure.
     @property
     def miss_caught(self) -> int:
         return sum(1 for o in self.miss_outcomes if o.flagged)

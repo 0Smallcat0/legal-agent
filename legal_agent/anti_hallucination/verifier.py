@@ -28,7 +28,6 @@ from dataclasses import dataclass
 from datetime import date
 
 from legal_agent.data.models import Statute
-from legal_agent.evaluation import assert_nonzero_scan
 
 
 @dataclass(frozen=True)
@@ -547,8 +546,7 @@ def _paragraph_ceiling(content: str) -> int | None:
     not parse where 「第N項」 boundaries fall inside multi-paragraph content
     (the source's own paragraph indentation is not preserved through
     ingestion), so it genuinely cannot say where the true ceiling is — the
-    axis stands down (unverified) rather than guess. See
-    `paragraph_axis_population` for the corpus-wide split this produces."""
+    axis stands down (unverified) rather than guess."""
     return 1 if content.count("\n") == 0 else None
 
 
@@ -569,89 +567,12 @@ def _item_ceiling(content: str) -> int | None:
     FIRST 項 pass). The flat "take the max digit found" rule cannot tell
     which run of markers bounds a given citation in that case, so it stands
     down (None = unverified) rather than guess. See
-    `paragraph_bounds_audit.py` for the per-block upgrade path this round
-    does not use, and `item_axis_population` for the corpus-wide split."""
+    `paragraph_bounds_audit.py` for a per-block upgrade path."""
     markers = _ITEM_MARKER_RE.findall(content)
     if markers.count("一") != 1:
         return None
     numbers = [n for n in (_parse_number(g) for g in markers) if n is not None]
     return max(numbers) if numbers else None
-
-
-def paragraph_axis_population(conn: sqlite3.Connection) -> tuple[int, int]:
-    """(checkable, total) current-in-force article rows for the paragraph-
-    existence axis — `checkable` is how many have zero newlines
-    (`_paragraph_ceiling` returns non-None for them); `total` is every
-    current article row. Exposed so mutation.py's ghost_paragraph generator
-    and RESULTS.md's coverage line read the SAME population `verify_answer`'s
-    own axis trusts, rather than a second, possibly-drifted count computed
-    by hand."""
-    rows = conn.execute(
-        "SELECT content FROM statutes WHERE article_no != '' AND effective_to IS NULL"
-    ).fetchall()
-    assert_nonzero_scan(len(rows), "paragraph_axis_population: current article rows")
-    checkable = sum(1 for (content,) in rows if _paragraph_ceiling(content or "") is not None)
-    return checkable, len(rows)
-
-
-def item_axis_population(conn: sqlite3.Connection) -> tuple[int, int, int]:
-    """(checkable, ambiguous, total): `checkable` = current article rows
-    where `_item_ceiling` would return non-None (a marker matching exactly
-    「一」 occurs exactly once, by REGEX match — see `_item_ceiling`'s
-    docstring for why a raw substring count of 「一、」 over-counts);
-    `ambiguous` = rows with 2+ such markers (retired to unverified); `total`
-    = every current article row."""
-    rows = conn.execute(
-        "SELECT content FROM statutes WHERE article_no != '' AND effective_to IS NULL"
-    ).fetchall()
-    assert_nonzero_scan(len(rows), "item_axis_population: current article rows")
-    counts = [_ITEM_MARKER_RE.findall(content or "").count("一") for (content,) in rows]
-    checkable = sum(1 for c in counts if c == 1)
-    ambiguous = sum(1 for c in counts if c >= 2)
-    return checkable, ambiguous, len(rows)
-
-
-def period_direction_axis_coverage(conn: sqlite3.Connection) -> int:
-    """How many number+unit+direction-word matches exist across every
-    current-in-force article — the population `_period_directions` has
-    anything to check against. 0 here means the regex itself broke, not that
-    Taiwan statutes stopped writing period bounds (measured: 842)."""
-    rows = conn.execute(
-        "SELECT content FROM statutes WHERE article_no != '' AND effective_to IS NULL"
-    ).fetchall()
-    hits = sum(len(_PERIOD_DIR_RE.findall(content or "")) for (content,) in rows)
-    assert_nonzero_scan(hits, "period_direction_axis_coverage: matches")
-    return hits
-
-
-def fraction_axis_coverage(conn: sqlite3.Connection) -> int:
-    """How many 「X分之Y」 matches exist across every current-in-force
-    article (e.g. 民法第1144條's 二分之一/三分之二)."""
-    rows = conn.execute(
-        "SELECT content FROM statutes WHERE article_no != '' AND effective_to IS NULL"
-    ).fetchall()
-    hits = sum(len(_FRACTION_RE.findall(content or "")) for (content,) in rows)
-    assert_nonzero_scan(hits, "fraction_axis_coverage: matches")
-    return hits
-
-
-def bare_penalty_axis_coverage(conn: sqlite3.Connection) -> tuple[int, int]:
-    """(hits, rows_scanned) from applying `_bare_penalty_amounts` to every
-    current-in-force article's own verbatim text. Unlike the other three
-    axis-coverage functions above, `hits` is EXPECTED to be near zero: real
-    statutes almost always write a stated amount WITH a trailing 「元」, so a
-    correctly-working masked/anchored scanner finds little to flag in
-    genuinely correct text — that is exactly what the 0/2,921 false-positive
-    sweep in RESULTS.md measures, and it is the axis working, not broken.
-    `assert_nonzero_scan` therefore guards `rows_scanned` (did the query run
-    against a real, non-empty corpus) rather than `hits` (which would raise a
-    false alarm on a correctly-working axis)."""
-    rows = conn.execute(
-        "SELECT content FROM statutes WHERE article_no != '' AND effective_to IS NULL"
-    ).fetchall()
-    assert_nonzero_scan(len(rows), "bare_penalty_axis_coverage: rows scanned")
-    hits = sum(len(_bare_penalty_amounts(content or "")) for (content,) in rows)
-    return hits, len(rows)
 
 
 # ── corpus lookup ────────────────────────────────────────────────────────────

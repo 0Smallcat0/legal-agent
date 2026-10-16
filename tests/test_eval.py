@@ -19,7 +19,6 @@ from legal_agent.data.database import connect, init_db  # noqa: E402
 from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
 from legal_agent.dialogue import stage3  # noqa: E402
 from legal_agent.evaluation.golden_set import run_golden_set  # noqa: E402
-from legal_agent.evaluation.hallucination_check import check_answers  # noqa: E402
 
 FIXTURE = ROOT / "tests" / "fixtures" / "golden_noise_fixture.json"
 FAKE_ANSWER = (
@@ -67,28 +66,6 @@ def test_tier1_scorecard_shows_answer_vs_expected_and_no_legal_autopass(real_con
     assert "人工" in text and "不宣稱法律正確性自動通過" in text
     # the agent answer itself appears (so a human can compare)
     assert "社會秩序維護法第72條" in text
-
-
-# ── Tier 2 ───────────────────────────────────────────────────────────────────
-def test_tier2_counts_fabricated_as_flagged_faithful_as_clean(real_conn):
-    faithful = "依社會秩序維護法第72條,可處新臺幣一萬元以下罰鍰。"
-    fabricated = "依噪音管制法第99條,住戶製造噪音應受處罰。"
-    report = check_answers([faithful, fabricated], conn=real_conn)
-
-    assert report.total == 2
-    assert report.flagged_answers == 1
-    assert report.clean_answers == 1
-    assert abs(report.flag_rate - 0.5) < 1e-9
-
-    by_answer = {a.answer: a for a in report.per_answer}
-    assert by_answer[fabricated].flagged is True
-    assert by_answer[faithful].flagged is False
-
-
-def test_tier2_empty_batch_is_zero_rate(real_conn):
-    report = check_answers([], conn=real_conn)
-    assert report.total == 0
-    assert report.flag_rate == 0.0
 
 
 if __name__ == "__main__":

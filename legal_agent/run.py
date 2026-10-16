@@ -131,9 +131,6 @@ def _format_result(result) -> str:
             if not result.practice_disclaimer_ok:
                 out.append("\n⚠ 注意:實務見解段未標明「非法律明文」,請人工確認。")
         else:
-            # The notice now travels WITH the answer (stage3.UNSEGMENTED_NOTICE),
-            # so every caller shows it — the CLI no longer needs its own copy.
-            pass
             out.append(result.answer)
 
         # What retrieval actually found, code-rendered. The model writes the

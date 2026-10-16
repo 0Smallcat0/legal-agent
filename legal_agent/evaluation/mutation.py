@@ -192,15 +192,6 @@ class MutationOutcome:
     expect_flag: bool
     ok: bool                # flagged == expect_flag (or the status-line criterion — see below)
     reason: str             # verifier's reason (or extraction failure note)
-    # unverified: True when ANY result carries .unverified — read via getattr
-    # with a False default, so this file works whether or not verifier.py has
-    # shipped the A2 tri-state yet (VerificationResult has no such field as
-    # of this mutation.py revision; getattr degrades cleanly either way).
-    unverified: bool = False
-    # False when verification_status_line(results) stops short of claiming
-    # "N 筆引用全數可回溯至資料庫" — the signal retrieval_miss_quoted is
-    # graded on (B4), independent of .flagged.
-    status_line_full_traceable: bool = True
 
 
 @dataclass
@@ -420,19 +411,14 @@ def _judge(
 ) -> MutationOutcome:
     """Run `answer` through the verifier and grade it.
 
-    retrieval_first (B3): when True, calls verify_answer with the SAME shape
-    dialogue/stage3.py:377 uses in production — retrieved_context carries the
-    candidate rows, conn=None, corpus_conn=conn (name resolution and the
-    「real article, just not retrieved」 diagnosis may still use the corpus;
-    existence/content never falls back to it). When False (default), behaves
-    EXACTLY as before this revision: verify_answer(answer, [], conn=conn,
-    ...) — every pre-existing call site is unaffected by this parameter's
-    addition.
+    retrieval_first: call verify_answer the way dialogue/stage3.py does in
+    production — retrieved_context carries the candidate rows, conn=None,
+    corpus_conn=conn (the corpus may still resolve names and diagnose 「real
+    article, just not retrieved」, but existence/content never fall back to it).
 
-    expect_status_line_catch (B4): when True, `ok` is graded on whether
-    verification_status_line(results) stops asserting full traceability,
-    NOT on .flagged — see MutationOutcome.status_line_full_traceable and the
-    module docstring's retrieval_miss_quoted section for why.
+    expect_status_line_catch: grade `ok` on whether
+    verification_status_line(results) stops claiming full traceability rather
+    than on .flagged (the retrieval_miss_quoted kind; see module docstring).
     """
     ctx = retrieved_context or []
     if retrieval_first:
@@ -445,7 +431,6 @@ def _judge(
             answer, ctx, as_of_date=as_of_date, conn=conn, semantic_llm=semantic_llm,
         )
     flagged = any(r.flagged for r in results) if results else False
-    unverified = any(getattr(r, "unverified", False) for r in results) if results else False
     status_line = verification_status_line(results)
     full_traceable = "全數可回溯至資料庫" in status_line
     reason = (
@@ -455,8 +440,7 @@ def _judge(
     ok = (not full_traceable) == expect_flag if expect_status_line_catch else flagged == expect_flag
     return MutationOutcome(
         kind, ref, answer, as_of_date, flagged=flagged, expect_flag=expect_flag,
-        ok=ok, reason=reason, unverified=unverified,
-        status_line_full_traceable=full_traceable,
+        ok=ok, reason=reason,
     )
 
 
@@ -475,9 +459,8 @@ def _judge(
 # above). A rule that only fires when the number itself is real is a rule
 # this axis's numbers can never accidentally take credit for.
 #
-# Each case was run through `verify_answer` with the semantic axis OFF (see
-# run_verb_suffix_sweep / the scratchpad probe this file's RESULTS.md entry
-# cites) and had to return flagged=False before being written down — a case
+# Each case was run through `verify_answer` with the semantic axis OFF and
+# had to return flagged=False before being written down — a case
 # the structural axes already catch would credit this axis with work it
 # never did.
 _SUBJECT_SWAPS = [
@@ -574,159 +557,6 @@ _SUBJECT_SWAPS = [
      "依性別平等工作法第14條,男性受僱者因生理日致工作有困難者,每月得請生理假一日,"
      "全年請假日數未逾三日,不併入病假計算,其餘日數併入病假計算。"),  # 條文主體:女性受僱者
 ]
-
-
-# ── B6: narrow verb-suffix-contradiction rule (SC#/residual-3 sweep) ────────
-# 「窄規則試驗」 for the 3 blindspot cases that resist every structural axis
-# above (得->應, 得禁止->不得禁止, 但書反轉): compare the LAST 「得/應/不得…
-# 之。」-shaped clause in a claim against the same-shaped clause in the source,
-# and flag a modal contradiction ONLY when the verb phrase after the modal is
-# CHARACTER-FOR-CHARACTER identical — the narrowest signal that still counts
-# as "the same clause, different modal". A second, independent branch flags a
-# claim that asserts a universal negation directly against a source's own
-# 「但…不在此限」 exception.
-#
-# NOT wired into verify_answer — that lives in verifier.py, out of this
-# file's remit. This is the rule run_verb_suffix_sweep() grades; whether
-# blindspots.py (or a future verifier.py revision) actually adopts it is a
-# decision downstream of that sweep's result, not this file's to make.
-_MODAL_RE = re.compile(
-    r"(?:^|[，,。；;！!？?\n])\s*(得|應|不得)([^，,。；;！!？?\n]*?之)(?=[。；;！!？?\n])"
-)
-_PROVISO_RE = re.compile(r"但[^。]*不在此限")
-_UNIVERSAL_NEGATION_RE = re.compile(r"(無論|不論)[^。]*(是否|一律)[^。]*(不|無|非|未)")
-
-
-def _last_clause_modal(text: str) -> tuple[str, str] | None:
-    """The (modal, verb-phrase) of the LAST 「得/應/不得…之。」-shaped clause in
-    `text`, or None. Deliberately narrow — a general modal-verb parser is
-    exactly the kind of thing that turns into a new false-positive source;
-    this is a seed for a sweep, not a parser."""
-    matches = list(_MODAL_RE.finditer(text))
-    if not matches:
-        return None
-    m = matches[-1]
-    return m.group(1), m.group(2)
-
-
-def verb_suffix_contradiction(claim_scope: str, source_content: str) -> tuple[bool, str]:
-    """Narrow semantic-axis candidate (B6). Two independent branches:
-
-    1. Modal contradiction: claim and source both end a clause in 「…之。」
-       with the SAME verb phrase, but a DIFFERENT modal prefix (得/應/不得).
-    2. Proviso reversal: source contains 「但…不在此限」 and the claim asserts
-       a universal negation (無論/不論…是否/一律…不/無/非/未) in the same text.
-
-    Returns (hit, reason). Callers decide what a hit means — this function
-    only grades the two sentences against each other.
-    """
-    claim_modal = _last_clause_modal(claim_scope)
-    source_modal = _last_clause_modal(source_content)
-    if (claim_modal and source_modal and claim_modal[1] == source_modal[1]
-            and claim_modal[0] != source_modal[0]):
-        return True, (
-            f"模態詞矛盾:主張「{claim_modal[0]}{claim_modal[1]}」,"
-            f"條文為「{source_modal[0]}{source_modal[1]}」"
-        )
-    proviso = _PROVISO_RE.search(source_content)
-    if proviso and _UNIVERSAL_NEGATION_RE.search(claim_scope):
-        return True, f"但書反轉:條文設有除外(「{proviso.group(0)}」),主張卻以全稱語氣否定"
-    return False, ""
-
-
-@dataclass(frozen=True)
-class VerbSuffixSweepResult:
-    gate_cases: int
-    gate_false_positives: tuple[tuple[str, str], ...]
-    swept: bool
-    sweep_population: int
-    sweep_false_positives: tuple[tuple[str, str, str], ...]
-
-    @property
-    def survives(self) -> bool:
-        return self.swept and not self.sweep_false_positives and not self.gate_false_positives
-
-    def render(self) -> str:
-        lines = ["═══════ _verb_suffix_contradiction sweep(B6 窄規則試驗) ═══════"]
-        lines.append(
-            f"gate(民法§793 三句 + {self.gate_cases - 3} 個既有 _SUBJECT_SWAPS 對照):"
-            f"{self.gate_cases} 案,誤報 {len(self.gate_false_positives)}"
-        )
-        for ref, reason in self.gate_false_positives:
-            lines.append(f"  ⚠ gate 誤報:[{ref}] {reason}")
-        if not self.swept:
-            lines.append("gate 未過,未執行全 2,921 條 sweep(規則自動剔除)")
-            return "\n".join(lines)
-        lines.append(
-            f"sweep(全 {self.sweep_population} 條現行條文,claim=source 自我比對):"
-            f"誤報 {len(self.sweep_false_positives)}"
-        )
-        for sid, ano, reason in self.sweep_false_positives:
-            lines.append(f"  ⚠ sweep 誤報:[{sid}{ano}] {reason}")
-        lines.append(f"規則存活:{'是,可提交給 verifier.py/blindspots 採用' if self.survives else '否(已剔除)'}")
-        lines.append(
-            "(注:自我比對對模態矛盾分支是結構性安全的自我對照 — claim 與 source 全同時"
-            "模態詞恆等,真正的對抗測試在上面的 gate;但書反轉分支則由自我比對真實檢驗,"
-            "因為它檢查的是同一條文內是否『恰巧』同時出現但書與全稱否定語句。)"
-        )
-        return "\n".join(lines)
-
-
-def run_verb_suffix_sweep(conn: sqlite3.Connection) -> VerbSuffixSweepResult:
-    """Step A (gate): 民法§793's three modal variants (得/應/不得禁止之) plus
-    every _SUBJECT_SWAPS control must produce EXACTLY the expected verdict —
-    0 false positives on the 9(+23) hand-verified swaps that must stay clean.
-    Step B (sweep): only if the gate is clean, run claim=source=content
-    self-comparison across all 2,921 current articles — a single false
-    positive there withdraws the rule automatically (sweep_false_positives
-    non-empty => survives is False) rather than silently narrowing it to pass.
-    """
-    row = conn.execute(
-        "SELECT content FROM statutes WHERE statute_id='民法' AND article_no='第793條' "
-        "AND effective_to IS NULL"
-    ).fetchone()
-    gate_fp: list[tuple[str, str]] = []
-    gate_n = 0
-    if row is not None:
-        source = row[0]
-        variants = [
-            ("民法第793條(得,原文)", "土地所有人,得禁止之。", False),
-            ("民法第793條(應,竄改)", "土地所有人,應禁止之。", True),
-            ("民法第793條(不得,竄改)", "土地所有人,不得禁止之。", True),
-        ]
-        for label, claim, expect in variants:
-            gate_n += 1
-            hit, reason = verb_suffix_contradiction(claim, source)
-            if hit != expect:
-                gate_fp.append((label, f"expect={expect} got={hit} reason={reason}"))
-
-    for sid, ano, answer in _SUBJECT_SWAPS:
-        source_row = conn.execute(
-            "SELECT content FROM statutes WHERE statute_id=? AND article_no=? "
-            "AND effective_to IS NULL", (sid, ano),
-        ).fetchone()
-        if source_row is None:
-            continue
-        gate_n += 1
-        hit, reason = verb_suffix_contradiction(answer, source_row[0])
-        if hit:                     # these must NOT be caught by this narrow rule
-            gate_fp.append((f"{sid}{ano}", reason))
-
-    if gate_fp:
-        return VerbSuffixSweepResult(gate_n, tuple(gate_fp), swept=False,
-                                     sweep_population=0, sweep_false_positives=())
-
-    sweep_fp: list[tuple[str, str, str]] = []
-    rows = _condition_articles(conn)
-    for r in rows:
-        sid, ano, content = r[0], r[1], r[2]
-        hit, reason = verb_suffix_contradiction(content, content)
-        if hit:
-            sweep_fp.append((sid, ano, reason))
-    return VerbSuffixSweepResult(
-        gate_n, tuple(gate_fp), swept=True, sweep_population=len(rows),
-        sweep_false_positives=tuple(sweep_fp),
-    )
 
 
 def run_mutation_test(
@@ -1217,7 +1047,8 @@ def run_mutation_test(
 # synthetic conn (e.g. the test suite's 9-article noise fixture) legitimately
 # produces zero cases for several of these and that is not a bug.
 _ALWAYS_NONEMPTY_ON_FULL_CORPUS = (
-    "control", "wrong_amount", "bare_penalty_amount", "out_of_force",
+    "control", "nonexistent_article", "ghost_suffix", "wrong_amount",
+    "bare_penalty_amount", "out_of_force", "period_swap", "direction_flip",
     "ghost_paragraph", "real_paragraph_ref", "ghost_item", "real_item_ref",
     "verbatim_crossref", "prefixed_statute", "prefixed_statute_control",
     "prose_prefix", "fake_statute", "alias_typo",
@@ -1266,10 +1097,6 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation [--seman
         _report = run_mutation_test(_conn, semantic_llm=_semantic_llm,
                                     retrieval_first=_args.retrieval_first)
         print(_report.render())
-
-        _sweep = run_verb_suffix_sweep(_conn)
-        print()
-        print(_sweep.render())
 
         _problems: list[str] = []
         if not _args.retrieval_first:

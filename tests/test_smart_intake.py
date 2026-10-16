@@ -50,9 +50,7 @@ def test_generic_prompt_lists_generic_fields_only():
     assert "problem" in prompt and "goal" in prompt
     assert "noise_type" not in prompt
     assert "民生法律諮詢" in prompt and "問診助理" in prompt
-    # the noise prompt is untouched by the generalisation
-    assert si.build_system_prompt("noise") == si.INTAKE_SYSTEM_PROMPT
-    assert "住宅噪音" in si.INTAKE_SYSTEM_PROMPT
+    assert "住宅噪音" in si.build_system_prompt("noise")
 
 
 def test_parse_uses_the_active_checklists_whitelist():

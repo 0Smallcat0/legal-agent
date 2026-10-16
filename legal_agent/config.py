@@ -14,7 +14,6 @@ PROJECT_ROOT = PACKAGE_ROOT.parent
 # `pip install` carries its own corpus and a fresh install can build the
 # database without a git clone.
 CORPUS_DIR = PACKAGE_ROOT / "corpus"               # human-verified source material (§1.5)
-PROMPTS_DIR = PACKAGE_ROOT / "prompts"             # system-prompt text files (§2)
 
 # Written at runtime, so it may NOT live inside the installed package:
 # site-packages is read-only on many systems and shared across projects.

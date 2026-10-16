@@ -83,23 +83,7 @@ from legal_agent.anti_hallucination.verifier import (
     _resolve_id,
 )
 from legal_agent.config import DB_PATH
-
-
-def _local_assert_nonzero_scan(count: int, label: str) -> None:
-    """Fallback for legal_agent.evaluation.assert_nonzero_scan (A9). See the
-    identical note in qualifier_audit.py -- added by a sibling workstream,
-    imported preferentially below; this only fires if that has not landed
-    yet in the checkout this runs against."""
-    if count == 0:
-        raise RuntimeError(
-            f"{label}: 掃到 0 個 token —— 一律視為腳本或正則壞掉,不得當成無異常通過"
-        )
-
-
-try:
-    from legal_agent.evaluation import assert_nonzero_scan
-except ImportError:  # pragma: no cover - present once the sibling workstream lands
-    assert_nonzero_scan = _local_assert_nonzero_scan
+from legal_agent.evaluation import assert_nonzero_scan
 
 # 款 marker at the start of a line: 「一、」「二、」… `re.MULTILINE` is kept for
 # what it documents (「^」 = line start) even though it is, measured, a no-op

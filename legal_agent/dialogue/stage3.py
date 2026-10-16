@@ -90,7 +90,6 @@ class Stage3Result:
     answer: str
     retrieved: list[Statute]
     verifications: list[VerificationResult]
-    retrieval_count: int
     retrieval_scores: list[float] | None = None
     flagged_count: int = 0
     # Mechanism 3 — three-tier honesty.
@@ -335,7 +334,7 @@ def run_stage3(
         return Stage3Result(
             answer=refusal,
             retrieved=[], verifications=[],
-            retrieval_count=0, retrieval_scores=[], flagged_count=0,
+            retrieval_scores=[], flagged_count=0,
             honesty_tier="insufficient", honesty_label=refusal,
             law_section=None, practice_section=None, analysis_section=None,
             sections_ok=False, practice_disclaimer_ok=False,
@@ -358,7 +357,7 @@ def run_stage3(
         return Stage3Result(
             answer=MODEL_EMPTY_TEXT,
             retrieved=retrieved, verifications=[],
-            retrieval_count=len(retrieved), retrieval_scores=scores, flagged_count=0,
+            retrieval_scores=scores, flagged_count=0,
             honesty_tier=tier, honesty_label=MODEL_EMPTY_TEXT,
             law_section=None, practice_section=None, analysis_section=None,
             sections_ok=False, practice_disclaimer_ok=False,
@@ -420,7 +419,6 @@ def run_stage3(
         answer=answer,
         retrieved=retrieved,
         verifications=verifications,
-        retrieval_count=len(retrieved),
         retrieval_scores=scores,
         flagged_count=flagged,
         honesty_tier=tier,
