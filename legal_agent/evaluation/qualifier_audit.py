@@ -61,17 +61,17 @@ from __future__ import annotations
 import json
 import sqlite3
 from dataclasses import dataclass, field
-from pathlib import Path
 
 from legal_agent.anti_hallucination.verifier import _CITATION_RE, _resolve_id
-from legal_agent.config import DB_PATH
+from legal_agent.config import DB_PATH, PROJECT_ROOT
+from legal_agent.evaluation import assert_nonzero_scan
 
 # Relative to the CURRENT WORKING DIRECTORY, matching every sibling harness
 # in this package (realworld.py, real_recall.py, judgment_relevance.py,
 # honesty_probe.py, ablation.py, calibrate.py all hardcode "evals/..." the
 # same way) -- run this with `cd "<repo>"` first, exactly like those.
-EVALS_DIR = Path("evals")
-JOURNAL_DIR = Path("journal")
+EVALS_DIR = PROJECT_ROOT / "evals"
+JOURNAL_DIR = PROJECT_ROOT / "journal"
 
 # Five hand-built name-laundering probes: the exact shapes this project's
 # blindspot/mutation suites use as the headline "did the gate catch a fake
@@ -87,25 +87,6 @@ _LAUNDERING_PROBES: tuple[tuple[str, str], ...] = (
 )
 
 
-def _local_assert_nonzero_scan(count: int, label: str) -> None:
-    """Fallback for legal_agent.evaluation.assert_nonzero_scan (A9).
-
-    That helper is added to evaluation/__init__.py by a sibling workstream;
-    imported preferentially below, and this definition only fires on a
-    checkout where that addition has not landed yet, so this audit is never
-    blocked on merge order. Same contract either way: 0 scanned == script or
-    regex broken, never "no anomalies".
-    """
-    if count == 0:
-        raise RuntimeError(
-            f"{label}: 掃到 0 個 token —— 一律視為腳本或正則壞掉,不得當成無異常通過"
-        )
-
-
-try:
-    from legal_agent.evaluation import assert_nonzero_scan
-except ImportError:  # pragma: no cover - present once the sibling workstream lands
-    assert_nonzero_scan = _local_assert_nonzero_scan
 
 
 @dataclass(frozen=True)
@@ -209,6 +190,9 @@ def _scan_sources() -> list[tuple[str, str]]:
     journal transcript. Corpus content is added separately by
     `_corpus_sources` (it needs the DB connection this function does not
     take)."""
+    for directory in (EVALS_DIR, JOURNAL_DIR):
+        if not directory.is_dir():
+            raise SystemExit(f"[qualifier_audit] {directory} not found — run from a repo checkout")
     sources: list[tuple[str, str]] = []
     for path in sorted(EVALS_DIR.glob("*.json")):
         try:

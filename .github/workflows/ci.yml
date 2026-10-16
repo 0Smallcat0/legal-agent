@@ -22,148 +22,38 @@ jobs:
         run: pip install .[dev,demo]
       - name: Lint
         run: python -m ruff check legal_agent app.py tests
-      - name: Run tests
-        run: python -m pytest -q
-      - name: Build the corpus for the evaluation harnesses below
-        # mutation / blindspots / qualifier_audit all open the DEFAULT corpus
-        # DB directly (`connect(config.DB_PATH)`), the same way a contributor
-        # runs them locally — none of them call `ensure_corpus()` themselves.
-        # `sqlite3.connect` on a path that does not exist yet creates an EMPTY
-        # file instead of raising, which would turn every harness below into
-        # a silent, meaningless 0-row pass on a fresh runner. `ensure_corpus()`
-        # is idempotent (legal_agent/data/bootstrap.py), so this is safe even
-        # though "Run tests" above may already have built isolated DBs at
-        # other, test-scoped paths.
+      - name: Build the corpus
+        # Before the tests, not after: the tests that compare published numbers
+        # against the shipped corpus need it, and used to skip silently here.
         run: python -c "import legal_agent; legal_agent.ensure_corpus()"
+      - name: Run tests
+        # Includes the blindspots suite: every case in evals/blindspots_v1.json
+        # and the positive-control file, with the four still-blind cases
+        # xfail(strict=True) in tests/test_verifier.py.
+        run: python -m pytest -q
       - name: Verifier mutation coverage (full corpus)
-        # Every planted error must still be caught, every correct citation
-        # must still pass, every axis-specific positive-control population
-        # (real_period_direction / real_paragraph_ref / real_item_ref /
-        # real_bare_amount / real_fraction / verbatim_crossref /
-        # prefixed_statute_control / prose_prefix) must show 0 false
-        # positives, AND no axis may silently generate zero cases against
-        # the shipped corpus — on the full 2,921-article corpus, not a
-        # hand-picked slice. `python -m legal_agent.evaluation.mutation`'s
-        # own `__main__` already computes and enforces exactly this (see
-        # MutationReport.catch_rate / .false_positive_rate /
-        # .positive_control_false_positives() / .zero_population_kinds(),
-        # and the SystemExit(1) at the bottom of the module) — verified
-        # 2026-08-17 to exit 0 on a clean run and non-zero the moment any of
-        # those checks fails, so its own exit code IS the gate here. (An
-        # earlier version of this step re-ran the harness in-process and
-        # asserted on catch_rate/false_positive_rate alone, before the
-        # per-axis and zero-population checks existed in __main__ — that
-        # duplicate was WEAKER than what __main__ now does on its own, so it
-        # has been removed rather than kept as dead weight.)
+        # __main__ exits non-zero on any missed mutation, any control or
+        # per-axis positive-control false positive, or any kind that generates
+        # zero cases on the shipped corpus.
         run: python -m legal_agent.evaluation.mutation
       - name: Verifier mutation coverage (retrieval-first)
-        # Mirrors the production call shape (legal_agent/dialogue/stage3.py):
-        # the verifier only sees what retrieval actually returned. catch_rate
-        # and false-positive rate are NOT held to the full-corpus mode's
-        # 100% / 0% bar here — __main__'s own retrieval-first branch grades
-        # this mode on retrieval_miss_quoted's status-line catch instead
-        # (MutationReport.status_line_total / .status_line_caught) and exits
-        # non-zero if that specific axis is missing or not fully caught, so
-        # its exit code already gates the thing this mode exists to measure.
-        # A hard 0%-FP gate on the OTHER axes would be a mistake here, not
-        # just a missing feature: evals/RESULTS.md records this mode's
-        # per-axis numbers separately because they run genuinely hot
-        # (verbatim_crossref measured 14/15 false positives in retrieval-first
-        # mode on 2026-08-17, versus 0/15 in full-corpus mode — a real,
-        # mode-specific, already-reported gap, not a flake) — gating on it
-        # here would make this step permanently red on a known number
-        # instead of catching a NEW regression.
-        #   The grep below is a SEPARATE, belt-and-suspenders check on top of
-        # __main__'s own exit code: it looks at the literal printed text
-        # rather than trusting the exit path stays wired up, so the one
-        # thing this step will not let slide silently — the
-        # retrieval_miss_quoted line disappearing entirely, e.g. folded into
-        # a combined statistic — is still caught even if a future change
-        # weakens __main__'s own check without anyone noticing here.
+        # Production call shape (dialogue/stage3.py). Gated only on the
+        # retrieval_miss_quoted status line; the other axes run hot in this
+        # mode by design (see evals/RESULTS.md). pipefail so the harness's own
+        # exit code survives the tee.
+        shell: bash
         run: |
+          set -o pipefail
           python -m legal_agent.evaluation.mutation --retrieval-first | tee retrieval_first_output.txt
-          grep -q "retrieval_miss_quoted" retrieval_first_output.txt || {
-            echo "CI RED: the retrieval_miss_quoted line is missing from --retrieval-first output.";
-            echo "Either the generator regressed or it was folded into a combined statistic -- both are exactly the failure this check exists for.";
-            exit 1;
-          }
-      - name: Citation blindspots baseline (structural axes)
-        # evals/blindspots_v1.json freezes 16 miss + 9 control cases (spec
-        # 階段0's C1); evals/blindspots_positive_control_v1.json adds cases
-        # that must never be flagged. blindspots.py's own __main__ does not
-        # set a non-zero exit code from the score by design (階段0's job was
-        # recording a baseline without crashing on it — see the module
-        # docstring), so this step scores both files in-process itself, the
-        # same way tests/test_published_numbers.py does, and enforces:
-        #   - every blindspots_v1.json control case stays unflagged, always;
-        #   - every positive-control case stays unflagged, always;
-        #   - every miss case OTHER than the three this repo's own
-        #     RESULTS.md documents as pending mutation.py's
-        #     _verb_suffix_contradiction sweep decision (得→應,
-        #     得禁止→不得禁止, 但書反轉), plus anaphora_tong_fa_20 (同法 回指,
-        #     inferred_id=True so the quote is never compared) — the four
-        #     RESULTS.md publishes as uncaught in 21/25 and tests/test_verifier.py
-        #     marks xfail(strict=True) — must be caught.
-        # That is a 12-of-16 floor (not the full 16), enforced by NAME rather
-        # than by count, so a case silently swapping places with an equally
-        # uncaught one cannot pass this by coincidence.
-        run: |
-          python -m legal_agent.evaluation.blindspots
-          python -c "
-          from legal_agent.config import DB_PATH
-          from legal_agent.data.database import connect
-          from legal_agent.evaluation.blindspots import (
-              score_blindspots, score_positive_control,
-          )
-
-          PENDING_SWEEP_CASE_IDS = {
-              'modal_de_to_ying', 'modal_full_negation', 'proviso_reversal',
-              'anaphora_tong_fa_20',
-          }
-
-          conn = connect(DB_PATH)
-          try:
-              report = score_blindspots(conn)
-              pc_report = score_positive_control(conn)
-          finally:
-              conn.close()
-
-          problems = []
-          if report.control_false_positives:
-              dirty = [o.case.id for o in report.control_outcomes if o.flagged]
-              problems.append(f'blindspots control case(s) flagged: {dirty}')
-          required_uncaught = [
-              o.case.id for o in report.miss_outcomes
-              if not o.flagged and o.case.id not in PENDING_SWEEP_CASE_IDS
-          ]
-          if required_uncaught:
-              problems.append(f'required miss case(s) still uncaught: {required_uncaught}')
-          if pc_report.clean < pc_report.total:
-              dirty_pc = [o.case.id for o in pc_report.outcomes if o.flagged]
-              problems.append(f'positive control case(s) flagged: {dirty_pc}')
-          if problems:
-              raise SystemExit('blindspots gate FAILED: ' + '; '.join(problems))
-          print(
-              f'blindspots gate OK: target_correct={report.target_correct}/{report.total} '
-              f'(miss_caught={report.miss_caught}/{report.miss_total}, '
-              f'{len(PENDING_SWEEP_CASE_IDS)} case(s) exempt pending the sweep decision), '
-              f'positive control {pc_report.clean}/{pc_report.total} clean'
-          )
-          "
+          grep -q "retrieval_miss_quoted" retrieval_first_output.txt
+      - name: Citation blindspots (structural axes)
+        run: python -m legal_agent.evaluation.blindspots
       - name: Qualifier gate audit (Tier-3 false-reject sweep)
-        # Standing gate (CONTRIBUTING.md), not a one-off — every change to
-        # _resolve_id or the Tier-3 name-qualifier set must be re-swept
-        # against real generated text before it ships. qualifier_audit.py's
-        # own __main__ already sets its exit code from `AuditReport.ok`
-        # (false_rejects == 0 and all 5 laundering probes rejected) and calls
-        # assert_nonzero_scan on the citation count first, so its exit code
-        # is the gate here — nothing extra needed in this step.
+        # Standing gate (CONTRIBUTING.md): exits non-zero on any false reject
+        # or any laundering probe that is let through.
         run: python -m legal_agent.evaluation.qualifier_audit
-      # The library used to be un-installable: every path hung off the repo
-      # root, so an installed copy looked in site-packages for a corpus that was
-      # never shipped there. Proving `pip install` succeeds is only half of it —
-      # this runs the INSTALLED package from a directory with no checkout in it,
-      # so that failure mode cannot come back unnoticed.
+      # Runs the INSTALLED package from a directory with no checkout in it,
+      # so a corpus that only resolves from the repo root cannot come back.
       - name: Use the installed package outside the repo
         run: |
           mkdir -p "$RUNNER_TEMP/elsewhere"
