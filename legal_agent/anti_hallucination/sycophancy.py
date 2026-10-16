@@ -18,9 +18,7 @@ _STRONG_PATTERNS = [
     r"一定.{0,2}贏", r"穩贏",
 ]
 # Conclusion words that flip meaning with the sentence frame: 「就是違法」 asserts,
-# 「有沒有違法?」 asks. Measured on a real session — 「這樣有沒有違法?」 tripped the
-# flag and the user was told they had 「先下了法律判斷」 for asking the very
-# question the tool exists to answer.
+# 「有沒有違法?」 asks — flagging the question would scold the user for asking it.
 _WEAK_PATTERNS = [
     r"構成.{0,8}罪",          # 這構成恐嚇罪 / 算不算構成傷害罪
     r"違法", r"犯法", r"觸法",
