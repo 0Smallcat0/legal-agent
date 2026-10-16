@@ -1,9 +1,13 @@
-"""Stage 1 — Triage (spec §3.2). Rule-based v1: NO retrieval, NO LLM.
+"""Stage 1 — Triage (spec §3.2). Rule-based: NO retrieval, NO LLM.
 
-Coarse-classify the opening complaint by keyword rules into `noise` (the only
-built scenario) vs. `other` (leak / threat / pets / odor / space -> generic flow
-not built yet) vs. `ambiguous` (e.g. "我有惡鄰居" -> ask a discriminating
-question instead of answering). The LLM classifier is a later step.
+Coarse-classify the opening complaint by keyword rules into `noise` (the one
+scenario with a hand-built checklist and ladder), `other:<domain>` (personal
+safety, rent / labor / consumer / traffic / family, neighbour leak / threat /
+pets / odor / space — all served by the generic flow), or `ambiguous` (e.g.
+"我有惡鄰居" -> ask one discriminating question instead of answering). Both
+intake paths, including the model-driven one, classify with these rules.
+
+Also infers which side of the complaint the user is on (`classify_stance`).
 """
 from __future__ import annotations
 
@@ -23,33 +27,23 @@ _NOISE = [
     "噪音", "吵", "大聲", "喧嘩", "喧囂", "吠", "狗叫", "音響", "卡拉ok", "ktv",
     "深夜", "半夜", "三更", "施工", "裝修", "分貝", "低頻", "震動", "擾人", "安寧",
     "聲音", "腳步", "拖家具", "喇叭", "重低音", "打鼓", "樂器",
-    # People report the BEHAVIOUR, not the word 「噪音」. Measured on a lived
-    # session: 「樓上小孩每天晚上跑跳到十一二點,還會拖椅子」 — the textbook
-    # complaint for the one scenario with a hand-built ladder — classified as
-    # ambiguous, so it got the generic flow and never saw 報警/管委會/存證信函.
+    # People report the BEHAVIOUR, not the word 「噪音」 (「樓上小孩跑跳、拖椅子」).
     "跑跳", "跑來跑去", "拖椅子", "拖桌", "蹦蹦", "砰砰", "哭鬧", "尖叫",
     "打球", "跳繩", "甩門", "摔門", "彈鋼琴", "唱歌",
 ]
 # Personal-safety complaints are checked BEFORE noise, and that ordering is the
-# whole point. Measured on a lived session: 「前男友…半夜按我家電鈴,還在我上班的
-# 地方等我,我很害怕」 hit the noise keyword 「半夜」, so someone describing being
-# stalked was handed the noise questionnaire — 「你住公寓大廈還是透天?」 — and the
-# answer came back citing 社維法§72 深夜喧嘩 and the 噪音 routing principle.
-# HARM words only. Relationship words (前夫/前妻/前男友/分手) were in this list
-# for one round and misfired immediately: a divorced father asking about
-# visitation was told 「你描述的涉及人身安全…請撥 110」 and had his question
-# answered out of 家暴法. Being someone's ex is not a safety signal.
+# whole point: 「前男友…半夜按我家電鈴…我很害怕」 hits the noise word 「半夜」, and a
+# stalking victim must not get the noise questionnaire.
+# HARM words only. Relationship words (前夫/前妻/前男友/分手) misfire — a divorced
+# father asking about visitation is not a safety case.
 _SAFETY = [
     "家暴", "暴力", "打我", "動手", "恐嚇", "威脅", "跟蹤", "騷擾", "糾纏",
     "保護令", "很害怕", "會怕", "性騷", "跟監", "堵我", "等我下班",
     "一直傳訊息", "按我家電鈴",
 ]
 
-# The everyday domains the corpus actually covers. Without these rows the
-# rule-based triage knew only 噪音 plus five neighbour disputes, so a plainly
-# stated 「退租後房東說牆壁有釘孔要扣我兩個月押金」 fell through to 「ambiguous」 and
-# the web demo replied 「這是租屋、勞資、消費、車禍、家事,還是鄰里的問題?」 —
-# asking the user to classify what they had just described.
+# The everyday domains the corpus covers, plus the neighbour disputes. A plainly
+# stated domain must not fall through to 「ambiguous」 and be asked to classify itself.
 _OTHER = [
     ("rent", "租屋", ["押金", "退租", "房東", "房客", "承租", "租約", "租金",
                      "二房東", "續租", "違約金"]),
@@ -68,12 +62,9 @@ _OTHER = [
 
 
 # ── Which side of the complaint the user is on ───────────────────────────────
-# Measured 2026-08-15 on the owner's own live dispute (journal/): every question
-# in NOISE_CHECKLIST, all five rungs of the noise ladder and the 存證信函 template
-# were written for the party MAKING the complaint. Run against a respondent's
-# description the ladder recommended 報警(110) citing 社維法§72 — the article that
-# fines him — and, once his own words were filed into fields, 調解 → 存證信函 →
-# 民事訴訟 against the neighbour who had complained about him.
+# The checklists, ladders and letter templates are written for the party MAKING
+# the complaint; handed to a respondent they tell him to report himself
+# (evals/RESULTS.md §8).
 #
 # So the seat is inferred where the sentence says it, and ASKED where it does
 # not. It is never assumed silently: an assumption nobody states is one the
@@ -82,9 +73,8 @@ STANCE_QUESTION = (
     "先確認一件事,因為它會改變後面每一題的意思:"
     "是別人製造的聲音吵到你,還是有人反映/投訴你這邊太吵?"
 )
-# The same question outside the noise scenario. Four of the five triage domains
-# live on the generic path, and its ladder is the complainant's too: 申訴, 檢舉,
-# 申請理賠, 存證信函, 提告.
+# The same question outside the noise scenario: the generic ladder is the
+# complainant's too (申訴, 檢舉, 申請理賠, 存證信函, 提告).
 STANCE_QUESTION_GENERIC = (
     "先確認一件事,因為它會改變後面每一題的意思:"
     "是你要向對方主張什麼,還是對方在向你要求或指控什麼?"
@@ -96,9 +86,8 @@ def stance_question(problem_type: str | None) -> str:
 
 # "Someone is complaining about ME." Phrases only — a bare 「我被」 or 「投訴」
 # cannot tell the two sides apart, and a wrong stance is worse than no stance.
-#「被鄰居投訴」 does not contain 「被投訴」, and the owner's own sentence is exactly
-# that shape. One pattern covers 被X投訴 / 被X檢舉 / 被X反映 for any short X,
-# instead of a row per neighbour noun.
+# 「被鄰居投訴」 does not contain 「被投訴」, so one pattern covers 被X投訴 /
+# 被X檢舉 / 被X反映 for any short X, instead of a row per neighbour noun.
 _BEING_COMPLAINED_ABOUT = re.compile(
     r"被[^,,。.;;\s]{0,6}?(?:投訴|檢舉|申訴|反映|抗議|舉發|報警)"
 )
@@ -206,10 +195,7 @@ def classify(message: str) -> TriageResult:
         return TriageResult("noise", "noise")
     for cat, label, keywords in _OTHER:
         if _hits(low, keywords):
-            # No message: the domain is reported as a one-line acknowledgement by
-            # the dialogue layer. It used to explain the system's own plumbing
-            # (「住宅噪音有專屬問診流程,其他問題走通用流程(同一套檢索與五道關卡…)」)
-            # before asking its first question — implementation detail, said to
-            # someone who came with a problem.
+            # No message: the dialogue layer acknowledges the domain in one line,
+            # without explaining the system's own plumbing.
             return TriageResult("other", f"other:{cat}", label=label)
     return TriageResult("ambiguous", None, question=DISCRIMINATING_QUESTION)

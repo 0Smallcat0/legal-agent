@@ -31,16 +31,12 @@ class Stage(str, Enum):
     READY_FOR_STAGE3 = "READY_FOR_STAGE3"
 
 
-# The user must be able to end the questioning. Measured on the web demo, which
-# has no such escape: four turns in, the visitor had answered everything they
-# knew, the checklist still had gaps, and the result column was still blank.
+# The user must always be able to end the questioning.
 DONE_WORDS = {"沒有了", "沒了", "就這樣", "夠了", "可以了", "沒有其他", "沒別的了",
               "不知道", "不清楚", "沒印象"}
 DONE_PHRASES = ("請幫我分析", "請分析", "開始分析", "幫我看", "可以分析", "直接分析")
-# Hard cap on intake turns. Three, not six: measured this session, retrieval on
-# the user's OWN opening words already reaches 19/20 of the articles a careful
-# person would want (evals/real_sessions.json), so questions four through six
-# bought paperwork, not accuracy.
+# Hard cap on intake turns. Retrieval on the opening words alone already reaches
+# 19/20 of the wanted articles, so more questions buy paperwork, not accuracy.
 MAX_INTAKE_TURNS = 3
 
 
@@ -96,12 +92,7 @@ class PipelineResult:
 
 
 def _render_batch(batch: list[intake.IntakeField]) -> str:
-    """ONE question, phrased as a question — not a numbered form.
-
-    The model-free path used to open with 「請幫我確認幾個問題(可逐項分行回答)」 and
-    a numbered list. In a chat box that reads as paperwork, and the user answers
-    one item anyway. Ask the next thing; say the exit exists.
-    """
+    """ONE question, phrased as a question (not a numbered form), plus the exit."""
     if not batch:
         return ""
     lines = [batch[0].question]
@@ -137,10 +128,7 @@ def _enter_noise_intake(state: SessionState, user_message: str) -> tuple[str, Se
     """Move into the noise checklist, seeding it with the user's own words."""
     state.problem_type = "noise"
     state.stage = Stage.INTAKE
-    # The opening complaint already describes the noise — the generic
-    # flow seeds `problem` with it, the noise flow did not, so a visitor
-    # who wrote 「樓上小孩跑跳、拖椅子」 was asked 「噪音主要是什麼?」 four
-    # turns running. Their own words are the best answer to that field.
+    # The opening complaint already describes the noise; don't ask for it again.
     state.collected_facts.setdefault("noise_type", state.user_text or user_message)
     batch = intake.next_questions(state)[:1]
     state.pending_questions = [f.key for f in batch]
@@ -242,11 +230,8 @@ def handle_turn_smart(state: SessionState, user_message: str,
                       history: list[dict], intake_llm) -> tuple[str, SessionState]:
     """LLM-driven intake with the SAME (reply, state) contract as handle_turn.
 
-    The CLI has driven its intake with the model since 07-19; the web demo kept
-    asking a scripted checklist even with Ollama running right there, because it
-    only used the model for the Stage-3 narrative. Same conversation, either
-    front end — and when no model is available, callers fall back to
-    `handle_turn`, which is what keeps the demo working on HF Spaces free CPU.
+    Used by both front ends; when no model is available callers fall back to
+    `handle_turn`, which keeps the demo working on HF Spaces free CPU.
 
     NO retrieval here (spec §3.3): this only calls `intake_llm`.
     """
@@ -273,9 +258,7 @@ def handle_turn_smart(state: SessionState, user_message: str,
             state.asked_stance = True
             return preface + triage.stance_question(state.problem_type), state
 
-    # Was 「noise if noise else generic」, which threw away what triage had just
-    # worked out: a car-accident claim and an unreturned deposit both landed on
-    # the same four generic questions.
+    # Keep triage's finer type, so each domain gets its own checklist.
     ptype = state.problem_type or "generic"
     turn = run_smart_intake_turn(
         history, state.collected_facts, intake_llm, ptype, state.pending_key,
@@ -316,10 +299,8 @@ def missing_fields(state: SessionState) -> list[str]:
 def assumptions_block(state: SessionState) -> str:
     """The seat this answer was written for, then the fields it never got.
 
-    The gap list alone reads as 「you did not answer these」 and quietly keeps the
-    system's own assumption out of sight. Measured on the owner's live dispute
-    (journal/, 2026-08-15): the whole page was written for the other side, and
-    nothing on it said so.
+    The gap list alone reads as 「you did not answer these」 and hides the
+    system's own assumption; a page written for the wrong side must say so.
     """
     lines = [triage.stance_line(state.stance, state.problem_type)]
     missing = missing_fields(state)

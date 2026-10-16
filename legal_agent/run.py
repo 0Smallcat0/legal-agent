@@ -115,11 +115,7 @@ def _format_result(result) -> str:
     if result.honesty_tier == "insufficient":
         out.append(f"【資料涵蓋】不足:{result.answer}")
     else:
-        # honesty_label lives on Stage3Result, not on PipelineResult — reading it
-        # off `result` raised AttributeError, and nobody noticed because the
-        # marginal band was empty under the stale threshold pair (floor 6 /
-        # marginal 1.5). Recalibrating the band made the branch reachable and the
-        # crash immediate: an unreachable code path is an untested one.
+        # honesty_label lives on Stage3Result, not on PipelineResult.
         label = getattr(getattr(result, "stage3", result), "honesty_label", None)
         if result.honesty_tier == "marginal" and label:
             out.append(f"【提醒】{label}")
@@ -133,11 +129,9 @@ def _format_result(result) -> str:
         else:
             out.append(result.answer)
 
-        # What retrieval actually found, code-rendered. The model writes the
-        # 法律明文 section and routinely uses only part of what it was given —
-        # one lived session was handed 勞基§22/§24/§30 and wrote about §30 only.
-        # Listing the window costs three lines and lets the reader see the law
-        # that was found, not just the law the model chose to discuss.
+        # What retrieval actually found, code-rendered: the model routinely
+        # discusses only part of what it was given, and the reader should see
+        # the law that was found, not just the law the model chose to discuss.
         retrieved = getattr(getattr(result, "stage3", result), "retrieved", ())
         if retrieved:
             refs_line = "、".join(f"{s.statute_id}{s.article_no}" for s in retrieved)
@@ -149,11 +143,9 @@ def _format_result(result) -> str:
             from legal_agent.retrieval.judgments import render_block
             out.append("\n" + render_block(list(refs)))
 
-    # Mechanism 2 — verification, ALWAYS printed. This used to render only when
-    # something was flagged, so a clean run showed no verification section at
-    # all — and silence reads as endorsement. Four of eight already-decided
-    # rental disputes were reasoned the wrong way round with `flagged_count` 0.
-    # Same words as the web (verifier.verification_status_line) so the two
+    # Mechanism 2 — verification, ALWAYS printed: silence reads as endorsement,
+    # and `flagged_count` 0 does not mean the reasoning applies (evals/RESULTS.md
+    # §7). Same words as the web (verifier.verification_status_line) so the two
     # cannot drift apart.
     from legal_agent.anti_hallucination.verifier import verification_status_line
 

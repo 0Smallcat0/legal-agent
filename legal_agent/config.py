@@ -15,9 +15,10 @@ PROJECT_ROOT = PACKAGE_ROOT.parent
 # database without a git clone.
 CORPUS_DIR = PACKAGE_ROOT / "corpus"               # human-verified source material (§1.5)
 
-# Written at runtime, so it may NOT live inside the installed package:
-# site-packages is read-only on many systems and shared across projects.
-# Order: explicit override, then the platform's per-user data directory.
+# Written at runtime, so NOT inside the installed package (site-packages may be
+# read-only). Order: LEGAL_AGENT_HOME, then the platform per-user data dir.
+# The DB therefore lives outside the repo and survives deleting it; tests and
+# CLI runs share it (AGENTS.md trap 1).
 _DEFAULT_DATA_DIR = Path(
     os.environ.get("LOCALAPPDATA")             # Windows
     or os.environ.get("XDG_DATA_HOME")         # Linux, when set
@@ -45,21 +46,15 @@ MODEL = MODEL_PLACEHOLDER
 #                 the pipeline / building the golden set without paying for API.
 #   "ollama"    — a FREE local model via Ollama (needs the Ollama service running
 #                 + a pulled model; see OLLAMA_MODEL). Enables intelligent intake
-#                 at zero cost. Your RTX 4060 (8GB) runs a 7-8B model well.
+#                 at zero cost. An 8GB GPU runs a 7-8B model well.
 #   "anthropic" — the real Claude API (needs MODEL set above + ANTHROPIC_API_KEY).
-# (gemini can be added later as its own builder.)
-#
-# Environment first, because the default assumes a machine with Ollama on it and
-# `pip install` puts this file in site-packages. Measured on a clean venv: the
-# library path (verify + retrieval) needs no model and works in two commands, but
-# someone who then runs the CLI without Ollama had to edit an INSTALLED file to
-# reach the free 「manual」 backend. That was the one place the documented path
-# left the reader stuck, so it is an env var now.
+# Read from the environment because an installed copy of this file lives in
+# site-packages, where no one should have to edit it.
 LLM_PROVIDER = os.environ.get("LEGAL_AGENT_PROVIDER", "ollama")
 
 # Local Ollama backend (used when LLM_PROVIDER = "ollama").
 OLLAMA_HOST = os.environ.get("LEGAL_AGENT_OLLAMA_HOST", "http://localhost:11434")
-# 要更好的繁中可換 qwen3:latest 等 — same reason as above, no source edit needed.
+# 要更好的繁中可換 qwen3:latest 等.
 OLLAMA_MODEL = os.environ.get("LEGAL_AGENT_OLLAMA_MODEL", "llama3.1:latest")
 
 
@@ -72,19 +67,17 @@ def _tri_state(name: str) -> bool | None:
     return raw.strip().lower() in {"1", "true", "yes", "on"}
 
 
-# Reasoning models can spend the whole generation budget inside <think> and
-# return an empty answer (measured on qwen3:4b — see ollama_llm). The backend
-# detects that and retries, but the retry costs a wasted generation on EVERY
-# call, so a user who knows their model thinks can turn it off up front with
-# LEGAL_AGENT_OLLAMA_THINK=false. Unset keeps the key out of the payload
-# entirely, so servers and models that never heard of it are unaffected.
+# Thinking models can spend the whole budget inside <think> and return nothing
+# (qwen3:4b); the backend retries, at one wasted generation per call.
+# LEGAL_AGENT_OLLAMA_THINK=false avoids that up front. Unset keeps the key out
+# of the payload entirely.
 OLLAMA_THINK = _tri_state("LEGAL_AGENT_OLLAMA_THINK")
 
 # Hybrid retrieval (retrieval/dense.py): "auto" fuses BM25 with local-Ollama
-# bge-m3 embeddings via RRF when the index/daemon is available, and silently
-# falls back to pure BM25 on ANY failure; "off" = pure BM25 always.
-# BM25 scores still drive the honesty tier either way (the floor keeps its
-# meaning); dense only improves the ORDERING and recall of candidates.
+# bge-m3 embeddings via RRF when the index/daemon is available, and SILENTLY
+# falls back to pure BM25 on any failure (counted by
+# retriever.dense_fallback_count — AGENTS.md trap 2); "off" = pure BM25 always.
+# BM25 scores drive the honesty tier either way; dense only reorders/recalls.
 DENSE_RETRIEVAL = "auto"
 
 # Query expansion (retrieval/lexicon.py): "on" appends hand-curated statutory

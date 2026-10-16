@@ -1,14 +1,12 @@
 """Layer-2 法源 ingest — persist a HUMAN-VERIFIED proposal file into the corpus.
 
-`load_proposals(path, conn)` reads a JSON list of verified 法源 proposals and
-persists each into the `statutes` table (which is now the general 法源 table,
-distinguished by hierarchy_level) via the existing cli.insert_statute path.
+`load_proposals(path, conn)` persists a JSON list of verified 法源 proposals into
+`statutes` (the general 法源 table, distinguished by hierarchy_level) via
+`database.insert_statute`. No fetching, generating or tiering.
 
-It ONLY persists a verified file: NO fetching, NO generating, NO tiering
-decisions. Idempotent — a duplicate (statute_id, article_no, effective_from) is
-skipped (IntegrityError). Every hierarchy_level is validated against
-source_hierarchy UP FRONT; an unknown level REJECTS the whole file (ValueError,
-not a silent skip). Missing required fields or malformed dates also reject.
+Idempotent — a duplicate (statute_id, article_no, effective_from) is skipped.
+Validated UP FRONT: an unknown hierarchy_level, a missing field, a malformed
+date or a second open slice rejects the whole file (ValueError).
 
 Proposal JSON = a list of:
     {
@@ -80,8 +78,7 @@ def _check_single_open_slice(statutes: list[Statute], conn: sqlite3.Connection) 
     force", so a point-in-time lookup between their effective_from dates hits
     the older one and out-of-force checks silently pass. The importer refuses
     instead of guessing a close date — the reviewer must cap the older slice
-    with an explicit effective_to (found live 2026-07-21: a hand-era proposal
-    and the official-XML import both shipped the same article open).
+    with an explicit effective_to.
     """
     open_in_file: dict[tuple[str, str], str] = {}
     for s in statutes:

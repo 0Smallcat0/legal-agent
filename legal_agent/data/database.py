@@ -1,9 +1,8 @@
 """SQLite connection, schema, and the single write path into `statutes`.
 
-Responsibility: open connections to the local SQLite database, create the three
-tables defined in schema.sql (spec §1.4), and own the one INSERT that every
-ingest route goes through. It does NOT fetch or generate legal data — deciding
-WHAT to persist belongs to the ingest modules; this one only persists it.
+Opens connections, creates the schema.sql tables (spec §1.4), and owns the one
+INSERT every statute ingest route goes through. Deciding WHAT to persist
+belongs to the ingest modules.
 """
 from __future__ import annotations
 
@@ -23,9 +22,8 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
       check is actually enforced (SQLite leaves it OFF by default).
     - ``row_factory = sqlite3.Row`` so callers read columns by name.
     """
-    # The default DB now lives in a per-user data directory that does not exist
-    # on a fresh install, and sqlite3 does not create it — it raises
-    # 「unable to open database file」, which reads like a permission problem.
+    # The default per-user data dir may not exist yet, and sqlite3 would raise a
+    # misleading 「unable to open database file」 instead of creating it.
     if str(db_path) != ":memory:":
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))

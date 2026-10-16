@@ -1,38 +1,17 @@
 """Ship the reference judgments with the repo — redacted to what the page shows.
 
-A fresh clone used to get 2,560 statutes and ZERO judgments: `db/*.db` is
-gitignored, and the 司法院 API serves only 00:00-06:00 and returns one day at a
-time (seven days late), so reproducing the harvest takes weeks of nightly runs.
-The README's own screenshot — real judgments with the 主文 award beside the
-answer — was therefore the one thing a reader could not reproduce.
+The 司法院 API serves only 00:00-06:00, one day at a time, so a harvest cannot
+practically be reproduced; the reachable judgments ship in the package instead.
 
-Two facts make shipping them cheap and safe:
-
-**Only 386 of 1,367 can ever surface.** `retrieval/judgments.related_judgments`
-is a deterministic JOIN on `cited_articles`; a judgment with no corpus article
-in it is unreachable by construction. So the shipped set is not a sample — it
-is the whole reachable set.
-
-**The page reads two slices, not the document.** `judgment_text.citation()`
-reads the header's court + 案號 lines, `awards()` reads the 主文. Everything
-else (事實及理由) is never displayed. Keeping only those slices is measured
-LOSSLESS for what is rendered — citation() and awards() return identical values
-on all 386 — while dropping the party block, and it costs 0.26 MB instead of
-5.9 MB.
-
-**Names inside 主文 are dropped, not masked.** The party block goes with the
-redaction, but 31 of the 386 also name a party in a 主文 sentence
-(「被告陳○○應給付…」). Masking would make the 主文 no longer verbatim, and
-verbatim-or-nothing is the rule the whole corpus rests on. So those 31 ship
-with their header only: they still surface, still carry their article overlap,
-and `awards()` returns () — the same silence the block already renders for a
-judgment whose 主文 orders no readable payment. Dropping the judgments outright
-was measured and rejected: it costs 19 of the 239 covered articles (勞基§24,
-民法§226/§194/§482 among them) to remove names that this route removes anyway.
-
-Detection uses the judgment's OWN party block as ground truth rather than a
-surname heuristic — 「連帶給付」 and 「平方公尺」 are surname-shaped and are not
-names, and a heuristic flagged 96 where the ground truth flags 31.
+  * Only judgments citing a corpus statute can surface (`related_judgments` is
+    a JOIN on `cited_articles`), so the shipped set is the whole reachable set.
+  * The page reads two slices — header (court + 案號) and 主文 — so only those
+    are kept: lossless for `citation()`/`awards()`, and the party block goes.
+  * A 主文 that names a party is dropped, not masked (masking breaks
+    verbatim): those judgments ship header-only and still surface.
+  * Names come from the judgment's OWN party block, not a surname heuristic
+    (「連帶給付」 and 「平方公尺」 are surname-shaped).
+Measurements: evals/HISTORY.md.
 
     python -m legal_agent.data.judgment_ingest -o corpus/judgments_v1.json
 """
@@ -124,8 +103,7 @@ def names_in_main_text(full_text: str | None) -> set[str]:
 def redact(full_text: str | None) -> str:
     """Header (court + 案號) plus the 主文, and nothing else.
 
-    Returns the header alone when the 主文 names a party — see the module
-    docstring for why those are dropped rather than masked.
+    Returns the header alone when the 主文 names a party (see module docstring).
     """
     if not full_text:
         return ""

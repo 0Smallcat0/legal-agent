@@ -50,9 +50,8 @@ GREETING = (
 
 # A deliberately-broken sample answer mirroring the live 8B model's README-demo
 # output: one wrong amount and one TYPO'd statute name (公寀≠公寓) must be
-# flagged, while 噪音管制法第8條 must PASS — it was out of corpus in the
-# 11-article era but corpus v2 carries the full statute, so it is now a correct
-# citation (re-verified 2026-07-21; the tab copy must not promise three flags).
+# flagged, while 噪音管制法第8條 is in the corpus and must PASS (so the tab copy
+# must not promise three flags).
 SAMPLE_BAD_ANSWER = (
     "依社會秩序維護法第72條,深夜喧嘩可處新臺幣六萬元以下罰鍰。"
     "另依噪音管制法第8條及公寀大廈管理條例第16條,亦有相關管制。"
@@ -64,9 +63,8 @@ SAMPLE_GOOD_ANSWER = (
 # A second broken sample, from the everyday-law side of the corpus. ALL THREE
 # defects are ones the verifier actually catches — a demo must not advertise
 # a catch it cannot make: an invented fine (§7 caps the deposit and prescribes
-# no 罰鍰), the 七日 hesitation period claimed as 十四日 (catchable since the
-# period content pass, 2026-07-21 — the very defect this sample had to DROP on
-# 07-19), and a nonexistent article number.
+# no 罰鍰), the 七日 hesitation period claimed as 十四日, and a nonexistent
+# article number.
 SAMPLE_BAD_ANSWER_2 = (
     "依租賃住宅市場發展及管理條例第7條,房東不退押金可處新臺幣五萬元罰鍰;"
     "依消費者保護法第19條,網購商品得於十四日內退回解約;"
@@ -301,11 +299,9 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
     top = max(sc for _, sc in scored) or 1.0
     cards = []
     for s, sc in scored:
-        # A 0.0 score is not 「4% relevant」 — it is the honest lexical score of a
-        # candidate the DENSE or LEXICON channel put here precisely because the
-        # user's words share nothing with the article. Measured on the web demo:
-        # 民法§432 (the article that decides a 押金/釘孔 case) was displayed last,
-        # labelled 「相關度 4%」. Say which channel found it instead of inventing a
+        # A 0.0 score is the honest lexical score of a candidate the DENSE or
+        # LEXICON channel put here precisely because the user's words share nothing
+        # with the article. Say which channel found it instead of inventing a
         # percentage for it.
         if sc <= 0.0:
             width = 100
@@ -314,9 +310,8 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
             width = max(4, round(sc / top * 100))
             relevance = f"字面相關度 {width}%"
         excerpt = escape(s.content[:56].replace("\n", " "))
-        # The proviso is marked, not explained: 民法§793 reached the owner's page
-        # verbatim and its 但書 — the sentence his whole side turns on — read as
-        # more law-coloured text. Verbatim slice, no interpretation; see
+        # The proviso (但書) is marked, not explained, so it does not read as more
+        # law-coloured text. Verbatim slice, no interpretation; see
         # legal_agent/data/statute_text.py for the precision/recall it accepts.
         body = mark_provisos(s.content, '<mark class="proviso">', "</mark>", escape)
         fulltext = (
@@ -496,14 +491,12 @@ def consult_step(message: str, history: list[dict], state: SessionState):
     new_case = ""
     if state.stage is Stage.READY_FOR_STAGE3:   # previous case closed — start anew
         history, state = _fresh_chat(), SessionState()
-        # Say so. Silently restarting made the next message look like it was
-        # ignored: the visitor typed a follow-up and got a fresh intake question.
+        # Say so, or the follow-up looks ignored when a fresh intake question appears.
         new_case = "(這是新的一件諮詢——上一件的結果仍在右側,按「重新開始」可清空)\n"
 
-    # With a local model present, the INTAKE is model-driven too — the same
-    # conversation the CLI has had since 07-19. Without one, the scripted
-    # checklist still runs, which is what keeps this demo working on HF Spaces
-    # free CPU with no keys.
+    # With a local model present the INTAKE is model-driven, as in the CLI.
+    # Without one the scripted checklist runs, which keeps this demo working on
+    # HF Spaces free CPU with no keys.
     history = [*history, {"role": "user", "content": message}]
     if ollama_available():
         reply, state = handle_turn_smart(
