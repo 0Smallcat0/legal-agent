@@ -1006,7 +1006,7 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.mutation [--seman
                 _problems.append(
                     f"retrieval_miss_quoted status-line catch "
                     f"{_report.status_line_caught}/{_report.status_line_total} < 100%"
-                    "(這是已知落差,見 module docstring — 需 verifier.py A2/A5 落地)"
+                    "(見 module docstring)"
                 )
         if _problems:
             print()
