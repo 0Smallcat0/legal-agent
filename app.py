@@ -38,6 +38,7 @@ from legal_agent.dialogue.flow import (
     handle_turn,
     handle_turn_smart,
 )
+from legal_agent.dialogue.intake import FIELD_LABELS
 from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
 from legal_agent.retrieval.lexicon import expansions
 from legal_agent.retrieval.retriever import retrieve_scored
@@ -83,23 +84,6 @@ RETRIEVAL_EXAMPLES = [
     ["網購買到瑕疵品,賣家不讓退貨"],
     ["父親過世,兄弟姊妹要分遺產"],
 ]
-
-# Intake field keys → 中文 labels. Covers BOTH checklists: the 住宅噪音
-# scenario and the generic flow every other problem falls through to.
-_FIELD_ZH = {
-    # 通用流程
-    "problem": "問題與對象",
-    "goal": "希望的結果",
-    "timeline": "時間與經過",
-    # 住宅噪音情境
-    "noise_type": "噪音類型",
-    "timing": "時段與頻率",
-    "building_type": "建物型態",
-    "impact": "影響",
-    "evidence": "證據",
-    # 兩者共用
-    "actions_taken": "已採取行動",
-}
 
 _TIER_TEXT = {
     "normal": "充分——檢索到高相關法源",
@@ -498,7 +482,7 @@ def _consult_result_html(result) -> str:
 def _ready_summary(state: SessionState) -> str:
     lines = ["事實已收集完成,開始檢索與診斷。", ""]
     lines += [
-        f"・{_FIELD_ZH.get(k, k)}:{v}" for k, v in state.collected_facts.items()
+        f"・{FIELD_LABELS.get(k, k)}:{v}" for k, v in state.collected_facts.items()
     ]
     return "\n".join(lines)
 

@@ -365,3 +365,9 @@ def test_the_complainants_ladder_is_untouched():
     ).render()
     assert "報警請警察到場" in text and "已嘗試" in text
     assert "民事訴訟" in text
+
+
+def test_the_stance_line_only_mentions_noise_on_a_noise_case():
+    assert "太吵" in triage.stance_line("respondent", "noise")
+    rent = triage.stance_line("respondent", "other:rent")
+    assert "被投訴的一方" in rent and "太吵" not in rent

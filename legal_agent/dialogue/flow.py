@@ -43,13 +43,6 @@ DONE_PHRASES = ("請幫我分析", "請分析", "開始分析", "幫我看", "�
 # bought paperwork, not accuracy.
 MAX_INTAKE_TURNS = 3
 
-# Field keys → what to call them on the page. A key the map does not carry is
-# printed as itself: a missing label must never hide a missing field.
-FIELD_LABELS = {
-    "problem": "問題描述", "goal": "你想達成什麼", "timeline": "時間經過",
-    "noise_type": "噪音類型", "timing": "時段與頻率", "building_type": "建築型態",
-    "impact": "受到的影響", "evidence": "證據", "actions_taken": "已採取的行動",
-}
 
 
 def wants_analysis(message: str) -> bool:
@@ -117,12 +110,10 @@ def _render_batch(batch: list[intake.IntakeField]) -> str:
 
 
 def _render_ready(state: SessionState) -> str:
-    facts = "\n".join(f"  - {k}: {v}" for k, v in state.collected_facts.items())
-    return (
-        "資訊已收集完成(READY_FOR_STAGE3)。\n"
-        "接下來進行分類與法條檢索(Stage 3)+ 解法階梯(Stage 4);請呼叫 advance_to_stage3()。\n"
-        f"整理到的事實:\n{facts}"
+    facts = "\n".join(
+        f"  - {intake.FIELD_LABELS.get(k, k)}:{v}" for k, v in state.collected_facts.items()
     )
+    return f"資訊已收集完成,接下來檢索相關法條並整理處理步驟。\n整理到的事實:\n{facts}"
 
 
 def _seed_key(problem_type: str | None) -> str:
@@ -155,7 +146,7 @@ def _enter_noise_intake(state: SessionState, user_message: str) -> tuple[str, Se
     state.pending_questions = [f.key for f in batch]
     state.asked_keys.update(state.pending_questions)
     return (
-        triage.stance_line(state.stance) + "\n"
+        triage.stance_line(state.stance, state.problem_type) + "\n"
         + "了解,住宅噪音的問題。再問一件事就好——\n" + _render_batch(batch)
     ), state
 
@@ -179,7 +170,7 @@ def _enter_generic_intake(state: SessionState, user_message: str,
     opener = f"了解,{label}的問題。" if label else "了解。"
     preface = f"{message}\n" if message else ""
     return (
-        preface + triage.stance_line(state.stance) + "\n"
+        preface + triage.stance_line(state.stance, state.problem_type) + "\n"
         + opener + "再問一件事就好——\n" + _render_batch(batch)
     ), state
 
@@ -244,7 +235,7 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
         state.stage = Stage.READY_FOR_STAGE3
         return _render_ready(state), state
 
-    return "已在 READY_FOR_STAGE3;請呼叫 advance_to_stage3() 進入 Stage 3+4。", state
+    return "資訊已收集完成,正在整理分析。", state
 
 
 def handle_turn_smart(state: SessionState, user_message: str,
@@ -330,10 +321,10 @@ def assumptions_block(state: SessionState) -> str:
     (journal/, 2026-08-15): the whole page was written for the other side, and
     nothing on it said so.
     """
-    lines = [triage.stance_line(state.stance)]
+    lines = [triage.stance_line(state.stance, state.problem_type)]
     missing = missing_fields(state)
     if missing:
-        labels = "、".join(FIELD_LABELS.get(k, k) for k in missing)
+        labels = "、".join(intake.FIELD_LABELS.get(k, k) for k in missing)
         lines.append(f"【本次沒有的資訊】{labels}——沒問到或沒答到,結論可能因此不同。")
     return "\n".join(lines)
 

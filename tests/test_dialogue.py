@@ -263,3 +263,8 @@ if __name__ == "__main__":
     import pytest
 
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_every_checklist_field_has_a_label():
+    keys = {f.key for checklist in intake.CHECKLISTS.values() for batch in checklist for f in batch}
+    assert keys <= set(intake.FIELD_LABELS), sorted(keys - set(intake.FIELD_LABELS))

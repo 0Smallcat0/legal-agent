@@ -145,12 +145,18 @@ def classify_stance(message: str) -> str | None:
 
 
 STANCE_LABELS = {
-    "respondent": "被投訴的一方(有人反映你這邊太吵)",
-    "complainant": "提出投訴的一方(別人的聲音吵到你)",
+    "respondent": "被投訴的一方",
+    "complainant": "提出投訴的一方",
+}
+# The parenthetical names the dispute, so it only fits a noise case: a
+# landlord accused over a deposit is not 「你這邊太吵」.
+_NOISE_STANCE_DETAIL = {
+    "respondent": "(有人反映你這邊太吵)",
+    "complainant": "(別人的聲音吵到你)",
 }
 
 
-def stance_line(stance: str | None) -> str:
+def stance_line(stance: str | None, problem_type: str | None = "noise") -> str:
     """The one visible line that makes the system's assumption correctable.
 
     Silence reads as endorsement — the same lesson the verification section
@@ -161,7 +167,9 @@ def stance_line(stance: str | None) -> str:
             "【本次假設】還沒確認你是哪一方,下面預設你是提出投訴的一方;"
             "若相反請說一句,我改。"
         )
-    return f"【本次假設】你是{STANCE_LABELS[stance]}。如果反了,直接說一句,我改。"
+    is_noise = (problem_type or "").split(":")[-1] == "noise"
+    detail = _NOISE_STANCE_DETAIL[stance] if is_noise else ""
+    return f"【本次假設】你是{STANCE_LABELS[stance]}{detail}。如果反了,直接說一句,我改。"
 
 
 @dataclass(frozen=True)

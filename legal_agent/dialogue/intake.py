@@ -312,6 +312,27 @@ CHECKLISTS: dict[str, list[list[IntakeField]]] = {
 }
 
 
+# Field key -> what to call it on the page, for every checklist above. One map
+# for the CLI and the web demo; tests/test_dialogue.py requires a label for
+# every key, because a missing one used to print the raw key (「handover」).
+FIELD_LABELS: dict[str, str] = {
+    "problem": "問題與對象", "goal": "希望的結果", "timeline": "時間與經過",
+    "actions_taken": "已採取的行動", "evidence": "證據",
+    "noise_type": "噪音類型", "timing": "時段與頻率", "building_type": "建物型態",
+    "impact": "受到的影響",
+    "rent_issue": "租屋問題類型", "deposit_terms": "租金與押金", "landlord_claim": "房東的主張",
+    "handover": "點交與搬離",
+    "labor_issue": "勞資問題類型", "work_terms": "薪資與工時", "employment_span": "到職與年資",
+    "employer_reason": "雇主的說法",
+    "consumer_issue": "消費問題類型", "purchase_channel": "購買管道與金額",
+    "delivery_date": "收到商品的日期", "seller_response": "賣家的回應",
+    "injury_damage": "傷勢與車損", "accident_date": "事故日期", "fault": "肇責與鑑定",
+    "insurance": "保險",
+    "family_issue": "家事問題類型", "relationship": "雙方關係", "family_timeline": "關鍵時點",
+    "assets_children": "子女與財產",
+}
+
+
 def domain_of(problem_type: str | None) -> str:
     """The checklist key for a triage label.
 
