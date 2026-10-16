@@ -34,11 +34,14 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-DEFAULT_CASES = "evals/realworld_v1.json"
+from legal_agent.config import PROJECT_ROOT
+from legal_agent.evaluation import corpus_connection
+
+DEFAULT_CASES = PROJECT_ROOT / "evals/realworld_v1.json"
 # The answer-side coding for one recorded run. Separate file because it is
 # per-run: the outcome side belongs to the case and never changes, the answer
 # side is a property of one model at one temperature.
-DEFAULT_CODING = "evals/realworld_answer_coding_run1.json"
+DEFAULT_CODING = PROJECT_ROOT / "evals/realworld_answer_coding_run1.json"
 
 
 @dataclass
@@ -368,8 +371,7 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
     """Retrieve for every case, grade the honesty tier, and score hit@k against
     the article the deciding authority cited. `llm` is optional and only feeds
     the side-by-side print — it never affects a score."""
-    from legal_agent.anti_hallucination.honesty import grade_honesty
-    from legal_agent.retrieval.lexicon import expansions
+    from legal_agent.anti_hallucination.honesty import grade_honesty, lexicon_hit
     from legal_agent.retrieval.retriever import (
         DEFAULT_K,
         dense_fallback_count,
@@ -379,14 +381,7 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
 
     reset_dense_fallbacks()
     document = load_document(path)
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         check_labels(document, conn)
         results = []
         for case in document["cases"]:
@@ -395,11 +390,9 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
             retrieved = [s for s, _ in scored]
             scores = [sc for _, sc in scored]
             window = [f"{s.statute_id}{s.article_no}" for s in retrieved]
-            phrases = expansions(query)
-            lexicon_hit = any(
-                phrase in (s.content or "") for s in retrieved for phrase in phrases
+            tier = grade_honesty(
+                retrieved, scores, lexicon_hit=lexicon_hit(retrieved, query), query=query,
             )
-            tier = grade_honesty(retrieved, scores, lexicon_hit=lexicon_hit, query=query)
             expected = [_ref(e) for e in case["governing_statutes"]]
             analysis = None
             if llm is not None:
@@ -419,9 +412,6 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
                 real_outcome=case["real_outcome"],
                 analysis=analysis,
             ))
-    finally:
-        if own is not None:
-            own.close()
     return OutcomeReport(
         results,
         dense_fallbacks=dense_fallback_count(),

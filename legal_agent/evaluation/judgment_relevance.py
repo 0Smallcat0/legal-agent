@@ -40,6 +40,9 @@ import re
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from legal_agent.config import PROJECT_ROOT
+from legal_agent.evaluation import corpus_connection
+
 # ── side 1: session -> family, from the articles a careful person expects ──
 # Ranges are 民法's own structure (編/章/節). A range is written where the whole
 # section shares one dispute type; single articles where it does not.
@@ -267,14 +270,7 @@ def run_judgment_relevance(path, conn=None, k: int | None = None) -> RelevanceRe
     )
 
     reset_dense_fallbacks()
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         report = RelevanceReport()
         for case in json.loads(Path(path).read_text(encoding="utf-8")):
             expected = list(case.get("expected_statutes", []))
@@ -306,9 +302,6 @@ def run_judgment_relevance(path, conn=None, k: int | None = None) -> RelevanceRe
                     entry.verdict = ("match" if entry.shown_family in families
                                      else "mismatch")
             report.cases.append(entry)
-    finally:
-        if own is not None:
-            own.close()
     report.dense_fallbacks = dense_fallback_count()
     return report
 
@@ -320,5 +313,5 @@ if __name__ == "__main__":   # python -m legal_agent.evaluation.judgment_relevan
 
     enable_utf8_stdout()
     print_corpus_fingerprint()
-    target = _sys.argv[1] if len(_sys.argv) > 1 else "evals/real_sessions.json"
+    target = _sys.argv[1] if len(_sys.argv) > 1 else PROJECT_ROOT / "evals" / "real_sessions.json"
     print(run_judgment_relevance(target).render())

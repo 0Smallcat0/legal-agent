@@ -27,6 +27,11 @@ import sqlite3
 from dataclasses import dataclass
 from datetime import date
 
+from legal_agent.anti_hallucination.answer_structure import (
+    _LAW_HEADING_RE,
+    ANALYSIS_HEADING,
+    PRACTICE_HEADING,
+)
 from legal_agent.data.models import Statute
 
 
@@ -217,8 +222,7 @@ _STRUCT_REF_RE = re.compile(r"第" + _NUM + r"(?:條|項|款|目)")
 
 # 實務見解-tier levels (rank >= 4): must NOT be presented as 「法律明文」.
 _PRACTICE_TIER_LEVELS = {"函釋", "行政實務見解"}
-_LAW_HEADING_RE = re.compile(r"(?<!非)法律明文")   # heading, not the "非法律明文" disclaimer
-_HEADINGS_AFTER_LAW = ("實務見解", "分析研判")
+_HEADINGS_AFTER_LAW = (PRACTICE_HEADING, ANALYSIS_HEADING)
 
 # ── monetary amounts (for the conservative content-match pass) ───────────────
 _YUAN_RE = re.compile(

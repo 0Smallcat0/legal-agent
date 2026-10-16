@@ -26,7 +26,7 @@ from html import escape
 import gradio as gr
 
 from legal_agent import config
-from legal_agent.anti_hallucination.honesty import grade_honesty
+from legal_agent.anti_hallucination.honesty import grade_honesty, lexicon_hit
 from legal_agent.anti_hallucination.verifier import verify_answer
 from legal_agent.data.bootstrap import ensure_corpus
 from legal_agent.data.database import connect
@@ -40,7 +40,6 @@ from legal_agent.dialogue.flow import (
 )
 from legal_agent.dialogue.intake import FIELD_LABELS
 from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
-from legal_agent.retrieval.lexicon import expansions
 from legal_agent.retrieval.retriever import retrieve_scored
 
 # ── content ──────────────────────────────────────────────────────────────────
@@ -562,18 +561,12 @@ def explore_retrieval(query: str, as_of: str) -> str:
         return f'<div class="note">{escape(str(exc))}</div>'
     finally:
         conn.close()
-    # Graded exactly as Stage 3 grades it, and it took three tries to be true.
-    # `query=` carries the coverage veto — a question naming a body of law the
-    # corpus does not hold is refused whatever BM25 scored. `lexicon_hit` is the
-    # other half: a curated 口語→法條 phrase landing on a retrieved article is
-    # coverage evidence that a length-sensitive BM25 score cannot express, and
-    # without it this tab refused short questions the CLI answers.
+    # Graded exactly as Stage 3 grades it: the coverage veto (`query=`) and the
+    # lexicon floor both apply, or this tab refuses questions the CLI answers.
     retrieved = [s for s, _ in scored]
-    phrases = expansions(query or "")
-    lexicon_hit = any(p in (s.content or "") for s in retrieved for p in phrases)
     tier = grade_honesty(
         retrieved, [sc for _, sc in scored],
-        lexicon_hit=lexicon_hit, query=query or "",
+        lexicon_hit=lexicon_hit(retrieved, query or ""), query=query or "",
     )
     return _tier_bar(tier) + _retr_cards(scored)
 

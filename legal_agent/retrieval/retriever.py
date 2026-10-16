@@ -294,7 +294,7 @@ def _expand(text: str) -> str:
     """Bridge the everyday/statutory vocabulary gap (config.QUERY_EXPANSION).
     Additive only — the user's wording stays verbatim at the front — so a
     query that already matched cannot lose its matches."""
-    if getattr(config, "QUERY_EXPANSION", "off") != "on":
+    if config.QUERY_EXPANSION != "on":
         return text
     from legal_agent.retrieval.lexicon import expand
     return expand(text)
@@ -337,7 +337,7 @@ def _promote_lexicon_phrases(
     """Give the top-k window up to LEXICON_RESERVED_SEATS articles that contain a
     triggered lexicon phrase verbatim. No-op when expansion is off, no phrase
     fires, or every hit is already in the window."""
-    if LEXICON_RESERVED_SEATS <= 0 or getattr(config, "QUERY_EXPANSION", "off") != "on":
+    if LEXICON_RESERVED_SEATS <= 0 or config.QUERY_EXPANSION != "on":
         return ranked[:k]
     from legal_agent.retrieval.lexicon import expansions
 
@@ -498,7 +498,7 @@ def _dense_fuse(
     a dense-only candidate (the vocabulary-gap case) carries its honest lexical
     score of 0.0. Returns None — pure BM25, behaviour unchanged — when the
     feature is off, the index is unbuilt, or Ollama is unreachable."""
-    if getattr(config, "DENSE_RETRIEVAL", "off") == "off":
+    if config.DENSE_RETRIEVAL == "off":
         return None
     try:
         from legal_agent.retrieval import dense

@@ -32,6 +32,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from legal_agent.anti_hallucination.verifier import VerificationResult, verify_answer
+from legal_agent.evaluation import corpus_connection
 from legal_agent.evaluation.golden_set import load_golden_set
 
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
@@ -213,20 +214,13 @@ def run_ablation(
 
         llm_factory = lambda m: ollama_llm(model=m, timeout=600.0)  # noqa: E731
 
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
 
     cases = load_golden_set(golden_path)
     if limit is not None:
         cases = cases[:limit]
 
     report = AblationReport()
-    try:
+    with corpus_connection(conn) as conn:
         for model in models:
             llm = llm_factory(model)
             for i, case in enumerate(cases, 1):
@@ -257,9 +251,6 @@ def run_ablation(
                     on_progress(f"[{model}] {i}/{len(cases)} {case.get('id','')}")
             if checkpoint_path is not None:
                 report.to_json(checkpoint_path)
-    finally:
-        if own is not None:
-            own.close()
     return report
 
 

@@ -28,6 +28,9 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from legal_agent.config import PROJECT_ROOT
+from legal_agent.evaluation import corpus_connection
+
 
 @dataclass
 class CaseRecall:
@@ -134,14 +137,7 @@ def run_real_recall(path, conn=None, k: int | None = None) -> RecallReport:
     )
 
     reset_dense_fallbacks()
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         cases = []
         for case in load_cases(path):
             expected = list(case.get("expected_statutes", []))
@@ -155,9 +151,6 @@ def run_real_recall(path, conn=None, k: int | None = None) -> RecallReport:
                 missed=[e for e in expected if e not in window],
                 window=window,
             ))
-    finally:
-        if own is not None:
-            own.close()
     return RecallReport(cases, dense_fallbacks=dense_fallback_count())
 
 
@@ -168,5 +161,5 @@ if __name__ == "__main__":   # python -m legal_agent.evaluation.real_recall [pat
     print_corpus_fingerprint()
     import sys as _sys
 
-    target = _sys.argv[1] if len(_sys.argv) > 1 else "evals/real_sessions.json"
+    target = _sys.argv[1] if len(_sys.argv) > 1 else PROJECT_ROOT / "evals" / "real_sessions.json"
     print(run_real_recall(target).render())

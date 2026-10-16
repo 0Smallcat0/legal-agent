@@ -31,7 +31,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass
 
-from legal_agent.anti_hallucination.verifier import _parse_number
+from legal_agent.anti_hallucination.verifier import _YUAN_RE, _parse_number
 
 # Standalone heading lines. \s matches U+3000 (IDEOGRAPHIC SPACE) in Unicode
 # mode, which is exactly how courts pad these headings.
@@ -42,16 +42,6 @@ _SECTION_AFTER_MAIN_RE = re.compile(
     re.MULTILINE,
 )
 
-# 大寫 (anti-tamper) numerals -> the standard forms the shared parser knows.
-_FORMAL_DIGITS = str.maketrans({
-    "壹": "一", "貳": "二", "參": "三", "肆": "四", "伍": "五",
-    "陸": "六", "柒": "七", "捌": "八", "玖": "九",
-    "拾": "十", "佰": "百", "仟": "千",
-})
-_AMOUNT_RE = re.compile(
-    r"([0-9０-９,，零〇一二三四五六七八九十百千萬億兩"
-    r"壹貳參肆伍陸柒捌玖拾佰仟]+)\s*元"
-)
 
 # A 主文 sentence states the award only when it ORDERS payment and is not
 # about costs or security — both of which also carry 元 amounts.
@@ -116,8 +106,9 @@ def award_amounts(block: str | None) -> list[int]:
             continue
         if any(m in sentence for m in _NOT_AWARD_MARKERS):
             continue
-        for raw in _AMOUNT_RE.findall(sentence):
-            value = _parse_number(raw.translate(_FORMAL_DIGITS))
+        # The shared parser reads 大寫 numerals (壹貳參…拾佰仟) directly.
+        for raw in _YUAN_RE.findall(sentence):
+            value = _parse_number(raw)
             if value is not None and value not in amounts:
                 amounts.append(value)
     return amounts

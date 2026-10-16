@@ -50,7 +50,7 @@ def build_runtime_llm():
     """Return the runtime llm callable for config.LLM_PROVIDER, or exit CLEANLY
     with a helpful message (no traceback)."""
     config.load_env()
-    provider = getattr(config, "LLM_PROVIDER", "anthropic")
+    provider = config.LLM_PROVIDER
 
     if provider == "manual":
         # Zero-cost human-in-the-loop: no model id and no API key required.
@@ -62,8 +62,8 @@ def build_runtime_llm():
         # Free local model. Needs the Ollama service running with a pulled model.
         from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
 
-        host = getattr(config, "OLLAMA_HOST", "http://localhost:11434")
-        model = getattr(config, "OLLAMA_MODEL", "qwen2.5:7b")
+        host = config.OLLAMA_HOST
+        model = config.OLLAMA_MODEL
         if not ollama_available(host):
             _die(
                 f"⚠ 連不到本機 Ollama({host})。請先:\n"
@@ -280,8 +280,8 @@ def main(argv=None) -> int:
 
     ensure_corpus(config.DB_PATH)   # fresh clone: build schema + corpus, once
     conn = connect(config.DB_PATH)
-    provider = getattr(config, "LLM_PROVIDER", "anthropic")
-    smart = provider != "manual" and getattr(config, "SMART_INTAKE", True)
+    provider = config.LLM_PROVIDER
+    smart = provider != "manual" and config.SMART_INTAKE
     intake_llm = None
     if smart and provider == "ollama":
         # Constrain the local model to valid JSON so fact extraction is reliable.

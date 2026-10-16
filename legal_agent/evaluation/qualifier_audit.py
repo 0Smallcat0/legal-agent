@@ -66,10 +66,6 @@ from legal_agent.anti_hallucination.verifier import _CITATION_RE, _resolve_id
 from legal_agent.config import DB_PATH, PROJECT_ROOT
 from legal_agent.evaluation import assert_nonzero_scan
 
-# Relative to the CURRENT WORKING DIRECTORY, matching every sibling harness
-# in this package (realworld.py, real_recall.py, judgment_relevance.py,
-# honesty_probe.py, ablation.py, calibrate.py all hardcode "evals/..." the
-# same way) -- run this with `cd "<repo>"` first, exactly like those.
 EVALS_DIR = PROJECT_ROOT / "evals"
 JOURNAL_DIR = PROJECT_ROOT / "journal"
 

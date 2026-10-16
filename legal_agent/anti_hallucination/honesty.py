@@ -11,6 +11,7 @@ from __future__ import annotations
 
 from legal_agent.anti_hallucination.coverage import absent_domain
 from legal_agent.data.models import Statute
+from legal_agent.retrieval.lexicon import expansions
 
 # Fixed text when the corpus covers nothing — the LLM is short-circuited (spec §2.4).
 INSUFFICIENT_TEXT = "這個問題我的資料庫沒有涵蓋,建議諮詢律師或換個描述方式"
@@ -62,6 +63,13 @@ MARGINAL_SCORE_THRESHOLD = 106.0
 # in 60–80. Re-check with evaluation/calibrate.py after any corpus or retrieval
 # change — this constant goes stale silently.
 INSUFFICIENT_SCORE_THRESHOLD = 70.0
+
+
+def lexicon_hit(retrieved: list[Statute], query: str) -> bool:
+    """Did a curated 口語→法條 phrase for `query` land verbatim on a retrieved
+    article? The coverage evidence `grade_honesty` takes as `lexicon_hit`."""
+    phrases = expansions(query or "")
+    return any(p in (s.content or "") for s in retrieved for p in phrases)
 
 
 def grade_honesty(

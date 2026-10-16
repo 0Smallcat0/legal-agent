@@ -42,6 +42,7 @@ import json
 import sqlite3
 from pathlib import Path
 
+from legal_agent.data import judicial_json
 from legal_agent.data.judgment_text import (
     _CASE_NO_RE,
     _COURT_LINE_RE,
@@ -181,26 +182,21 @@ def load_judgments(path: str | Path, conn: sqlite3.Connection) -> int:
     records = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(records, list):
         raise ValueError(f"{path} 需為 JSON 陣列")
-    inserted = 0
+    rows = []
     for index, record in enumerate(records):
-        jid = record.get("jid")
-        if not jid:
+        if not record.get("jid"):
             raise ValueError(f"judgment[{index}] 缺少 'jid'")
-        cursor = conn.execute(
-            "INSERT OR IGNORE INTO judgments "
-            "(jid, court, year, case_type, issues, cited_articles, holding, full_text) "
-            "VALUES (?, ?, ?, ?, NULL, ?, NULL, ?)",
-            (
-                jid,
-                record.get("court"),
-                record.get("year"),
-                record.get("case_type"),
-                json.dumps(record.get("cited_articles") or [], ensure_ascii=False),
-                record.get("full_text") or "",
-            ),
-        )
-        inserted += cursor.rowcount
-    conn.commit()
+        rows.append({
+            "jid": record["jid"],
+            "court": record.get("court"),
+            "year": record.get("year"),
+            "case_type": record.get("case_type"),
+            "issues": None,
+            "cited_articles": json.dumps(record.get("cited_articles") or [], ensure_ascii=False),
+            "holding": None,
+            "full_text": record.get("full_text") or "",
+        })
+    inserted, _skipped = judicial_json.load_judgments(rows, conn)
     return inserted
 
 

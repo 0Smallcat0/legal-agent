@@ -24,6 +24,7 @@ from legal_agent.anti_hallucination.honesty import (
     MARGINAL_PREFIX,
     grade_honesty,
     insufficient_text,
+    lexicon_hit,
 )
 from legal_agent.anti_hallucination.sycophancy import check_premise
 from legal_agent.anti_hallucination.verifier import VerificationResult
@@ -172,11 +173,7 @@ def build_model_input(retrieved: list[Statute], collected_facts: dict) -> str:
 def default_anthropic_llm() -> Callable[[str], str]:
     """Bind the REAL Anthropic client (built here, not at import). NEVER called in
     tests — run_stage3 is always handed a fake `llm` there."""
-    try:
-        from dotenv import load_dotenv
-        load_dotenv(config.PROJECT_ROOT / ".env")
-    except Exception:
-        pass
+    config.load_env()
 
     import anthropic  # lazy: tests never need the SDK imported
 
@@ -317,17 +314,9 @@ def run_stage3(
     scores = [sc for _, sc in scored]
 
     premise_flag = check_premise(user_text) if user_text else False
-    # Did a curated 口語→法條 phrase land on something we actually retrieved?
-    # That is coverage evidence a length-sensitive BM25 score cannot express.
-    from legal_agent.retrieval.lexicon import expansions as _expansions
-
-    phrases = _expansions(fact_query)
-    lexicon_hit = any(
-        phrase in (statute.content or "")
-        for statute in retrieved
-        for phrase in phrases
+    tier = grade_honesty(
+        retrieved, scores, lexicon_hit=lexicon_hit(retrieved, fact_query), query=fact_query,
     )
-    tier = grade_honesty(retrieved, scores, lexicon_hit=lexicon_hit, query=fact_query)
 
     if tier == "insufficient":   # short-circuit BEFORE the LLM (never fabricate)
         refusal = insufficient_text(fact_query)

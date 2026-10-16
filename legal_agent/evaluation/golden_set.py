@@ -30,6 +30,8 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
+from legal_agent.evaluation import corpus_connection
+
 
 @dataclass
 class CaseResult:
@@ -239,19 +241,9 @@ def _run_case(case: dict, llm, conn) -> CaseResult:
 def run_golden_set(golden_path, llm, conn=None) -> Scorecard:
     """Run every golden case through the pipeline with the injected `llm` and score
     statute coverage. `llm` is real at runtime, a fake in tests."""
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         cases = load_golden_set(golden_path)
         results = [_run_case(c, llm, conn) for c in cases]
-    finally:
-        if own is not None:
-            own.close()
     return Scorecard(results)
 
 

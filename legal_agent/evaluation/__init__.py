@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import contextlib
 import sys
+from collections.abc import Iterator
 
 
 def enable_utf8_stdout() -> None:
@@ -49,3 +50,20 @@ def print_corpus_fingerprint(db_path=None):
     fingerprint = corpus_fingerprint(db_path)
     print(fingerprint.render())
     return fingerprint.require_floor()
+
+
+@contextlib.contextmanager
+def corpus_connection(conn=None) -> Iterator:
+    """Yield `conn` as given, or a connection to the default corpus that is
+    closed afterwards when none was passed."""
+    if conn is not None:
+        yield conn
+        return
+    from legal_agent.config import DB_PATH
+    from legal_agent.data.database import connect
+
+    own = connect(DB_PATH)
+    try:
+        yield own
+    finally:
+        own.close()
