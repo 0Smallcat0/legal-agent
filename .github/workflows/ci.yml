@@ -100,8 +100,11 @@ jobs:
         #   - every miss case OTHER than the three this repo's own
         #     RESULTS.md documents as pending mutation.py's
         #     _verb_suffix_contradiction sweep decision (得→應,
-        #     得禁止→不得禁止, 但書反轉) must be caught.
-        # That is a 13-of-16 floor (not the full 16), enforced by NAME rather
+        #     得禁止→不得禁止, 但書反轉), plus anaphora_tong_fa_20 (同法 回指,
+        #     inferred_id=True so the quote is never compared) — the four
+        #     RESULTS.md publishes as uncaught in 21/25 and tests/test_verifier.py
+        #     marks xfail(strict=True) — must be caught.
+        # That is a 12-of-16 floor (not the full 16), enforced by NAME rather
         # than by count, so a case silently swapping places with an equally
         # uncaught one cannot pass this by coincidence.
         run: |
@@ -115,6 +118,7 @@ jobs:
 
           PENDING_SWEEP_CASE_IDS = {
               'modal_de_to_ying', 'modal_full_negation', 'proviso_reversal',
+              'anaphora_tong_fa_20',
           }
 
           conn = connect(DB_PATH)
