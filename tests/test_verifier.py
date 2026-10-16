@@ -791,5 +791,14 @@ def test_a_docnum_after_the_citation_does_not_switch_off_the_amount_check(live_c
     assert "及內政部台內警字第123號" in by_raw      # the 文號 is still extracted on its own
 
 
+def test_a_multi_list_article_flags_only_an_item_above_every_list(live_conn):
+    """民法§129 has two lists (一~三, then 一~五). Which one 「第4款」 means is
+    undecidable, so it stays unverified; 「第6款」 is in neither and is a ghost."""
+    above = verify_answer("依民法第129條第6款,時效中斷。", [], conn=live_conn)[0]
+    assert above.flagged is True and "第5款" in above.reason
+    within = verify_answer("依民法第129條第4款,時效中斷。", [], conn=live_conn)[0]
+    assert within.flagged is False and within.unverified is True
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))

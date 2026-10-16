@@ -1,22 +1,35 @@
-# corpus/
+# legal_agent/corpus/ — the shipped corpus
 
-The small, **human-verified** source material (spec §1.5) staged here before it
-is parsed into the SQLite tables. **In use now**: `noise_routing_proposal.json`
-holds the 命令 / 行政實務見解 sources that have been ingested into the DB. Legal
-data is still hand-verified — never fetched, generated, or hardcoded.
+These four files ARE the corpus. `legal_agent/data/bootstrap.py` loads them, in
+this order (`PROPOSALS`, then the judgments), into the SQLite database on first
+call; the database itself lives outside the repo at `LEGAL_AGENT_HOME`. Nothing
+here is fetched at runtime, generated, or typed in by hand.
 
-## Build strategy (spec §1.5): small-and-accurate, single scenario first
+| file | rows | what it is |
+|---|---|---|
+| `moj_bulk_v1_proposal.json` | 2,560 | 11 statutes from the official 全國法規資料庫 bulk XML: 民法, 中華民國刑法, 消費者保護法, 勞動基準法, 道路交通管理處罰條例, 公寓大廈管理條例, 噪音管制法, 社會秩序維護法, 違反社會秩序維護法案件處理辦法, 租賃住宅市場發展及管理條例, 家庭暴力防治法 |
+| `moj_gap_v1_proposal.json` | 361 | 5 more from the same XML, added to close gaps the action ladder had exposed: 強制汽車責任保險法, 勞工保險條例, 就業服務法, 性別平等工作法, 個人資料保護法 |
+| `noise_routing_proposal.json` | 2 | the 新北市 police noise-handling principle (`hierarchy_level` 行政實務見解, counted separately from the statutes) and one repealed historical version of 違反社會秩序維護法案件處理辦法§11 |
+| `judgments_v1.json` | 386 | reference judgments, redacted to header + 主文 (below) |
 
-Do **not** build the full corpus first. For the locked scenario #1 —
-**住宅噪音糾紛 (residential noise disputes)** — manually scope only the relevant
-sources, small enough to **human-verify every article's correctness and
-timeliness**:
+So the corpus is **16 statutes, 2,921 articles in force, plus one historical
+version and the police routing note** — 2,923 statute rows in all.
+`tests/test_published_numbers.py` derives the first two counts from the built
+database and fails when the prose disagrees.
 
-- [x] 民法 相鄰關係 — 第793條 loaded (＋第184/195條 for 侵權/人格權)
-- [x] 噪音管制法 — 第3/6/9條 loaded
-- [x] 社會秩序維護法 第72條 loaded
-- [x] 公寓大廈管理條例 — 第16/47條 loaded
-- [x] reference judgments — `judgments_v1.json`, 386 of them (see below)
+## How the statute files are made
+
+`legal_agent/data/moj_xml.py` parses the official bulk download into the
+proposal-JSON shape, and `legal_agent/data/source_ingest.py` validates and
+persists it — including the rule that refuses two open (in-force) versions of
+the same article. The nine 住宅噪音 articles originally typed in by hand were
+kept as a golden sample and match the XML character for character; they now
+live only as a test fixture (`tests/fixtures/noise_corpus.json`).
+
+```bash
+python -m legal_agent.data.moj_xml FalVMingLing.xml -o proposals.json --include 噪音管制法
+python -m legal_agent.data.source_ingest proposals.json
+```
 
 ## `judgments_v1.json` — reference judgments, redacted to what the page shows
 
@@ -47,13 +60,8 @@ them.
 Rebuild from a harvested DB with:
 
 ```bash
-python -m legal_agent.data.judgment_ingest -o corpus/judgments_v1.json
+python -m legal_agent.data.judgment_ingest -o legal_agent/corpus/judgments_v1.json
 ```
-
-> The above is a **collection checklist**, not the data itself. Each item must be
-> pulled from the official sources (法規 → law.moj.gov.tw; 判決 →
-> opendata.judicial.gov.tw), verified by a human, and — crucially — captured
-> **with its 生效日期 / 沿革** so the `statutes` time slices (§1.4) are correct.
 
 ## Honesty caveat to preserve (spec §1.3)
 

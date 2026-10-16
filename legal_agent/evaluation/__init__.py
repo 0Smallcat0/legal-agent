@@ -1,8 +1,8 @@
 """Evaluation harnesses — every published number in evals/RESULTS.md has one here.
 
 Deterministic, no model: mutation, blindspots, qualifier_audit, real_recall,
-honesty_probe, judgment_relevance, realworld --direction.
-Call a real model: golden_set, ablation, calibrate.
+honesty_probe, judgment_relevance, realworld, calibrate (stub answers).
+Call a real model: golden_set, ablation, mutation --semantic, realworld --answers.
 """
 from __future__ import annotations
 

@@ -73,18 +73,10 @@ Every one of these produced a wrong number that was believed for a while.
 
 ## The harnesses
 
-```bash
-python -m legal_agent.evaluation.mutation                          # verifier recall
-python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # statute coverage (needs a model)
-python -m legal_agent.evaluation.real_recall                       # 168 real sessions
-python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
-python -m legal_agent.evaluation.judgment_relevance                # reference tier
-python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold sweep
-```
-
-`mutation`, `real_recall`, `honesty_probe` and `judgment_relevance` need no LLM
-and are deterministic.
-`golden_set` and `ablation` call a real model and are not.
+The full list, split into the ones that need no model (deterministic) and the
+ones that call a real model (not), is kept in one place:
+[`CONTRIBUTING.md` → The harnesses](CONTRIBUTING.md#the-harnesses). The current
+figure each one produces is in [`evals/RESULTS.md` §1](evals/RESULTS.md).
 
 ## Before you propose a change
 

@@ -4,7 +4,7 @@ Every measured figure in this project has a harness behind it. The numbers
 COPIED out of those harnesses into README badges, the demo's hero line and the
 CLI greeting have nothing behind them, and on 2026-08-06 that cost four separate
 rounds of fixes in one day: the greeting still said 「11 部民生法規」 and the demo
-footer 「2,560 條」 long after the corpus reached 16 statutes and 2,922 articles;
+footer 「2,560 條」 long after the corpus reached 16 statutes and 2,921 articles;
 the Space advertised 10,437/10,437 after the mutation denominators were
 re-measured; the tests badge and the demo hero each lagged a commit behind twice.
 
@@ -22,13 +22,18 @@ ROOT = Path(__file__).resolve().parents[1]
 def _corpus_counts(conn) -> tuple[int, int, int]:
     """(statutes, articles, judgments) as the prose counts them.
 
-    The prose says 「16 部民生法規 2,922 條+警察分工實務指引」 — the police routing
-    note is described SEPARATELY, so it is excluded from both counts here rather
-    than the numbers being hardcoded to match. 15 法律 + 1 命令 = 16.
+    The prose says 「16 部民生法規 2,921 條現行條文+1 個歷史版本+警察分工實務指引」.
+    The police routing note is described SEPARATELY, so it is excluded from both
+    counts here rather than the numbers being hardcoded to match. 15 法律 + 1 命令
+    = 16. Articles are counted as distinct CURRENT articles (`effective_to IS
+    NULL`), not rows: 違反社會秩序維護法案件處理辦法§11 also carries one repealed
+    historical slice, and counting rows called that one article two — the prose
+    said 「2,922 條」 while `mutation` said 2,921 in force.
     """
     statutes, articles = conn.execute(
-        "SELECT COUNT(DISTINCT statute_id), COUNT(*) FROM statutes "
-        "WHERE hierarchy_level != '行政實務見解'"
+        "SELECT COUNT(DISTINCT statute_id), "
+        "COUNT(DISTINCT statute_id || '|' || article_no) FROM statutes "
+        "WHERE hierarchy_level != '行政實務見解' AND effective_to IS NULL"
     ).fetchone()
     (judgments,) = conn.execute("SELECT COUNT(*) FROM judgments").fetchone()
     return statutes, articles, judgments
@@ -54,8 +59,8 @@ def test_every_prose_corpus_count_matches_the_corpus(shipped_conn):
         # the CLI's opening line
         ("legal_agent/run.py", f"語料為 {statutes} 部民生法規"),
         # the demo: footer disclaimer, 法規檢索 tab, hero line
-        ("app.py", f"{statutes} 部民生法規 {articles:,} 條"),
-        ("app.py", f"{statutes} 部民生法規、{articles:,} 條條文"),
+        ("app.py", f"{statutes} 部民生法規 {articles:,} 條現行條文"),
+        ("app.py", f"{statutes} 部民生法規、{articles:,} 條現行條文"),
         ("app.py", f"{judgments} 篇實際判決佐證"),
     ]
     wrong = [(name, text) for name, text in expected if text not in _read(name)]

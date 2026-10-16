@@ -2,12 +2,12 @@
 
 The golden set scores the pipeline on cases written FOR the pipeline. This
 harness scores retrieval on 168 problems typed into the assistant as ordinary
-people type them — by the AUTHOR, not by outside users (`evals/HISTORY.md` §6
-and §7 name the first twelve), and vocabulary rows were curated against them
+people type them — by the AUTHOR, not by outside users (`evals/HISTORY.md` §A6
+and §A7 name the first twelve), and vocabulary rows were curated against them
 through 2026-07-31, so this is a tuned-on number in the sense RESULTS.md §7
 spells out for 25/27. This line said 「nine」 for weeks after the file passed a
 hundred, and it was the only place the provenance was written down — the transcripts that exposed most of the 2026-07-25 defect
-list (evals/HISTORY.md §6).
+list (evals/HISTORY.md §A6).
 
 Deliberately narrow:
   * input is the user's own turns, so the number does not depend on how well

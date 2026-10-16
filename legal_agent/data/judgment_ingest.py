@@ -203,11 +203,11 @@ def load_judgments(path: str | Path, conn: sqlite3.Connection) -> int:
 def main(argv: list[str] | None = None) -> int:
     import argparse
 
-    from legal_agent.config import DB_PATH
+    from legal_agent.config import CORPUS_DIR, DB_PATH
     from legal_agent.data.database import connect
 
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("-o", "--out", default="corpus/judgments_v1.json")
+    parser.add_argument("-o", "--out", default=str(CORPUS_DIR / "judgments_v1.json"))
     parser.add_argument("--db", default=str(DB_PATH))
     args = parser.parse_args(argv)
 

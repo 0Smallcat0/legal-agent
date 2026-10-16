@@ -17,7 +17,7 @@ and 裁判要旨 stay NULL because summarising them is NLP. 「但…不在此�
 own delimiters at both ends, so it belongs to the first kind. Nothing here reads
 the clause, decides whether it applies, or rewrites it.
 
-Measured on the shipping corpus (2,922 articles in force, 2026-08-15):
+Measured on the shipping corpus (2,921 articles in force, 2026-08-15):
 
 | pattern | articles |
 |---|---|

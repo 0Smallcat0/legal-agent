@@ -347,7 +347,7 @@ def check_labels(document: dict, conn) -> None:
 
     This is not hypothetical. The first run of this file labelled 民法 as
     「中華民國民法」 (the corpus spells 刑法 that way, 民法 not) and published a
-    fake 1/9. Fail loudly instead — see RESULTS.md §5 on bad rulers.
+    fake 1/9. Fail loudly instead — see RESULTS.md §7 on bad rulers.
     """
     rows = {
         f"{sid}{ano}"

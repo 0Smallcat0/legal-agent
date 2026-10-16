@@ -7,7 +7,7 @@
 
 **A RAG pipeline where every citation is checked by code, and the checker is
 itself graded by planting errors in correct answers: 100% caught across
-nineteen error kinds, 0/2,921 false positives — with the kinds it cannot plant
+twenty-one error kinds, 0/2,921 false positives — with the kinds it cannot plant
 named rather than left out of the denominator.**
 
 The usual defence against a hallucinated citation is a better prompt. This one
@@ -49,9 +49,10 @@ To run the demo from a clone instead:
 pip install .[demo] && python app.py
 ```
 
-The worked example is Taiwan law: 2,922 articles across 16 everyday statutes and
-386 real court judgments, all shipped in the repo, so a fresh clone reproduces
-every number below.
+The worked example is Taiwan law: 2,921 articles across 16 everyday statutes, all
+in force (plus one repealed historical version, kept for point-in-time queries),
+and 386 real court judgments, all shipped in the repo, so a fresh clone
+reproduces every number below.
 
 <p align="center">
   <img src="docs/demo_web.png" alt="A real consultation: the model's analysis, the judgments citing those same articles with what each court ordered paid, and the action ladder" width="840">
@@ -64,20 +65,24 @@ must be right are not left to it.</sub>
 
 ## Measured, reproducible
 
-| | |
+A subset of the table in [`evals/RESULTS.md` §1](evals/RESULTS.md), copied from
+it; that table also names the harness behind every row.
+
+| what | number |
 |---|---|
-| seeded defects caught | **100% in each of 19 kinds, 0/2,921 false positives** ([per-kind table](evals/RESULTS.md)) |
-| statute coverage, 32-case golden set | **100% pass+partial, 0 miss** (73% strict) |
-| retrieval recall, real user wording | **348/356**, 5.9 unexpected articles per session |
-| honesty tier / wrong-premise detection | **91% / 100%** |
+| seeded defects caught | **100% in each of 21 kinds, 0/2,921 false positives** — per-kind denominators in RESULTS §4 |
+| statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict |
+| retrieval recall, real user wording | **348/356 (98%)**, 5.9 unexpected articles per session |
+| honesty tier | **29/32 (91%)** |
+| wrong-premise detection | **32/32 (100%)** |
 | out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
-| first reference judgment states an awarded sum | **50/60 sessions** |
-| that judgment is the same KIND of dispute as the question | **51/88**, and 58/146 carry a 案由 too generic to tell |
+| first reference judgment states an awarded sum | **50/60 sessions** (shipped corpus; 54/60 on the full local harvest) |
+| that judgment is the same KIND of dispute as the question | **51/88 scorable (58%)**, 146/168 sessions carry one, 58/146 案由 too generic to tell |
 | first action names the reader's own documents | **83/168 sessions** |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** |
 | articles on the page the model skipped | **8 → 18 of 21 expected** |
-| the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them |
+| the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them (first run, before tuning: 7/27 and 9/16) |
 | the same thing, on 17 cases **held out** | **12/23**, 5 of 17 answered with none of them |
 
 ```bash
@@ -87,6 +92,9 @@ python -m legal_agent.evaluation.real_recall                       # lived sessi
 python -m legal_agent.evaluation.judgment_relevance                # reference tier
 python -m legal_agent.evaluation.realworld                         # already-ended disputes
 ```
+
+Every harness, and which ones need a model:
+[CONTRIBUTING.md → The harnesses](CONTRIBUTING.md#the-harnesses).
 
 **Read the last two rows before you trust the first one.** Every other number here
 is measured against expectations this project wrote — the same hand built the

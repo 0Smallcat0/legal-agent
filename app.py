@@ -215,13 +215,13 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">植入錯誤抓取率 19 類全數 100%(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">植入錯誤抓取率 21 類全數 100%(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
 FOOTER = """
 <p class="disclaimer">工程實驗,非法律意見,不能取代律師。法源為全國法規資料庫官方
-公開資料逐字匯入(16 部民生法規 2,922 條+警察分工實務指引);「住宅噪音」有專屬問診流程,
+公開資料逐字匯入(16 部民生法規 2,921 條現行條文+1 個歷史版本+警察分工實務指引);「住宅噪音」有專屬問診流程,
 其他問題走通用流程。資料庫未涵蓋的領域,系統會直接說不知道。</p>
 """
 
@@ -591,7 +591,7 @@ def compare_timeslice(query: str) -> str:
 # ── 評測結果 ─────────────────────────────────────────────────────────────────
 STATS = """
 <div class="statgrid">
-  <div class="stat"><div class="num">19 類 100%</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
+  <div class="stat"><div class="num">21 類 100%</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">法條涵蓋率(含部分命中;嚴格 73%)</div></div>
   <div class="stat"><div class="num">386</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(32/32)</div></div>
@@ -676,7 +676,7 @@ with gr.Blocks(title="Legal Agent") as demo:
 
     with gr.Tab("法規檢索"):
         gr.Markdown(
-            "資料庫收錄 16 部民生法規、2,922 條條文(民法、刑法、消保法、勞基法、"
+            "資料庫收錄 16 部民生法規、2,921 條現行條文(民法、刑法、消保法、勞基法、"
             "勞保條例、就服法、性平工作法、個資法、道交條例、強制車險法、公寓大廈、"
             "租賃住宅、家暴法、噪音管制、社維法及其處理辦法)。\n\n"
             "同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。"

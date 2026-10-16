@@ -561,6 +561,15 @@ def _paragraph_ceiling(content: str) -> int | None:
     return 1 if content.count("\n") == 0 else None
 
 
+def _item_upper_bound(content: str) -> int | None:
+    """The largest 款 number ANY list in `content` reaches. For an article with
+    several lists (`_item_ceiling` is None) it cannot say which list a citation
+    means, but a claimed 款 above every list is absent from all of them."""
+    numbers = [n for n in (_parse_number(g) for g in _ITEM_MARKER_RE.findall(content))
+               if n is not None]
+    return max(numbers) if numbers else None
+
+
 def _item_ceiling(content: str) -> int | None:
     """The largest 款 number `content`'s OWN numbered list reaches, trusted
     ONLY when a marker matching EXACTLY 「一」 — counted from
@@ -1138,7 +1147,12 @@ def verify_answer(
                 if claimed_i is not None:
                     item_ceiling = _item_ceiling(source.content)
                     if item_ceiling is None:
-                        axis_unverified = True
+                        # Several lists: only a 款 above all of them is decidable.
+                        item_ceiling = _item_upper_bound(source.content)
+                        if item_ceiling is not None and claimed_i > item_ceiling:
+                            ghost_item = True
+                        else:
+                            axis_unverified = True
                     elif claimed_i > item_ceiling:
                         ghost_item = True
 

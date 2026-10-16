@@ -36,7 +36,7 @@ CONTROL — restating the article's own real paragraph/item/fraction/period/
 amount correctly must never be flagged either, and each has ITS OWN
 denominator (never averaged into the headline "0/2,921", which would hide
 false positives the same way the original 11,904 number hid this file's own
-uncovered classes — see RESULTS.md "新增的七條軸沒有任何對照組"):
+uncovered classes — see RESULTS.md §4):
     real_paragraph_ref, real_item_ref, real_fraction, real_period_direction,
     real_bare_amount, verbatim_crossref, prose_prefix, prefixed_statute_control
 
@@ -370,6 +370,18 @@ def _single_list_max_item(content: str) -> int | None:
         return None
     values = [_parse_number(h) for h in hits]
     if not values or any(v is None for v in values):
+        return None
+    return max(values)
+
+
+def _multi_list_max_item(content: str) -> int | None:
+    """The max item number over ALL lists when `content` has two or more (the
+    24 articles the single-list axis refuses); None otherwise."""
+    hits = _ITEM_RE.findall(content)
+    if hits.count("一") < 2:
+        return None
+    values = [_parse_number(h) for h in hits]
+    if any(v is None for v in values):
         return None
     return max(values)
 
@@ -852,6 +864,22 @@ def run_mutation_test(
                 conn=conn, retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
 
+        # ghost_item_multilist / real_item_ref_multilist — the multi-list
+        # articles: a 款 above EVERY list is a ghost; the highest real one
+        # must not be flagged (it reads as unverified, which list is unknown).
+        multi_max = _multi_list_max_item(content)
+        if multi_max is not None:
+            outcomes.append(_judge(
+                "ghost_item_multilist", f"{ref}第{multi_max + 1}款",
+                f"依{ref}第{multi_max + 1}款,其規範內容如條文所示。", expect_flag=True,
+                conn=conn, retrieval_first=retrieval_first, retrieved_context=ctx,
+            ))
+            outcomes.append(_judge(
+                "real_item_ref_multilist", ref,
+                f"依{ref}第{multi_max}款,其規範內容如條文所示。", expect_flag=False,
+                conn=conn, retrieval_first=retrieval_first, retrieved_context=ctx,
+            ))
+
         # verbatim_crossref (positive control, B2/B4 prerequisite) — an
         # article whose OWN text anaphorically cites 本法/同法 (a 辦法/母法
         # pair). Quoting it VERBATIM must never be flagged just because the
@@ -1074,6 +1102,7 @@ _ALWAYS_NONEMPTY_ON_FULL_CORPUS = (
     "prose_prefix", "fake_statute", "alias_typo",
     "anaphora_amount", "anaphora_period", "real_bare_amount",
     "docnum_adjacent_amount", "real_positional_amount",
+    "ghost_item_multilist", "real_item_ref_multilist",
     "period_direction_flip", "real_period_direction",
     "fraction_tamper", "real_fraction",
 )
