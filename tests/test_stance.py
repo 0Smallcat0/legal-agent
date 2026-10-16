@@ -9,14 +9,8 @@ Run:  python -m pytest tests/test_stance.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.dialogue import triage  # noqa: E402
-from legal_agent.dialogue.flow import (  # noqa: E402
+from legal_agent.dialogue import triage
+from legal_agent.dialogue.flow import (
     MAX_INTAKE_TURNS,
     SessionState,
     Stage,
@@ -24,7 +18,7 @@ from legal_agent.dialogue.flow import (  # noqa: E402
     handle_turn,
     missing_fields,
 )
-from legal_agent.dialogue.solution import (  # noqa: E402
+from legal_agent.dialogue.solution import (
     build_generic_ladder,
     build_respondent_ladder,
     build_solution_ladder,

@@ -7,26 +7,24 @@ Run:  python -m pytest tests/test_eval_suite.py -q
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
-from legal_agent.evaluation.ablation import run_ablation, strip_think  # noqa: E402
-from legal_agent.evaluation.calibrate import (  # noqa: E402
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.seed import seed_source_hierarchy
+from legal_agent.evaluation.ablation import run_ablation, strip_think
+from legal_agent.evaluation.calibrate import (
     CalibrationPoint,
     collect_points,
     predict_tier,
     sweep_threshold,
 )
-from legal_agent.evaluation.golden_set import run_golden_set  # noqa: E402
-from legal_agent.evaluation.mutation import run_mutation_test  # noqa: E402
-from tests.conftest import load_noise_fixture  # noqa: E402
+from legal_agent.evaluation.golden_set import run_golden_set
+from legal_agent.evaluation.mutation import run_mutation_test
+from tests.conftest import load_noise_fixture
+
+ROOT = Path(__file__).resolve().parents[1]
 
 FIXTURE = ROOT / "tests" / "fixtures" / "golden_noise_fixture.json"
 GOLDEN_V1 = ROOT / "evals" / "golden_noise_v1.json"
@@ -220,18 +218,14 @@ def test_real_recall_scores_hits_and_misses(tmp_path):
     conn.close()
 
 
-def test_real_sessions_file_only_expects_articles_that_exist():
+def test_real_sessions_file_only_expects_articles_that_exist(shipped_conn):
     # The file is a measurement instrument: an expectation the corpus cannot
     # contain would make the number meaningless.
     import re
-    import sqlite3
 
-    from legal_agent.config import DB_PATH
     from legal_agent.evaluation.real_recall import load_cases
 
-    if not Path(DB_PATH).exists():
-        pytest.skip("corpus DB not built")
-    conn = sqlite3.connect(DB_PATH)
+    conn = shipped_conn
     pattern = re.compile(r"^(?P<sid>.+?)(?P<ano>第[0-9-]+條)$")
     for case in load_cases(ROOT / "evals" / "real_sessions.json"):
         for ref in case["expected_statutes"]:
@@ -241,7 +235,6 @@ def test_real_sessions_file_only_expects_articles_that_exist():
                 "SELECT 1 FROM statutes WHERE statute_id = ? AND article_no = ?",
                 (m.group("sid"), m.group("ano")),
             ).fetchone(), ref
-    conn.close()
 
 
 if __name__ == "__main__":

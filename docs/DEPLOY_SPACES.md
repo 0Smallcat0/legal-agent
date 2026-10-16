@@ -167,10 +167,10 @@ healthy deploy read as a hung one.
 container keeps serving throughout the build, so
 `curl -o /dev/null -w "%{http_code}"` answers 200 the whole time — and `sha` in
 the API is the commit being DEPLOYED, not the one running. Ask the app what it
-is instead; the tests badge is a number that changes on almost every deploy:
+is instead, by grepping for a string your commit changed:
 
 ```bash
-curl -sL https://<space-subdomain>.hf.space/config | grep -o "[0-9]\+ 項測試通過"
+curl -sL https://<space-subdomain>.hf.space/config | grep -o "<text only the new build renders>"
 ```
 
 Gradio renders the hero client-side, so the page HTML does not carry it —

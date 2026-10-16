@@ -55,7 +55,7 @@ Three consequences people run into:
 
 ```bash
 pip install -r requirements.txt
-python -m pytest -q                 # 641 tests, no network, no API key
+python -m pytest -q                 # no network, no API key
 python app.py                       # web demo, builds the corpus on first run
 ```
 

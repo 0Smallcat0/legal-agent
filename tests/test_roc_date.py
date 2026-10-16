@@ -7,15 +7,9 @@ Run:  python -m pytest tests/test_roc_date.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.data.roc_date import RocDateError, convert_roc_to_iso  # noqa: E402
+from legal_agent.data.roc_date import RocDateError, convert_roc_to_iso
 
 
 @pytest.mark.parametrize(

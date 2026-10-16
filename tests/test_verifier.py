@@ -7,21 +7,16 @@ Run:  python -m pytest tests/test_verifier.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.anti_hallucination.verifier import (  # noqa: E402
+from legal_agent.anti_hallucination.verifier import (
     VERIFIED_SCOPE_NOTE,
     verification_status_line,
     verify_answer,
 )
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.seed import seed_source_hierarchy
+from legal_agent.evaluation.blindspots import load_blindspot_cases, load_positive_control_cases
 
 
 @pytest.fixture
@@ -398,19 +393,12 @@ def test_cross_reference_quoted_from_a_retrieved_source_is_not_called_recall(rea
     assert results["第8條"].flagged is False and "交叉引用" in results["第8條"].reason
     assert results["第9條"].flagged is False        # written 第九條 in the source
     assert results["第99條"].flagged is True        # not in the quoted text -> recall
-    # B4 fix: a citation resolved ONLY via the retrieved source's own quoted
-    # text was never independently checked against the corpus, so it must read
-    # as "not verified" (unverified=True) rather than as "verified clean" —
-    # today nothing sets this field, so getattr (not a plain attribute access)
-    # turns the gap into a readable assertion message instead of a bare
-    # AttributeError until verifier.py adds it.
-    assert getattr(results["第8條"], "unverified", None) is True, (
-        "VerificationResult.unverified not yet implemented (verifier.py A2/B4 pending)")
-    assert getattr(results["第9條"], "unverified", None) is True, (
-        "VerificationResult.unverified not yet implemented (verifier.py A2/B4 pending)")
-    # 第99條 is a genuine miss (exists=False, flagged=True) — not merely
-    # unverified — and that distinction must survive the A2 rewrite too.
-    assert getattr(results["第99條"], "unverified", False) is False
+    # A citation resolved ONLY via the retrieved source's own quoted text was
+    # never checked against the corpus, so it reads as unverified, not clean.
+    assert results["第8條"].unverified is True
+    assert results["第9條"].unverified is True
+    # 第99條 is a genuine miss (exists=False, flagged=True), not merely unverified.
+    assert results["第99條"].unverified is False
     line = verification_status_line(list(results.values()))
     assert "全數可回溯至資料庫" not in line, line
     assert line == (
@@ -645,11 +633,9 @@ def test_anaphoric_same_law_reference_after_a_named_citation_resolves(real_conn)
 
 # ── A7 bare penalty amount scanner (masked scan) ─────────────────────────────
 def _bare_penalty_amounts_fn():
-    from legal_agent.anti_hallucination import verifier as _v
+    from legal_agent.anti_hallucination.verifier import _bare_penalty_amounts
 
-    if not hasattr(_v, "_bare_penalty_amounts"):
-        pytest.skip("_bare_penalty_amounts not implemented yet (verifier.py A7 pending)")
-    return _v._bare_penalty_amounts
+    return _bare_penalty_amounts
 
 
 def test_bare_penalty_amounts_does_not_swallow_article_numbers_or_fractions():
@@ -683,14 +669,8 @@ def test_bare_penalty_amounts_still_catches_a_real_bare_penalty():
 # rows) — these are regressions against the actual corpus, same skip-if-absent
 # guard every other live-DB test in this suite already uses.
 @pytest.fixture
-def live_conn():
-    from legal_agent.config import DB_PATH
-
-    if not Path(DB_PATH).exists():
-        pytest.skip("no corpus in this checkout")
-    conn = connect(DB_PATH)
-    yield conn
-    conn.close()
+def live_conn(shipped_conn):
+    return shipped_conn
 
 
 def test_correct_seven_day_restatement_of_consumer_protection_act_19_not_flagged(live_conn):
@@ -701,10 +681,6 @@ def test_correct_seven_day_restatement_of_consumer_protection_act_19_not_flagged
 
 
 def test_period_direction_axis_flags_a_flipped_seven_day_window(live_conn):
-    from legal_agent.anti_hallucination import verifier as _v
-
-    if not hasattr(_v, "_period_directions"):
-        pytest.skip("_period_directions not implemented yet (verifier.py A8 pending)")
     # Measured on today's verifier (2026-08-17): flagged=False — _periods()
     # only ever compares the NUMBER (7), never the direction word, so 七日內
     # flipped to 七日以上 passes silently. Period-axis twin of the amount
@@ -722,10 +698,6 @@ def test_correct_inheritance_fraction_restatement_of_civil_code_1144_not_flagged
 
 
 def test_fraction_axis_flags_a_share_the_article_never_states(live_conn):
-    from legal_agent.anti_hallucination import verifier as _v
-
-    if not hasattr(_v, "_fractions"):
-        pytest.skip("_fractions not implemented yet (verifier.py A8 pending)")
     # 四分之三 appears NOWHERE in 民法第1144條 (only 二分之一 and 三分之二 do) —
     # chosen specifically so this is not the 三分之一<->三分之二-style equivalent
     # mutant the fraction-tamper generator has to guard against (that article
@@ -736,38 +708,19 @@ def test_fraction_axis_flags_a_share_the_article_never_states(live_conn):
     assert r.flagged is True, r.reason
 
 
-# ── evals/blindspots_v1.json — the 25-case blind-spot suite (Stage 0
-# workstream: legal_agent/evaluation/blindspots.py) runs inside the normal
-# test suite too, not only via `python -m legal_agent.evaluation.blindspots`.
-# Uses that module's OWN loader/dataclass directly (BlindspotCase.id/
-# category/answer/expect_flag) now that it exists in this checkout, rather
-# than guessing a schema. A missing module or file skips cleanly instead of
-# erroring collection or passing silently.
-def _load_blindspots_cases() -> list:
-    try:
-        from legal_agent.evaluation.blindspots import load_blindspot_cases
-    except ModuleNotFoundError:
-        return []
-    try:
-        return load_blindspot_cases()
-    except (OSError, ValueError, KeyError):
-        return []
+# ── evals/blindspots_v1.json + the positive-control file ───────────────────
+# The same cases `python -m legal_agent.evaluation.blindspots` scores, with the
+# same calling convention (full-corpus conn, empty retrieved_context).
 
-
-_BLINDSPOTS_CASES = _load_blindspots_cases()
-
-# The four cases the structural axes still cannot see, measured 2026-08-17.
-# Twelve of the sixteen original misses are now caught; these are not. All four
-# are the same shape: the citation is real, the article exists, the quote is
-# close enough, and what changed is a modal or a proviso -- "得" to "應",
-# "得禁止" to "不得禁止", a proviso inverted, an anaphoric reference to a
-# different article. Nothing in a structural check (amount, direction word,
-# period, article existence) can see any of them; catching them needs a
-# semantic axis, and the one this repo has misfires on 43% of correct citations.
+# The four cases the structural axes still cannot see. Three are a modal or
+# proviso changed inside a real, correctly-cited article (得→應, 得禁止→不得禁止,
+# an inverted 但書); the fourth is a 同法 reference whose inherited citation is
+# never compared against its article. Catching them needs a semantic axis, and
+# the one this repo has misfires on 43% of correct citations.
 #
-# strict=True on purpose: if a later change does catch one of these, this test
-# goes red and says so rather than silently passing. That is how the published
-# 21/25 stays honest in both directions.
+# strict=True on purpose: if a later change catches one of these, this test
+# goes red and says so. That is how the published 21/25 stays honest in both
+# directions.
 _STILL_BLIND = {
     "modal_de_to_ying",
     "modal_full_negation",
@@ -777,80 +730,31 @@ _STILL_BLIND = {
 
 
 def _blindspot_param(case):
-    if case is None:
-        return case
     if case.id in _STILL_BLIND:
         return pytest.param(
             case,
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason=(
-                    f"{case.id}: structurally invisible (modal/proviso semantics). "
-                    "Counted as a miss in the published 21/25."
-                ),
-            ),
+            id=f"{case.id}-{case.category}",
+            marks=pytest.mark.xfail(strict=True, reason=f"{case.id}: counted as a miss in 21/25"),
         )
-    return case
+    return pytest.param(case, id=f"{case.id}-{case.category}")
 
 
-_BLINDSPOTS_PARAMS = [_blindspot_param(c) for c in _BLINDSPOTS_CASES] or [None]
-_BLINDSPOTS_IDS = (
-    [f"{c.id}-{c.category}" for c in _BLINDSPOTS_CASES] if _BLINDSPOTS_CASES
-    else ["blindspots-not-available-yet"]
-)
-
-
-@pytest.mark.parametrize("case", _BLINDSPOTS_PARAMS, ids=_BLINDSPOTS_IDS)
+@pytest.mark.parametrize("case", [_blindspot_param(c) for c in load_blindspot_cases()])
 def test_blindspots_case_agrees_with_the_frozen_json(case, live_conn):
-    if case is None:
-        pytest.skip(
-            "legal_agent.evaluation.blindspots / evals/blindspots_v1.json "
-            "not available in this checkout"
-        )
-    # Same calling convention blindspots.py._run_one uses: full-corpus conn,
-    # empty retrieved_context. The 16 "miss" cases are EXPECTED to fail here
-    # on an unrepaired verifier.py — that is the frozen 16/25 階段0 baseline;
-    # the 9 "control" cases must already pass today.
     results = verify_answer(case.answer, [], conn=live_conn)
-    flagged = any(r.flagged for r in results) if results else False
+    flagged = any(r.flagged for r in results)
     assert flagged == case.expect_flag, (
         f"{case.id} [{case.category}]: expected flag={case.expect_flag}, got "
         f"{flagged} — reasons={[r.reason for r in results]}"
     )
 
 
-# ── evals/blindspots_positive_control_v1.json — the 4-case "must not be
-# flagged" control set, same treatment. 3 of the 4 (must_not_regress) are
-# clean today; the 4th (must_stop_being_flagged — 家庭暴力防治法§61 verbatim)
-# is today's known false positive and is EXPECTED to fail here until fixed.
-def _load_positive_control_cases() -> list:
-    try:
-        from legal_agent.evaluation.blindspots import load_positive_control_cases
-    except ModuleNotFoundError:
-        return []
-    try:
-        return load_positive_control_cases()
-    except (OSError, ValueError, KeyError):
-        return []
-
-
-_POSITIVE_CONTROL_CASES = _load_positive_control_cases()
-_POSITIVE_CONTROL_PARAMS = _POSITIVE_CONTROL_CASES or [None]
-_POSITIVE_CONTROL_IDS = (
-    [f"{c.id}-{c.label}" for c in _POSITIVE_CONTROL_CASES] if _POSITIVE_CONTROL_CASES
-    else ["positive-control-not-available-yet"]
+@pytest.mark.parametrize(
+    "case", [pytest.param(c, id=f"{c.id}-{c.label}") for c in load_positive_control_cases()]
 )
-
-
-@pytest.mark.parametrize("case", _POSITIVE_CONTROL_PARAMS, ids=_POSITIVE_CONTROL_IDS)
 def test_positive_control_case_agrees_with_the_frozen_json(case, live_conn):
-    if case is None:
-        pytest.skip(
-            "legal_agent.evaluation.blindspots / "
-            "evals/blindspots_positive_control_v1.json not available in this checkout"
-        )
     results = verify_answer(case.answer, [], conn=live_conn)
-    flagged = any(r.flagged for r in results) if results else False
+    flagged = any(r.flagged for r in results)
     assert flagged is False, (
         f"{case.id} [{case.label}]: expected flag=False, got {flagged} — "
         f"reasons={[r.reason for r in results]}"

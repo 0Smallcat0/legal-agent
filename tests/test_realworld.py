@@ -213,16 +213,8 @@ def test_direction_counts_are_pooled_by_label_source():
     assert [m.label_source for m in matches] == ["official", "derived"]
 
 
-def test_shipped_case_file_labels_all_exist_in_the_shipped_corpus():
+def test_shipped_case_file_labels_all_exist_in_the_shipped_corpus(shipped_conn):
     """The published number is only external if every label is resolvable."""
-    from legal_agent import config
-    from legal_agent.data.database import connect
     from legal_agent.evaluation.realworld import DEFAULT_CASES, load_document
 
-    if not config.DB_PATH.exists():
-        pytest.skip("no built corpus in this environment")
-    conn = connect(config.DB_PATH)
-    try:
-        check_labels(load_document(DEFAULT_CASES), conn)   # must not raise
-    finally:
-        conn.close()
+    check_labels(load_document(DEFAULT_CASES), shipped_conn)   # must not raise

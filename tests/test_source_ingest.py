@@ -6,17 +6,15 @@ Run:  python -m pytest tests/test_source_ingest.py -q
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.seed import seed_source_hierarchy
+from legal_agent.data.source_ingest import load_proposals
 
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
-from legal_agent.data.source_ingest import load_proposals  # noqa: E402
+ROOT = Path(__file__).resolve().parents[1]
 
 FIXTURE = ROOT / "tests" / "fixtures" / "proposals_fixture.json"
 

@@ -5,15 +5,10 @@ Run:  python -m pytest tests/test_dialogue.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.dialogue import intake, triage  # noqa: E402
-from legal_agent.dialogue.flow import SessionState, Stage, handle_turn  # noqa: E402
+from legal_agent.dialogue import intake, triage
+from legal_agent.dialogue.flow import SessionState, Stage, handle_turn
 
 
 # ── Stage 1: triage ──────────────────────────────────────────────────────────

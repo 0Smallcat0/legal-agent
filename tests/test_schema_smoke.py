@@ -13,13 +13,9 @@ Run:  python -m pytest tests/ -q      (or)      python tests/test_schema_smoke.p
 from __future__ import annotations
 
 import sqlite3
-import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.data.database import connect, init_db  # noqa: E402
+from legal_agent.data.database import connect, init_db
 
 
 def test_three_tables_exist(tmp_path):

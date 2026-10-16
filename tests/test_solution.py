@@ -4,13 +4,7 @@ Run:  python -m pytest tests/test_solution.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.dialogue.solution import (  # noqa: E402
+from legal_agent.dialogue.solution import (
     _deadline_sentences,
     build_generic_ladder,
     build_solution_ladder,

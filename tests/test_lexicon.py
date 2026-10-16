@@ -9,13 +9,9 @@ Run:  python -m pytest tests/test_lexicon.py -q
 from __future__ import annotations
 
 import sqlite3
-import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.retrieval.lexicon import LEXICON, expand, expansions  # noqa: E402
+from legal_agent.retrieval.lexicon import LEXICON, expand, expansions
 
 
 def test_expansion_is_additive_never_replacing():
