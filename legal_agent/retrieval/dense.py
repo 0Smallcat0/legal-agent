@@ -152,9 +152,11 @@ def rrf_fuse(
 
 
 if __name__ == "__main__":  # python -m legal_agent.retrieval.dense  (build/refresh index)
-    import sqlite3 as _sqlite3
+    from legal_agent.data.bootstrap import ensure_corpus
+    from legal_agent.data.database import connect
 
-    _conn = _sqlite3.connect(config.DB_PATH)
+    ensure_corpus()
+    _conn = connect(config.DB_PATH)
     try:
         _keys, _matrix = ensure_index(_conn)
     finally:

@@ -120,15 +120,13 @@ def judgment_count(conn: sqlite3.Connection) -> int:
 
 
 def _ensure_judgments(conn: sqlite3.Connection) -> int:
-    """Load the shipped reference judgments once. Returns the row count.
+    """Make sure every shipped reference judgment is present. Returns the row count.
 
-    Harvested judgments (from `data/judicial_api.py`) live in the same table, so
-    a populated table is left alone: the shipped file is a floor, never an
-    overwrite.
+    Harvested judgments (from `data/judicial_api.py`) live in the same table.
+    The shipped file is a floor, never an overwrite: rows already present are
+    ignored. It is loaded even when the table is non-empty, because a partial
+    harvest used to make the 386 shipped judgments never load at all.
     """
-    existing = judgment_count(conn)
-    if existing:
-        return existing
     shipped = config.CORPUS_DIR / JUDGMENTS
     if shipped.exists():
         load_judgments(shipped, conn)

@@ -510,3 +510,10 @@ def test_owner_occupied_keeps_the_building_articles_that_mention_a_tenant():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_the_public_retrieve_honours_k_zero(shipped_conn):
+    """`k or DEFAULT_K` used to turn an explicit k=0 into the tuned window."""
+    import legal_agent
+
+    assert legal_agent.retrieve("退租後房東不退押金", k=0, conn=shipped_conn) == []

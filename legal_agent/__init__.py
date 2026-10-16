@@ -161,7 +161,7 @@ def retrieve_scored(
     own = None if conn is not None else open_corpus(db_path)
     active = conn if conn is not None else own
     try:
-        return _retrieve(query, as_of_date=as_of, k=k or DEFAULT_K, conn=active)
+        return _retrieve(query, as_of_date=as_of, k=DEFAULT_K if k is None else k, conn=active)
     finally:
         if own is not None:
             own.close()
