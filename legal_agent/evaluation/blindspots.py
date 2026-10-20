@@ -117,7 +117,7 @@ def _known_fields(cls, row: dict) -> dict:
     """Keep only the keys `cls` declares — lets the JSON carry documentation
     fields (like extra prose) a future edit adds without every loader in the
     codebase needing to change in lockstep."""
-    names = {f for f in cls.__dataclass_fields__}
+    names = set(cls.__dataclass_fields__)
     return {k: v for k, v in row.items() if k in names}
 
 
@@ -222,7 +222,7 @@ class BlindspotReport:
         ]
         for o in self.outcomes:
             lines.append(
-                f"{o.case.id:<{id_width}}{o.case.category:<10}{str(o.flagged):<9}"
+                f"{o.case.id:<{id_width}}{o.case.category:<10}{o.flagged!s:<9}"
                 f"{o.case.expect_flag}"
             )
         lines.append("")
@@ -285,7 +285,7 @@ class PositiveControlReport:
         ]
         for o in self.outcomes:
             lines.append(
-                f"{o.case.id:<{id_width}}{o.case.label:<24}{str(o.flagged):<9}"
+                f"{o.case.id:<{id_width}}{o.case.label:<24}{o.flagged!s:<9}"
                 f"{o.case.expect_flag}"
             )
         lines.append("")

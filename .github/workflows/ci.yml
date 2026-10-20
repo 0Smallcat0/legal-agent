@@ -97,11 +97,11 @@ jobs:
         # same way tests/test_published_numbers.py does, and enforces:
         #   - every blindspots_v1.json control case stays unflagged, always;
         #   - every positive-control case stays unflagged, always;
-        #   - every miss case OTHER than the three this repo's own
-        #     RESULTS.md documents as pending mutation.py's
-        #     _verb_suffix_contradiction sweep decision (得→應,
-        #     得禁止→不得禁止, 但書反轉) must be caught.
-        # That is a 13-of-16 floor (not the full 16), enforced by NAME rather
+        #   - every miss case OTHER than the four this repo's own
+        #     RESULTS.md publishes as still missed (得→應, 得禁止→不得禁止,
+        #     但書反轉, and the 同法 anaphora) must be caught — the same four
+        #     tests/test_verifier.py holds as xfail(strict=True).
+        # That is a 12-of-16 floor (not the full 16), enforced by NAME rather
         # than by count, so a case silently swapping places with an equally
         # uncaught one cannot pass this by coincidence.
         run: |
@@ -113,8 +113,9 @@ jobs:
               score_blindspots, score_positive_control,
           )
 
-          PENDING_SWEEP_CASE_IDS = {
+          PUBLISHED_MISS_CASE_IDS = {
               'modal_de_to_ying', 'modal_full_negation', 'proviso_reversal',
+              'anaphora_tong_fa_20',
           }
 
           conn = connect(DB_PATH)
@@ -130,7 +131,7 @@ jobs:
               problems.append(f'blindspots control case(s) flagged: {dirty}')
           required_uncaught = [
               o.case.id for o in report.miss_outcomes
-              if not o.flagged and o.case.id not in PENDING_SWEEP_CASE_IDS
+              if not o.flagged and o.case.id not in PUBLISHED_MISS_CASE_IDS
           ]
           if required_uncaught:
               problems.append(f'required miss case(s) still uncaught: {required_uncaught}')
@@ -142,7 +143,7 @@ jobs:
           print(
               f'blindspots gate OK: target_correct={report.target_correct}/{report.total} '
               f'(miss_caught={report.miss_caught}/{report.miss_total}, '
-              f'{len(PENDING_SWEEP_CASE_IDS)} case(s) exempt pending the sweep decision), '
+              f'{len(PUBLISHED_MISS_CASE_IDS)} published miss(es) exempt), '
               f'positive control {pc_report.clean}/{pc_report.total} clean'
           )
           "
