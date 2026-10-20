@@ -80,7 +80,9 @@ it; that table also names the harness behind every row.
 | out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second |
 | deadlines quoted from the retrieved articles | **69/168 sessions** |
 | first reference judgment states an awarded sum | **50/60 sessions** (shipped corpus; 54/60 on the full local harvest) |
-| that judgment is the same KIND of dispute as the question | **51/88 scorable (58%)**, 146/168 sessions carry one, 58/146 案由 too generic to tell |
+| that judgment is the same KIND of dispute as the question | **107/118 scorable (91%)**, 156/168 sessions carry one — the ranker uses the grader's table, see RESULTS §11 |
+| judgments shown that the question should cite (38-question acceptance set) | **87/100 (87%)**, 0/38 pages pointing at another kind of dispute — table below |
+| the same, 12 questions held out | **27/32 (84%)**, 0/12 |
 | first action names the reader's own documents | **83/168 sessions** |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** |
 | articles on the page the model skipped | **8 → 18 of 21 expected** |
@@ -97,6 +99,35 @@ python -m legal_agent.evaluation.realworld                         # already-end
 
 Every harness, and which ones need a model:
 [CONTRIBUTING.md → The harnesses](CONTRIBUTING.md#the-harnesses).
+
+### Reference judgments: are they the ones the question should cite?
+
+`evals/judgment_qa_v1.json` asks 38 plain-words questions across 22 kinds of
+dispute; for each, the judgments the page should cite are derived by rule (案由
+of the question's kind AND citing one of its articles) and frozen. Every
+judgment shown is graded. 引用正確率 = shown judgments that are on the list;
+答非所問 = the page shows judgments, none of the question's kind. Answer cites
+the right law (focus), `dense_fallbacks` 0, same frozen lists at every stage:
+
+| | judgments | 引用正確率 | questions with ≥1 right judgment | 答非所問 |
+|---|---|---|---|---|
+| before | 386 | 18/63 (28.6%) | 11/38 | 17/38 (44.7%) |
+| + judgments for the thin dispute families | 405 | 29/72 (40.3%) | 17/38 | 10/38 (26.3%) |
+| + judgments for the situations still missing | 435 | 48/95 (50.5%) | 23/38 | 10/38 (26.3%) |
+| + lexicon rows for 8 unreachable articles | 435 | 72/100 (72.0%) | 33/38 | 3/38 (7.9%) |
+| + a judgment of the article's own kind first | 435 | **87/100 (87.0%)** | **35/38** | **0/38 (0%)** |
+| 12 questions held out: before → after | 386 → 435 | 1/23 (4.3%) → **27/32 (84.4%)** | 1/12 → **11/12** | 8/12 → **0/12** |
+
+The judgments come from the 司法院's public 裁判書查詢 site (`legal_agent/data/fjud.py`:
+≥3 s between requests, cached, resumable). The worst causes were fixed in order
+of size; the causes, the cost to a real session found and repaired on the way,
+and why the 案由-based numbers partly measure the ranker's own definition, are
+in [RESULTS §11](evals/RESULTS.md).
+
+```bash
+python -m legal_agent.evaluation.judgment_qa                                  # tuned set
+python -m legal_agent.evaluation.judgment_qa evals/judgment_qa_holdout_v1.json # held out
+```
 
 **Read the last two rows before you trust the first one.** Every other number here
 is measured against expectations this project wrote — the same hand built the
