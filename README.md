@@ -53,7 +53,7 @@ pip install .[demo] && python app.py
 
 The worked example is Taiwan law: 2,921 articles across 16 everyday statutes, all
 in force (plus one repealed historical version, kept for point-in-time queries),
-and 386 real court judgments, all shipped in the repo, so a fresh clone
+and 435 real court judgments, all shipped in the repo, so a fresh clone
 reproduces every number below.
 
 <p align="center">

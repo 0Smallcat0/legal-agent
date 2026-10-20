@@ -854,15 +854,15 @@ judgments whose 案由 names the family AND that cite an article of it — the o
 ones the JOIN can bring to a page under that family. **待補** = short of 3, one
 page's worth (`related_judgments` shows three).
 
-| 家族 | 諮詢數 | 附判決 | 同類 | 庫存同類 | 待補 |
+| 家族 | 諮詢數 | 附判決 ⁽ᵃ⁾ | 同類 ⁽ᵃ⁾ | 庫存同類 | 待補 |
 |---|---|---|---|---|---|
 | 侵權 | 12 | 12 | 9 | 92 | 0 |
 | 勞動 | 12 | 11 | 10 | 7 | 0 |
-| 承攬 | 11 | 9 | 6 | 5 | 0 |
+| 承攬 | 11 | 9 | 6 | 8 | 0 |
 | 繼承 | 11 | 10 | 9 | 15 | 0 |
-| 委任 | 9 | 8 | 3 | 2 | 1 |
-| 租賃 | 9 | 7 | 4 | 6 | 0 |
-| 買賣 | 8 | 8 | 6 | 2 | 1 |
+| 委任 | 9 | 8 | 3 | 9 | 0 |
+| 租賃 | 9 | 7 | 4 | 12 | 0 |
+| 買賣 | 8 | 8 | 6 | 6 | 0 |
 | 住戶 | 7 | 6 | 4 | 6 | 0 |
 | 共有 | 7 | 7 | 5 | 5 | 0 |
 | 所有權 | 7 | 5 | 4 | 21 | 0 |
@@ -873,16 +873,19 @@ page's worth (`related_judgments` shows three).
 | 不當得利 | 4 | 4 | 1 | 5 | 0 |
 | 僱傭 | 4 | 4 | 0 | 0 | 3 |
 | 婚姻 | 4 | 4 | 4 | 13 | 0 |
-| 寄託 | 4 | 4 | 0 | 0 | 3 |
-| 保證 | 3 | 3 | 0 | 0 | 3 |
+| 寄託 | 4 | 4 | 0 | 3 | 0 |
+| 保證 | 3 | 3 | 0 | 3 | 0 |
 | 消費借貸 | 3 | 3 | 3 | 20 | 0 |
-| 使用借貸 | 2 | 0 | 0 | 0 | 3 |
-| 擔保物權 | 2 | 2 | 0 | 1 | 2 |
+| 使用借貸 | 2 | 0 | 0 | 3 | 0 |
+| 擔保物權 | 2 | 2 | 0 | 3 | 0 |
 | 親子 | 2 | 2 | 1 | 5 | 0 |
-| 贈與 | 2 | 2 | 0 | 0 | 3 |
-| 秩序 | 1 | 0 | 0 | 0 | 3 |
+| 贈與 | 2 | 2 | 0 | 6 | 0 |
+| 秩序 | 1 | 0 | 0 | 12 | 0 |
 
-**15 of 25 families hold ≥3 same-kind judgments; the other ten are short 25
+(ᵃ) WIP: 附判決/同類 are still the pre-backfill BM25 figures; 庫存同類/待補 are the
+435-judgment corpus. Re-measured in §11.
+
+**15 of 25 families held ≥3 same-kind judgments before the backfill; the other ten were short 25
 in all.** By the route triage actually takes on the user's raw words:
 
 | 分流 | 諮詢數 | 附判決 | 同類 |

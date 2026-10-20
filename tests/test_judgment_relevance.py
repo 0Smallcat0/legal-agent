@@ -67,19 +67,28 @@ def test_families_sessions_ask_about_have_a_case_type_keyword(case_type, family)
     assert case_type_family(case_type) == family
 
 
-def test_new_keywords_change_no_shipped_case_type():
-    """They exist to recognise judgments not yet in the corpus; every shipped
-    案由 must map exactly as it did before they were added."""
+def test_new_keywords_read_every_backfilled_case_type_as_its_family():
+    """They were added before any judgment carried them (none of the first 386
+    shipped 案由 did); the backfill (RESULTS §10/§11) then brought exactly such
+    judgments in. Each shipped 案由 containing one must read as that keyword's
+    family — 「返還寄託物」 as 寄託, never as whatever an earlier keyword says."""
     import json
 
     from legal_agent.evaluation import judgment_relevance as jr
 
-    added = {"返還借用物", "使用借貸", "寄託", "保證債務", "連帶保證", "社會秩序維護法"}
+    added = {"返還借用物": "使用借貸", "使用借貸": "使用借貸", "寄託": "寄託",
+             "保證債務": "保證", "連帶保證": "保證", "社會秩序維護法": "秩序"}
     shipped = json.loads((ROOT / "legal_agent" / "corpus" / "judgments_v1.json")
                          .read_text(encoding="utf-8"))
+    hits = 0
     for record in shipped:
-        assert not any(k in (record["case_type"] or "") for k in added), record["case_type"]
-    assert {k for k, _f in jr._CASE_TYPE_FAMILIES} >= added
+        case_type = record["case_type"] or ""
+        for keyword, family in added.items():
+            if keyword in case_type:
+                hits += 1
+                assert case_type_family(case_type) == family, case_type
+    assert hits > 0
+    assert {k for k, _f in jr._CASE_TYPE_FAMILIES} >= set(added)
 
 
 @pytest.mark.parametrize("case_type,uninformative", [
