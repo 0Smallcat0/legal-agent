@@ -60,6 +60,10 @@ FAMILY_QUERIES: dict[str, tuple[str, ...]] = {
     "委任": ("服務報酬", "交付帳冊"),
     "買賣": ("買賣價金", "貨款"),
     "擔保物權": ("抵押權不存在", "抵押權"),
+    # Families already at TARGET; used only by --qa, which looks for one
+    # article inside a family rather than for the family as a whole.
+    "租賃": ("租賃", "遷讓房屋", "租金"),
+    "承攬": ("承攬", "工程款"),
 }
 
 # 社維法 cases are decided by 裁定 (社會秩序維護法第45條), so for that family a
@@ -71,6 +75,7 @@ _ROW_RE = re.compile(
     r'.*?<td>(?P<date>[^<]*)</td>\s*<td[^>]*>(?P<title>[^<]*)</td>',
     re.S,
 )
+_ARTICLE_NO_RE = re.compile(r"第\d+(?:-\d+)?條")
 _LIST_RE = re.compile(r"qryresultlst\.aspx\?[^\"']+")
 _TOTAL_RE = re.compile(r"共\s*([\d,]+)\s*筆")
 _HIDDEN_RE = re.compile(r'name="(__[A-Z]+)" id="[^"]*" value="([^"]*)"')
@@ -183,8 +188,9 @@ class Client:
             raise RuntimeError(f"bot-defense rejected {url}")
         return page
 
-    def search(self, title: str, sys_code: str = "") -> str:
-        """Submit the 進階查詢 form for one 案由; returns the list URL (session-bound)."""
+    def search(self, title: str, sys_code: str = "", kw: str = "") -> str:
+        """Submit the 進階查詢 form for one 案由 (and, if given, one full-text
+        term such as 「第429條」); returns the list URL (session-bound)."""
         self.get(BASE + "default.aspx")
         form_page = self.get(BASE + "Default_AD.aspx", referer=BASE + "default.aspx")
         form = dict(_HIDDEN_RE.findall(form_page))
@@ -192,7 +198,7 @@ class Client:
             "jud_court": "", "jud_sys": sys_code, "jud_year": "", "sel_judword": "常用字別",
             "jud_case": "", "jud_no": "", "jud_no_end": "", "dy1": "", "dm1": "",
             "dd1": "", "dy2": "", "dm2": "", "dd2": "", "jud_title": title,
-            "jud_jmain": "", "jud_kw": "", "KbStart": "", "KbEnd": "",
+            "jud_jmain": "", "jud_kw": kw, "KbStart": "", "KbEnd": "",
             "judtype": "JUDBOOK", "whosub": "0", "ctl00$cp_content$btnQry": "送出查詢",
         })
         result = self.get(BASE + "Default_AD.aspx", data=form, referer=BASE + "Default_AD.aspx")
@@ -210,8 +216,9 @@ class Cache:
         (self.root / "lists").mkdir(parents=True, exist_ok=True)
         (self.root / "docs").mkdir(parents=True, exist_ok=True)
 
-    def list_path(self, title: str, sys_code: str, page: int) -> Path:
-        return self.root / "lists" / f"{_key(title, sys_code, str(page))}.json"
+    def list_path(self, title: str, sys_code: str, page: int, kw: str = "") -> Path:
+        parts = (title, sys_code, str(page)) + ((kw,) if kw else ())
+        return self.root / "lists" / f"{_key(*parts)}.json"
 
     def doc_path(self, jid: str) -> Path:
         return self.root / "docs" / f"{_key(jid)}.json"
@@ -221,19 +228,19 @@ class Cache:
 
 
 def list_rows(client: Client, cache: Cache, title: str, sys_code: str = "",
-              pages: int = 3) -> Iterator[ListRow]:
+              pages: int = 3, kw: str = "") -> Iterator[ListRow]:
     """Result rows for one 案由, newest first, up to `pages` pages of 20."""
     list_url: str | None = None
     for page in range(1, pages + 1):
-        path = cache.list_path(title, sys_code, page)
+        path = cache.list_path(title, sys_code, page, kw)
         if path.exists():
             payload = json.loads(path.read_text(encoding="utf-8"))
         else:
             if list_url is None:
-                list_url = client.search(title, sys_code)
+                list_url = client.search(title, sys_code, kw)
             raw = client.get(f"{list_url}&sort=DS&page={page}", referer=BASE + "Default_AD.aspx")
             rows, total = parse_list(raw)
-            payload = {"title": title, "sys": sys_code, "page": page, "total": total,
+            payload = {"title": title, "sys": sys_code, "kw": kw, "page": page, "total": total,
                        "rows": [row.__dict__ for row in rows]}
             path.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
         rows = [ListRow(**r) for r in payload["rows"]]
@@ -258,21 +265,34 @@ def document(client: Client, cache: Cache, jid: str) -> dict | None:
     return record
 
 
+def _site_term(article: str) -> str:
+    """「民法第753-1條」 -> 「第753條之1」: how judgments write a 之 article."""
+    m = _ARTICLE_NO_RE.search(article)
+    number = m.group(0)[1:-1]
+    base, _, sub = number.partition("-")
+    return f"第{base}條之{sub}" if sub else f"第{base}條"
+
+
 def collect(client: Client, cache: Cache, family: str, need: int, known_ids: set[str],
-            have: set[str], pages: int = 3, log=print) -> list[dict]:
+            have: set[str], pages: int = 3, log=print,
+            articles: frozenset[str] = frozenset()) -> list[dict]:
     """Fetch until `need` records serve `family`, newest first.
 
     A row is fetched only when its listed 案由 already reads as the family; a
     fetched record counts only when `serves_family` accepts it (it must also
-    cite one of the family's articles — the page can reach it no other way)."""
+    cite one of the family's articles — the page can reach it no other way).
+    With `articles` (「民法第429條」-style), the record must also cite one of
+    them, and the site is asked for each article's number as a full-text term."""
     from legal_agent.data.judicial_json import parse_judgment
     from legal_agent.evaluation.judgment_coverage import serves_family
     from legal_agent.evaluation.judgment_relevance import case_type_family
 
     got: list[dict] = []
     seen: set[str] = set()
-    for title in FAMILY_QUERIES.get(family, ()):
-        for row in list_rows(client, cache, title, pages=pages):
+    terms = sorted({_site_term(a) for a in articles if _ARTICLE_NO_RE.search(a)}) or [""]
+    searches = [(title, kw) for kw in terms for title in FAMILY_QUERIES.get(family, ())]
+    for title, kw in searches:
+        for row in list_rows(client, cache, title, pages=pages, kw=kw):
             if len(got) >= need:
                 return got
             merits = row.is_judgment or family in RULINGS_ARE_MERITS
@@ -284,10 +304,55 @@ def collect(client: Client, cache: Cache, family: str, need: int, known_ids: set
             if record is None:
                 continue
             parsed, _warnings = parse_judgment(record, known_ids)
-            if parsed and serves_family(parsed["case_type"], json.loads(parsed["cited_articles"])) == family:
+            cited = json.loads(parsed["cited_articles"]) if parsed else []
+            refs = {f"{c['statute_id']}{c['article_no']}" for c in cited}
+            if (parsed and serves_family(parsed["case_type"], cited) == family
+                    and (not articles or refs & articles)):
                 got.append(record)
                 log(f"  {family}: {row.jid}  {row.case_type}")
     return got
+
+
+def questions_without_judgments(conn, path) -> list[dict]:
+    """Acceptance-set questions for which the table holds no judgment that
+    serves their family AND cites one of their articles."""
+    from legal_agent.evaluation.judgment_coverage import serves_family
+
+    rows = []
+    for _jid, case_type, cited in conn.execute(
+            "SELECT jid, case_type, cited_articles FROM judgments"):
+        try:
+            cited_list = json.loads(cited or "[]")
+        except ValueError:
+            continue
+        family = serves_family(case_type, cited_list)
+        if family:
+            rows.append((family, {f"{c.get('statute_id')}{c.get('article_no')}" for c in cited_list}))
+    questions = json.loads(Path(path).read_text(encoding="utf-8"))["questions"]
+    return [q for q in questions
+            if not any(fam == q["family"] and refs & set(q["expected_statutes"])
+                       for fam, refs in rows)]
+
+
+def _fill_questions(client: Client, cache: Cache, conn, args) -> int:
+    from legal_agent.evaluation.judgment_coverage import TARGET
+
+    known_ids = {r[0] for r in conn.execute("SELECT DISTINCT statute_id FROM statutes")}
+    have = {r[0] for r in conn.execute("SELECT jid FROM judgments")}
+    picked: dict[str, dict] = {}
+    for q in questions_without_judgments(conn, args.qa):
+        if q["family"] not in FAMILY_QUERIES:
+            print(f"{q['id']}: 家族 {q['family']} 沒有可查的案由,跳過")
+            continue
+        got = collect(client, cache, q["family"], TARGET, known_ids, have | set(picked),
+                      args.pages, articles=frozenset(q["expected_statutes"]))
+        picked.update({r["JID"]: r for r in got})
+        print(f"{q['id']}: 取得 {len(got)}")
+    if args.out:
+        Path(args.out).write_text(json.dumps(list(picked.values()), ensure_ascii=False, indent=1),
+                                  encoding="utf-8")
+    print(f"共選 {len(picked)} 筆;本次連線 {client.requests} 次")
+    return 0
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -299,6 +364,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--fill", action="store_true", help="抓 judgment_backfill 認定不足的家族")
     parser.add_argument("--title", help="改為抓單一案由")
+    parser.add_argument("--qa", help="驗收集檔:替語料中沒有任何應引判決的題目,"
+                                     "依其家族與應引條文抓判決")
+    parser.add_argument("--out", help="--qa 選中的判決寫到這個 JSON 檔(給 judicial_json 載入)")
     parser.add_argument("--sys", default="", help="裁判類別(V 民事、M 刑事…;預設全部)")
     parser.add_argument("--max", type=int, default=10, help="--title 模式最多抓幾份全文")
     parser.add_argument("--pages", type=int, default=3, help="每個案由最多翻幾頁(每頁 20 筆)")
@@ -307,8 +375,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cache", default=None, help="快取資料夾(預設 LEGAL_AGENT_HOME/fjud_cache)")
     parser.add_argument("--sessions", default=str(config.PROJECT_ROOT / "evals" / "real_sessions.json"))
     args = parser.parse_args(argv)
-    if bool(args.fill) == bool(args.title):
-        parser.error("請給 --fill 或 --title,二擇一")
+    if sum(map(bool, (args.fill, args.title, args.qa))) != 1:
+        parser.error("請給 --fill、--title 或 --qa,三擇一")
 
     cache = Cache(Path(args.cache) if args.cache else default_cache())
     client = Client(args.delay)
@@ -330,6 +398,11 @@ def main(argv: list[str] | None = None) -> int:
 
     ensure_corpus()
     conn = connect(config.DB_PATH)
+    if args.qa:
+        try:
+            return _fill_questions(client, cache, conn, args)
+        finally:
+            conn.close()
     try:
         wanted = deficits(conn, args.sessions, args.target or TARGET)
         known_ids = {r[0] for r in conn.execute("SELECT DISTINCT statute_id FROM statutes")}

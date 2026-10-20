@@ -132,3 +132,30 @@ def test_cached_list_pages_resume_without_a_search(tmp_path):
     # Fewer than 20 rows on page 1 = the last page, so no second request either.
     got = list(fjud.list_rows(NoNetwork(), cache, "返還寄託物", pages=3))
     assert [r.jid for r in got] == [r.jid for r in rows]
+
+
+def test_an_article_is_searched_the_way_judgments_write_it():
+    assert fjud._site_term("民法第429條") == "第429條"
+    assert fjud._site_term("民法第753-1條") == "第753條之1"
+
+
+def test_a_full_text_term_gets_its_own_cache_entry(tmp_path):
+    cache = fjud.Cache(tmp_path)
+    assert cache.list_path("租賃", "", 1) != cache.list_path("租賃", "", 1, kw="第429條")
+
+
+def test_questions_without_judgments_reads_family_and_article(tmp_path):
+    import sqlite3
+
+    conn = sqlite3.connect(":memory:")
+    conn.execute("CREATE TABLE judgments (jid TEXT, case_type TEXT, cited_articles TEXT)")
+    conn.execute("INSERT INTO judgments VALUES ('J1', '返還寄託物', ?)",
+                 (json.dumps([{"statute_id": "民法", "article_no": "第597條"}]),))
+    path = tmp_path / "qa.json"
+    path.write_text(json.dumps({"questions": [
+        {"id": "has", "family": "寄託", "expected_statutes": ["民法第597條"]},
+        {"id": "other-article", "family": "寄託", "expected_statutes": ["民法第602條"]},
+        {"id": "other-family", "family": "使用借貸", "expected_statutes": ["民法第597條"]},
+    ]}, ensure_ascii=False), encoding="utf-8")
+    assert [q["id"] for q in fjud.questions_without_judgments(conn, path)] == [
+        "other-article", "other-family"]
