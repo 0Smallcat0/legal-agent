@@ -179,6 +179,8 @@ _CITATION_RE = re.compile(
 # (2) 文號式: ...第X號 (函釋 / 行政實務見解). Bounded by punctuation (class excludes
 # 、,。) and by 條, so 「…法第72條及內政部…第123號」 cannot swallow the 條 citation.
 _DOCNUM_RE = re.compile(r"(?:(?!條)[一-鿿0-9０-９A-Za-z()（）]){2,40}?第" + _NUM + r"號")
+# A clause break between a 條 citation and a 文號: the 文號 then starts its own claim.
+_CLAUSE_BREAK_RE = re.compile(r"[,，;；。:：!！?？\n]")
 # 「第X條」 immediately after a statute name — used to recognise a cross-reference
 # that a retrieved source states in its own text.
 _CROSSREF_RE = re.compile(r"第(" + _NUM + r")條")
@@ -837,9 +839,17 @@ def verify_answer(
     # neighbours (the two extractors below run in separate passes, so document
     # order is not the yield order).
     found = sorted(_iter_citations(answer_text, known), key=lambda cp: cp[1])
-    # Only 條 citations clip each other's claim scope: a 文號 carries no amount
-    # or period to grade, so 「第72條及某函第123號,處九萬元」 still belongs to 第72條.
-    article_positions = [(pos, pos + len(c.raw)) for c, pos in found if c.article_no]
+    # A 文號 joined to the 條 citation before it (及/、, no clause break) does not
+    # clip that citation's scope, so 「第72條及某函第123號,處九萬元」 still belongs
+    # to 第72條. A 文號 in a later clause states its own claim and does clip it.
+    article_positions = []
+    for c, pos in found:
+        if not c.article_no:
+            prev_end = max((p + len(a.raw) for a, p in found if a.article_no and p < pos),
+                           default=None)
+            if prev_end is not None and not _CLAUSE_BREAK_RE.search(answer_text, prev_end, pos):
+                continue
+        article_positions.append((pos, pos + len(c.raw)))
     for citation, pos in found:
         prev_end = max((e for s, e in article_positions if s < pos), default=None)
         next_start = min((s for s, _ in article_positions if s > pos), default=None)

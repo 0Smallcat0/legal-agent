@@ -7,7 +7,7 @@
 
 **A RAG pipeline where every citation is checked by code, and the checker is
 itself graded by planting errors in correct answers: 100% caught across
-twenty-two error kinds, 0/2,921 false positives — with the kinds it cannot plant
+twenty-three error kinds, 0/2,921 false positives — with the kinds it cannot plant
 named rather than left out of the denominator.**
 
 The usual defence against a hallucinated citation is a better prompt. This one
@@ -70,7 +70,7 @@ it; that table also names the harness behind every row.
 
 | what | number |
 |---|---|
-| seeded defects caught | **100% in each of 22 kinds, 0/2,921 false positives** — per-kind denominators in RESULTS §4 |
+| seeded defects caught | **100% in each of 23 kinds, 0/2,921 false positives** — per-kind denominators in RESULTS §4 |
 | statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict |
 | retrieval recall, real user wording | **348/356 (98%)**, 5.9 unexpected articles per session |
 | honesty tier | **29/32 (91%)** |

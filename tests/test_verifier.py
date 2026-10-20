@@ -794,6 +794,15 @@ def test_a_docnum_after_the_citation_does_not_switch_off_the_amount_check(live_c
     assert "及內政部台內警字第123號" in by_raw      # the 文號 is still extracted on its own
 
 
+def test_a_docnum_in_a_later_clause_still_ends_the_citations_claim(live_conn):
+    """Only a 文號 joined to the citation (及/、) shares its claim. One in its own
+    clause states its own amount: grading that against §72 flagged a correct
+    「一萬元以下」 on 345 of 345 amount-bearing articles."""
+    answer = "依社會秩序維護法第72條處新臺幣一萬元以下罰鍰,內政部台內警字第123號函則另指出得處九萬元。"
+    r = next(r for r in verify_answer(answer, [], conn=live_conn) if r.citation.article_no)
+    assert r.flagged is False, r.reason
+
+
 def test_a_multi_list_article_flags_only_an_item_above_every_list(live_conn):
     """民法§129 has two lists (一~三, then 一~五). Which one 「第4款」 means is
     undecidable, so it stays unverified; 「第6款」 is in neither and is a ghost."""
