@@ -929,7 +929,35 @@ host "data.judicial.gov.tw"」, and the same for opendata.judicial.gov.tw,
 judgment.judicial.gov.tw, law.judicial.gov.tw and www.judicial.gov.tw. There
 were also no API credentials, and the run was at 10:00 Asia/Taipei, outside the
 API's 00:00–06:00 window. So **no judgment was added and every number above is
-before any backfill.** To fill it on a machine that can reach the court:
+before any backfill.**
+
+**Second attempt, 2026-10-21 01:17 Asia/Taipei, with outbound network open.**
+The hosts are now reachable, but both sources need an account, and none was
+registered:
+
+- `GET https://opendata.judicial.gov.tw/api/Datasets?categoryTheme4Sys=051`
+  → 200. 裁判書 is 369 datasets, one RAR per month from 199601 to 202608
+  (the newest re-issued 「20261016Update」, e.g. 202608 = datasetId 59372,
+  fileSetId 72011), plus a `Delete-Infor` CSV (fileSetId 72012). Columns as
+  published: ID、JYEAR、JCASE、JNO、JDATE、JTITLE、JFULL、JPDF. Every one is
+  `categoryDataset: "B"`; the site's own front end renders the download link
+  only when `"A"===categoryDataset || isLogin`, and login sits behind a
+  Cloudflare Turnstile.
+- `GET /api/FilesetLists/72011/file` (and 72012, and `?preview=true`) → 500,
+  `{"succeeded":false,"message":"Entity \"GetFilesetListFileQuery\" (72011) was not found."}`;
+  `GET /api/Datasets/59372` and `/59005` (199601) → 500, the same 「not found」.
+  As a control, a category-A dataset on the same host (6876, fileSetId 8322)
+  answers 200 and serves its 950,580-byte file, so the endpoint works and the
+  refusal is the B category. `GET /api/MemberData` → 401.
+- `POST https://data.judicial.gov.tw/jdg/api/Auth` with a dummy user → 200,
+  `{"error":"驗證失敗"}` — the API host now answers (the 403 is gone, and this
+  was inside the 00:00–06:00 window), but it needs `JUDICIAL_USER` /
+  `JUDICIAL_PASSWORD`, and neither is set here. `GET /` on that host is an IIS
+  403 from the origin, not the proxy.
+
+So the archive's internal layout is still unverified, the reader was not
+changed, and the table above still stands as the before-backfill state. To fill
+it on a machine with an account:
 
 ```bash
 # A) bulk files already downloaded from opendata.judicial.gov.tw (unzipped):
