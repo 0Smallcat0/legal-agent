@@ -14,6 +14,7 @@ sentence disagrees with it.
 """
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -83,17 +84,23 @@ def test_every_prose_corpus_count_matches_the_corpus(shipped_conn):
 # must appear verbatim in the table evals/RESULTS.md publishes.
 def test_the_mutation_and_blindspots_numbers_match_a_live_run(shipped_conn):
     from legal_agent.evaluation.blindspots import score_blindspots
-    from legal_agent.evaluation.mutation import run_mutation_test
+    from legal_agent.evaluation.mutation import (
+        _ALWAYS_NONEMPTY_ON_FULL_CORPUS,
+        run_mutation_test,
+    )
 
     report = run_mutation_test(shipped_conn)
     blindspots = score_blindspots(shipped_conn)
     results = _read("evals/RESULTS.md")
 
+    # Per kind, next to its own name: a bare substring passed a regressed
+    # alias_typo (1/2) because 「1/2」 appears elsewhere in the file. Iterating
+    # the gated list, not report.kinds, catches a kind that generated nothing.
     missing = []
-    for kind in report.kinds:
+    for kind in dict.fromkeys((*_ALWAYS_NONEMPTY_ON_FULL_CORPUS, *report.kinds)):
         bucket = report._bucket(kind)
         needle = f"{sum(1 for o in bucket if o.ok):,}/{len(bucket):,}"
-        if needle not in results:
+        if not bucket or not re.search(rf"`{kind}`[\s|]*\*\*{re.escape(needle)}\*\*", results):
             missing.append((kind, needle))
     if blindspots.target_headline not in results:
         missing.append(("blindspots", blindspots.target_headline))
