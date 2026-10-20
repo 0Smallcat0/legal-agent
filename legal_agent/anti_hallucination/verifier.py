@@ -222,10 +222,18 @@ _SENTENCE_BOUNDARY = "。！？!?\n；;"
 _CLAUSE_BOUNDARY = "，,、"
 
 
+def _parse_amount(text: str) -> int | None:
+    """`_parse_number` for a money figure: a leading bare 千/百 (數千元, 數百元)
+    states no amount. Only here — 百分之五 needs the bare 百."""
+    if text.lstrip(",，")[:1] in ("千", "百", "仟", "佰"):
+        return None
+    return _parse_number(text)
+
+
 def _amounts(text: str) -> set[int]:
     values: set[int] = set()
     for group in _YUAN_RE.findall(text) + _CURRENCY_RE.findall(text):
-        value = _parse_number(group)
+        value = _parse_amount(group)
         if value is not None:
             values.add(value)
     return values
@@ -235,7 +243,7 @@ def _has_vague_amount(text: str) -> bool:
     """An 「…元」 that names no single amount (數萬元, 十餘萬元, 三四千元): the
     amount axis has nothing to compare, so the claim is unverified, not clean."""
     return any(
-        _parse_number(g) is None and g.strip(",，")
+        _parse_amount(g) is None and g.strip(",，")
         for g in _YUAN_RE.findall(text)
     )
 
@@ -299,7 +307,7 @@ def _bare_penalty_amounts(text: str) -> set[int]:
         )
         if not anchored:
             continue
-        value = _parse_number(m.group(0))
+        value = _parse_amount(m.group(0))
         if value is not None:
             values.add(value)
     return values

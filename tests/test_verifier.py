@@ -803,7 +803,7 @@ def test_a_docnum_in_a_later_clause_still_ends_the_citations_claim(live_conn):
     assert r.flagged is False, r.reason
 
 
-@pytest.mark.parametrize("amount", ["數萬元", "十餘萬元", "三四千元"])
+@pytest.mark.parametrize("amount", ["數萬元", "十餘萬元", "三四千元", "數千元"])
 def test_an_amount_that_states_no_number_is_not_reported_as_traceable(amount, live_conn):
     """§72 caps at 一萬元. A vague amount parses to no number, so the amount axis
     cannot grade it, and the answer must not read as fully traceable."""

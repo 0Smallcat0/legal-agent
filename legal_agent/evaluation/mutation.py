@@ -624,13 +624,13 @@ def run_mutation_test(
                 expect_flag=False, conn=conn,
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
-        # vague_amount — 「數萬元」 names no amount, so the amount axis cannot
+        # vague_amount — 「數萬元」/「數千元」 name no amount, so the amount axis cannot
         # grade it. Graded on the status line: it must not claim full
         # traceability (it did once the bare 萬 stopped reading as 0).
-        if source_amounts:
+        for vague in ("數萬元", "數千元") if source_amounts else ():
             outcomes.append(_judge(
                 "vague_amount", ref,
-                f"依{ref},違者處新臺幣數萬元罰鍰。",
+                f"依{ref},違者處新臺幣{vague}罰鍰。",
                 expect_flag=True, conn=conn, expect_status_line_catch=True,
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))

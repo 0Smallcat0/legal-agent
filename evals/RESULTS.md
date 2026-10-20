@@ -150,7 +150,7 @@ number for a kind that is not listed here does not exist.
 | `docnum_before_citation` | **2,921/2,921** | a 文號 written right before the citation; graded on the status line, which must not claim full traceability |
 | `real_positional_amount` | **344/344** | the amount in digit-by-digit form, 一〇〇〇〇 (must NOT be flagged) |
 | `real_docnum_own_clause` | **345/345** | the real amount, then a 文號 in its own clause stating another (must NOT be flagged) |
-| `vague_amount` | **345/345** | 「數萬元」, which names no amount; graded on the status line, which must not claim full traceability |
+| `vague_amount` | **690/690** | 「數萬元」 or 「數千元」, which name no amount; graded on the status line, which must not claim full traceability |
 | `anaphora_amount` | **345/345** | an amount attributed to the wrong article |
 | `fraction_tamper` | **63/63** | 三分之二 altered |
 | `real_fraction` | **82/82** | the fraction as written (must NOT be flagged) |
@@ -189,7 +189,12 @@ break (,;。:) it closes it, as on main.
 處數萬元罰鍰」 parsed to no amount at all and the answer read 「全數可回溯」:
 **0/345** on that commit. main had flagged it, for the wrong reason (「[0]」). An
 「…元」 that names no single amount (數萬, 十餘萬, 三四千) now marks the
-citation unverified: **345/345**.
+citation unverified: **345/345**. 「數千元」 has read as 1,000 since before
+this branch (數 is outside the amount pattern, and a bare 千 counts as 一千), so
+on the 7 articles whose own amount is 1,000 it read as fully traceable; the
+kind now plants both, **683/690 → 690/690**. A bare 千/百 states no amount only
+in a money figure — 百分之五 still needs it, and dropping it in the shared
+number parser cost 26 of the 82 `real_fraction` cases.
 
 The `real_*` kinds are the half that makes the other half mean anything: they
 plant nothing and must come back unflagged, which is where a false-positive rate
