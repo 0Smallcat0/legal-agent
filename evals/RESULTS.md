@@ -40,6 +40,7 @@ identically.
 | articles on the page the model skipped | **8 → 18 of 21 expected** | counted on the saved sessions |
 | first reference judgment states an awarded sum | **50/60 sessions** (shipped corpus; 54/60 on the full local harvest) | counted over 60 stored sessions |
 | that judgment is the same KIND of dispute as the question | **51/88 scorable (58%)**, 146/168 sessions carry one, 58/146 案由 too generic to tell | `judgment_relevance`, both sides derived |
+| dispute families holding ≥3 same-kind judgments | **15/25**, 25 judgments short; 使用借貸, 保證, 寄託, 贈與, 秩序 hold none, and 僱傭, 消費 cannot be named by any 案由 — §10 | `judgment_coverage`, families of the 168 sessions |
 | reference judgments beside a golden-set answer | 11/30 cases, 10 carrying a 主文 award figure (30-case golden v2, 2026-07-25); the 32-case run after §8's respondent ban reads 7/32, 3 with an award | counted, not scored |
 | bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190); a second sample read 16/24 and 4/208, so the bare 67% reproduces and the gated delta is inside the harness's spread | `ablation` *(model)*, llama3.1 over golden_v2, `evals/ablation_v2.json` |
 | the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them (first run, before tuning: 7/27 and 9/16) | `realworld`, 16 臺中市 公寓大廈 調處案, labels from the case table's own 法令依據 column |
@@ -830,6 +831,125 @@ Each of these looked obviously right and lost on the numbers:
   `anaphora_tong_fa_20`, each answer against its anchor article — it fired on
   **0 of 4**. It was never wired into the verifier; it was deleted (2026-10-16)
   rather than left printing a pass on every run.
+
+## §10 — does each kind of dispute have a judgment to point at? (2026-10-20)
+
+`judgment_relevance` grades the first judgment a page shows. This asks the
+question before it: for each kind of dispute the 168 stored sessions bring, how
+many of the 386 shipped judgments are of that kind, and does a consultation
+about it get one on the page at all.
+
+```bash
+python -m legal_agent.evaluation.judgment_coverage                     # this table
+python -m legal_agent.data.judgment_backfill DIR_OR_FILE ... --dry-run  # what a backfill would add
+```
+
+**Family** is derived from the session's own expected articles
+(`statute_family`, 民法's 編/章/節); a session can sit in two rows, and 38 of the
+168 name no family (cross-cutting articles only) and are not in the table.
+**附判決** = the page shows ≥1 reference judgment; **同類** = ≥1 of those shown
+has a 案由 of the session's family. Both use `judgment_relevance`'s focus (the
+answer cites the right law), so they are a ceiling. **庫存同類** = shipped
+judgments whose 案由 names the family AND that cite an article of it — the only
+ones the JOIN can bring to a page under that family. **待補** = short of 3, one
+page's worth (`related_judgments` shows three).
+
+| 家族 | 諮詢數 | 附判決 | 同類 | 庫存同類 | 待補 |
+|---|---|---|---|---|---|
+| 侵權 | 12 | 12 | 9 | 92 | 0 |
+| 勞動 | 12 | 11 | 10 | 7 | 0 |
+| 承攬 | 11 | 9 | 6 | 5 | 0 |
+| 繼承 | 11 | 10 | 9 | 15 | 0 |
+| 委任 | 9 | 8 | 3 | 2 | 1 |
+| 租賃 | 9 | 7 | 4 | 6 | 0 |
+| 買賣 | 8 | 8 | 6 | 2 | 1 |
+| 住戶 | 7 | 6 | 4 | 6 | 0 |
+| 共有 | 7 | 7 | 5 | 5 | 0 |
+| 所有權 | 7 | 5 | 4 | 21 | 0 |
+| 監護 | 6 | 6 | 6 | 31 | 0 |
+| 家暴 | 5 | 4 | 4 | 8 | 0 |
+| 扶養 | 5 | 5 | 5 | 6 | 0 |
+| 消費 | 5 | 4 | 0 | 0 | 3 |
+| 不當得利 | 4 | 4 | 1 | 5 | 0 |
+| 僱傭 | 4 | 4 | 0 | 0 | 3 |
+| 婚姻 | 4 | 4 | 4 | 13 | 0 |
+| 寄託 | 4 | 4 | 0 | 0 | 3 |
+| 保證 | 3 | 3 | 0 | 0 | 3 |
+| 消費借貸 | 3 | 3 | 3 | 20 | 0 |
+| 使用借貸 | 2 | 0 | 0 | 0 | 3 |
+| 擔保物權 | 2 | 2 | 0 | 1 | 2 |
+| 親子 | 2 | 2 | 1 | 5 | 0 |
+| 贈與 | 2 | 2 | 0 | 0 | 3 |
+| 秩序 | 1 | 0 | 0 | 0 | 3 |
+
+**15 of 25 families hold ≥3 same-kind judgments; the other ten are short 25
+in all.** By the route triage actually takes on the user's raw words:
+
+| 分流 | 諮詢數 | 附判決 | 同類 |
+|---|---|---|---|
+| ambiguous | 74 | 64 | 25 |
+| other:family | 21 | 21 | 18 |
+| other:labor | 17 | 14 | 10 |
+| other:rent | 16 | 14 | 7 |
+| other:consumer | 11 | 10 | 4 |
+| other:leak | 8 | 8 | 5 |
+| other:safety | 7 | 6 | 5 |
+| other:traffic | 6 | 5 | 4 |
+| noise | 5 | 2 | 1 |
+| other:space | 2 | 1 | 0 |
+| other:threat | 1 | 1 | 1 |
+
+Measured with `dense_fallbacks` 168/168 (no Ollama in the environment), so 附判決
+and 同類 are BM25-only; 庫存同類 and 待補 do not touch retrieval. The same
+environment reproduces `judgment_relevance`'s published 146/168 and 51/88
+exactly, before and after this section's changes.
+
+What the table says, read plainly:
+
+- **Two of the zeros are the instrument, not the corpus.** No 案由 can be read
+  as 僱傭 (「確認僱傭關係」 is mapped to 勞動) or as 消費 (consumer disputes are
+  filed as 買賣/返還價金), so those rows are 0 whatever the corpus holds, and the
+  backfill skips them and says so. Merging 僱傭 into 勞動 on the session side
+  would be the obvious fix, and it would raise `judgment_relevance`'s own
+  number by re-drawing its grader; it was not done.
+- **Four had no 案由 keyword at all** — 使用借貸, 寄託, 保證, 秩序. Keywords
+  were added (返還借用物/使用借貸, 寄託, 保證債務/連帶保證, 社會秩序維護法). None
+  of the 386 shipped 案由 contains them, pinned by a test, so no published number
+  moved; they let a backfilled judgment be recognised.
+- **贈與's one candidate does not count.** 「撤銷贈與」 cites only 民法§244, so
+  the JOIN can never surface it under a 贈與 question.
+- **秩序 and 使用借貸 show nothing at all** (附判決 0): the harvester only ever
+  took civil (V) cases, and 社維法 rulings are filed on the criminal side.
+
+**What was NOT done: the backfill itself.** `judgment_backfill` was written
+and tested, but the 司法院 hosts are not reachable from the environment this
+was measured in — the outbound proxy answered `CONNECT data.judicial.gov.tw:443`
+with `403 Forbidden`, body 「request blocked: no rule or allowlist entry allows
+host "data.judicial.gov.tw"」, and the same for opendata.judicial.gov.tw,
+judgment.judicial.gov.tw, law.judicial.gov.tw and www.judicial.gov.tw. There
+were also no API credentials, and the run was at 10:00 Asia/Taipei, outside the
+API's 00:00–06:00 window. So **no judgment was added and every number above is
+before any backfill.** To fill it on a machine that can reach the court:
+
+```bash
+# A) bulk files already downloaded from opendata.judicial.gov.tw (unzipped):
+python -m legal_agent.data.judgment_backfill ~/judicial_bulk/ --dry-run   # look first
+python -m legal_agent.data.judgment_backfill ~/judicial_bulk/
+# B) or nightly from the API (00:00-06:00, JUDICIAL_USER/JUDICIAL_PASSWORD in .env);
+#    one night covers one day's change list, so repeat until nothing is 待補:
+#    cron:      30 0 * * *  cd /path/to/legal-agent && python -m legal_agent.data.judgment_backfill --api
+#    Windows:   schtasks /create /sc daily /st 00:30 /tn legal-agent-backfill /tr "python -m legal_agent.data.judgment_backfill --api"
+# then, either way:
+python -m legal_agent.data.judgment_ingest      # re-export judgments_v1.json, redaction included
+python -m legal_agent.evaluation.judgment_coverage
+```
+
+Not verified from here: the bulk archive's exact layout. The reader accepts the
+flat record `judicial_json` already documents (JID/JYEAR/JTITLE/JFULL, one per
+file or a list) and saved JDoc responses (JFULLX), walking directories
+recursively; a file it cannot parse is skipped rather than fatal. A backfill
+grows the shipped judgment count past 386, so the corpus README and the prose
+counts `test_published_numbers` checks move with it.
 
 ## More
 

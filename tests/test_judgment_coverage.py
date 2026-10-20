@@ -97,3 +97,20 @@ def test_families_no_case_type_can_name_are_reported_not_filled():
     two families stay at 0 whatever the corpus holds."""
     assert not nameable("僱傭") and not nameable("消費")
     assert nameable("使用借貸") and nameable("租賃")
+
+
+def test_the_published_stock_column_matches_the_corpus(shipped_conn):
+    """RESULTS §10's 庫存同類/待補 columns are recomputed here, as the mutation
+    table is in test_published_numbers: a backfill that ships must move them."""
+    import re
+
+    text = (ROOT / "evals" / "RESULTS.md").read_text(encoding="utf-8")
+    section = text[text.index("## §10"):text.index("## More")]
+    rows = re.findall(r"^\| (\S+) \| \d+ \| \d+ \| \d+ \| (\d+) \| (\d+) \|$",
+                      section, flags=re.M)
+    assert len(rows) >= 20
+    stock = stock_by_family(shipped_conn)
+    for family, published_stock, published_missing in rows:
+        live = len(stock.get(family, []))
+        assert (int(published_stock), int(published_missing)) == (
+            live, max(0, TARGET - live)), family

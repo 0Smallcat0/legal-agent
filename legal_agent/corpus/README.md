@@ -63,6 +63,11 @@ Rebuild from a harvested DB with:
 python -m legal_agent.data.judgment_ingest -o legal_agent/corpus/judgments_v1.json
 ```
 
+Ten of the 25 dispute families the stored sessions ask about hold fewer than
+three same-kind judgments ([`evals/RESULTS.md` §10](../../evals/RESULTS.md)).
+`python -m legal_agent.data.judgment_backfill` fills them from official records
+only (local bulk JSON, or `--api` nightly), then the export above re-ships them.
+
 ## Honesty caveat to preserve (spec §1.3)
 
 The statute DB is incomplete: local 自治條例 (some cities' own noise/pet rules)
