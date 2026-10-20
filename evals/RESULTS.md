@@ -769,6 +769,60 @@ find them; the vocabulary table carries them. And nothing here measures whether
 the answer is right for him: this is one unfinished case with no outcome, and it
 is not allowed to become a ruler.
 
+### §8.2 — the stance answer, a bare `</think>`, and a period mailed to the other side (2026-10-21)
+
+Found by driving `app.consult_step` the way a visitor does — 退租押金, with and
+without a model — and reading the page end to end.
+
+**The stance question's own second option was read backwards.** It offers
+「你要向對方主張」 / 「對方在向你要求」; the second hit the loose 對方 complainant
+row first, so a visitor who answered exactly as offered was given the opposite
+seat. Fixed by checking money demanded *of* me (向我要, 跟我要, 要我…還/付/賠/退
+with up to four characters between) before the complainant rows, moving 跟我要 to
+the respondent side, adding the ways people state the asserting side (要回, 討回,
+我要告, 我要向…), and letting the turn right after the question answer by
+position (前者 / 後者, replies of 12 characters or fewer). On a 33-reply probe —
+both options as offered, the ways people answer them, the landing page's four
+examples — **10/33 → 32/33, reversed 4 → 0.** The probe was written by the same
+hand as the rows, so it is a regression guard, not a measurement of users; the
+one left unread (公司說我們是責任制…) states no seat and is asked.
+
+**On the 168 stored sessions: respondent 12 → 26, complainant 71 → 71, unknown
+85 → 71.** 21 sessions changed seat and all 21 were read: 20 are right
+(`debt-sold-without-notice` and `card-debt-sold-i-already-paid-some` — the shape
+§8.1 named — `guarantor-or-co-borrower`, `neighbour-minded-my-shop` now
+respondent; `loan-unpaid`, `wage-deduction`, `dementia-guardian` now
+complainant), and `lent-my-car-towed` is genuinely two-sided. `old-card-debt`
+is still read complainant on its 他們 row and is left: a row changed for one
+stored session is §7's tuning on the eval set. `real_recall` does not move —
+stance is not a retrieval input. Unknown is still 42%.
+
+**A bare `</think>` put the prompt on the page.** With thinking switched off,
+qwen3:4b can still reason in the open and close it with `</think>`; that text
+quoted the prompt's own rules into 分析研判 and handed the verifier 46
+citations. The answer is now what follows the last `</think>`. Re-run on the
+same session, the page carries no reasoning. **Not fixed:** when qwen3:4b
+reasons without ever closing the tag, nothing marks where the answer starts.
+The shipping model is llama3.1 8B, which does not do this; qwen3:4b is a
+smaller local option, not the measured one.
+
+**The letter told the landlord about 合夥人退夥.** `_generic_letter` added
+「四、另請台端注意」 with the first period found anywhere in the window. For 退租押金
+that was 民法§686 (兩個月前通知他合夥人), mailed to the other side; with a model,
+a 勞基法§9-1 競業禁止 line did the same. It was the one line no
+「與你情況不符者請自行刪去」 covered. On the Space path (no model, BM25 only) a
+period entered the letter in **68 of 168 sessions and was one of the session's
+expected articles in 11**; hybrid, 67 and 14. The period is the sender's own
+clock and already leads the ladder, so the letter now quotes only its three
+依據 and no period.
+
+**The deadline rung has the same noise, stated rather than fixed.** The rung
+quotes up to three periods from the window. BM25 only: **102 references in 68
+sessions, 16 of them expected articles**; hybrid: 93 in 67, 16. Expected lists
+are not exhaustive, so 86/102 bounds the noise from above, but the 退租押金 page
+shows its shape: the recommended first step is 「先確認期限」 citing 民法§686. Two
+narrowings were measured and are in §9; neither shipped.
+
 ## §9 — Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
@@ -851,6 +905,29 @@ Each of these looked obviously right and lost on the numbers:
   `anaphora_tong_fa_20`, each answer against its anchor article — it fired on
   **0 of 4**. It was never wired into the verifier; it was deleted (2026-10-16)
   rather than left printing a pass on every run.
+- **keeping a plain period only when its sentence grants a remedy** (得…請求 /
+  解除 / 撤銷 / 回復 / 主張), to stop the deadline rung quoting 民法§686. Over
+  every article in force: 84 sentences already lose a right and stay, 5 plain
+  ones would be kept and 87 dropped. 686 is dropped, and so are deadlines a
+  reader can miss: 消保法§45-3's 十日之不變期間 for 異議, 社維法§59's 五日 抗告,
+  道交條例§65/§87's 三十日 撤銷訴訟, 勞保條例§20's 一年內得請領. A filter that
+  loses those to lose 686 trades a quoted irrelevance for a silent miss.
+- **dropping duration tokens (兩個月, 二年, 六個月) from BM25**, since a 兩個月 in
+  the user's words is what pulled 民法§685/§686 and 刑法§42 into 退租押金's
+  window. `real_recall`, `dense_fallbacks` 0:
+
+  | | hit | unexpected / session | rung refs (in expected) |
+  |---|---|---|---|
+  | BM25 only | 321 → **320** | 6.09 → 6.10 | 102 → 89 (16 → 16) |
+  | hybrid | 348 → **347** | 5.93 → 5.93 | 93 → 92 (16 → 16) |
+
+  BM25 only it loses 民法§125 for `old-card-debt` (十五年), §494, §478 and §450,
+  and gains §549, §19 and §335; hybrid it loses 勞基法§22. The thirteen rung
+  references it removes were all outside the expected lists, but the window is
+  no cleaner, and a duration in a person's own words is often what names the
+  governing article. On 退租押金 itself, BM25 only, §685/§686/刑法§42 do leave —
+  and so do 民法§440/§450 and 租賃條例§10, replaced by 勞基法§9-1, 個資法§5 and
+  勞保條例§14.
 
 ## More
 

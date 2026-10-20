@@ -91,6 +91,12 @@ def ollama_llm(
             # the empty answer alone, which stage3 already reports loudly.
             with contextlib.suppress(urllib.error.URLError, OSError):
                 answer = _call(prompt, False, num_predict * 2).get("response", "")
+        # With thinking switched off, qwen3:4b can still reason in the open and
+        # close it with a bare </think>; that text quoted the prompt's own rules
+        # onto the page and fed 46 citations to the verifier. The answer is what
+        # follows the last one.
+        if "</think>" in answer:
+            answer = answer.rsplit("</think>", 1)[1].lstrip()
         return answer
 
     return llm
