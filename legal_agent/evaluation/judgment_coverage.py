@@ -36,6 +36,7 @@ from pathlib import Path
 from legal_agent.config import PROJECT_ROOT
 from legal_agent.evaluation import corpus_connection
 from legal_agent.evaluation.judgment_relevance import (
+    _CASE_TYPE_FAMILIES,
     _CROSS_CUTTING,
     case_type_family,
     statute_family,
@@ -49,6 +50,12 @@ def session_families(expected: list[str]) -> list[str]:
     exactly as `judgment_relevance` scores them."""
     return sorted({f for f in (statute_family(e) for e in expected)
                    if f and f not in _CROSS_CUTTING})
+
+
+def nameable(family: str) -> bool:
+    """Can any 案由 be read as this family at all? When not, its stock is 0 by
+    construction — a limit of the instrument, which no backfill can fill."""
+    return any(f == family for _k, f in _CASE_TYPE_FAMILIES)
 
 
 def serves_family(case_type: str | None, cited: list[dict]) -> str | None:
@@ -129,11 +136,13 @@ class CoverageReport:
         for r in sorted(self.triage.values(), key=lambda r: (-r.sessions, r.key)):
             lines.append(f"{r.key:16s} {r.sessions:6d} {r.with_judgment:6d} {r.same_kind:6d}")
         empty = sorted(k for k, r in self.families.items() if not r.stock)
+        unnamed = sorted(k for k in self.families if not nameable(k))
         lines += [
             "",
             f"達標(庫存同類 ≥{TARGET}):{self.at_target}/{len(self.families)} 個家族,"
             f"共缺 {self.missing} 筆",
             f"庫存為 0:{'、'.join(empty) or '(無)'}",
+            f"其中案由表認不出的家族(量尺限制,補不到):{'、'.join(unnamed) or '(無)'}",
             "同類 = 頁面上至少一筆判決的案由與諮詢同家族;附判決/同類 依 judgment_relevance"
             " 的 focus(答案引對條文)量,是上限不是保證。",
         ]

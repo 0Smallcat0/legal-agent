@@ -14,6 +14,7 @@ from legal_agent.evaluation.judgment_coverage import (
     TARGET,
     CoverageReport,
     Row,
+    nameable,
     serves_family,
     session_families,
     stock_by_family,
@@ -89,3 +90,10 @@ def test_the_harness_runs_end_to_end(tmp_path, shipped_conn):
     for row in [*report.families.values(), *report.triage.values()]:
         assert row.same_kind <= row.with_judgment <= row.sessions
     assert "達標" in report.render()
+
+
+def test_families_no_case_type_can_name_are_reported_not_filled():
+    """僱傭關係 is read as 勞動 and consumer cases are filed as 買賣/價金, so these
+    two families stay at 0 whatever the corpus holds."""
+    assert not nameable("僱傭") and not nameable("消費")
+    assert nameable("使用借貸") and nameable("租賃")
