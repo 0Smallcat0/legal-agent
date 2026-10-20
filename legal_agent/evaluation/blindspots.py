@@ -19,9 +19,11 @@ is a deny-list, not an allow-list). Labels: "must_not_regress" and
   * `target_headline` (正確數/總數) — miss cases flagged + controls clean.
     Higher is better; this is the published figure (RESULTS.md §4).
 
-Exit code: non-zero only if the case files are empty or the 16+9 composition
-is wrong (fix the case file, never this script). Catch counts and the
-positive-control count are reported, not gated.
+Exit code: non-zero if the case files are empty or the 16+9 composition is
+wrong (fix the case file, never this script), or on any `gate_problems`: a
+control or positive-control case flagged, a miss case outside STILL_BLIND
+uncaught, a STILL_BLIND case caught (update the published 21/25), or a
+positive-control file that is not 6 cases.
 
 Run:  python -m legal_agent.evaluation.blindspots
 """
@@ -45,6 +47,19 @@ EXPECTED_MISS_TOTAL = 16
 EXPECTED_CONTROL_TOTAL = 9
 FROZEN_DENOMINATOR = EXPECTED_MISS_TOTAL + EXPECTED_CONTROL_TOTAL
 EXPECTED_POSITIVE_CONTROL_TOTAL = 6
+
+# The four miss cases the structural axes still cannot see. Three are a modal
+# or proviso changed inside a real, correctly-cited article (得→應, 得禁止→不得禁止,
+# an inverted 但書); the fourth is a 同法 reference whose inherited citation is
+# never compared against its article. Catching them needs a semantic axis, and
+# the one this repo has misfires on 43% of correct citations. They are the 4 in
+# the published 21/25; tests/test_verifier.py marks them xfail(strict=True).
+STILL_BLIND = frozenset({
+    "modal_de_to_ying",
+    "modal_full_negation",
+    "proviso_reversal",
+    "anaphora_tong_fa_20",
+})
 
 
 @dataclass(frozen=True)
@@ -300,6 +315,30 @@ def _fail_if_composition_wrong(report: BlindspotReport) -> None:
         )
 
 
+def gate_problems(report: BlindspotReport, pc_report: PositiveControlReport) -> list[str]:
+    """Everything that makes the published 21/25 and 6/6 untrue; empty = pass."""
+    problems = []
+    flagged_controls = [o.case.id for o in report.control_outcomes if o.flagged]
+    if flagged_controls:
+        problems.append(f"control 被誤標:{flagged_controls}")
+    uncaught = [o.case.id for o in report.miss_outcomes
+                if not o.flagged and o.case.id not in STILL_BLIND]
+    if uncaught:
+        problems.append(f"miss 未抓到:{uncaught}")
+    newly_caught = [o.case.id for o in report.miss_outcomes
+                    if o.flagged and o.case.id in STILL_BLIND]
+    if newly_caught:
+        problems.append(f"STILL_BLIND 已被抓到,請更新 21/25 與 STILL_BLIND:{newly_caught}")
+    flagged_pc = [o.case.id for o in pc_report.outcomes if o.flagged]
+    if flagged_pc:
+        problems.append(f"positive control 被誤標:{flagged_pc}")
+    if pc_report.total != EXPECTED_POSITIVE_CONTROL_TOTAL:
+        problems.append(
+            f"positive control 案例數 {pc_report.total}(應 {EXPECTED_POSITIVE_CONTROL_TOTAL})"
+        )
+    return problems
+
+
 if __name__ == "__main__":  # python -m legal_agent.evaluation.blindspots
     from legal_agent.evaluation import enable_utf8_stdout, print_corpus_fingerprint
 
@@ -321,11 +360,11 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.blindspots
         assert_nonzero_scan(
             _pc_report.total, "blindspots_positive_control_v1.json cases"
         )
-        if _pc_report.total != EXPECTED_POSITIVE_CONTROL_TOTAL:
-            print(
-                f"⚠ 正控制組案例數不符規格:實際 {_pc_report.total}"
-                f"(應 {EXPECTED_POSITIVE_CONTROL_TOTAL})"
-            )
         print(_pc_report.render())
+        _problems = gate_problems(_report, _pc_report)
     finally:
         _conn.close()
+    for _p in _problems:
+        print(f"FAIL: {_p}")
+    if _problems:
+        raise SystemExit(1)

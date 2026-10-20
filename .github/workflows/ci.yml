@@ -47,6 +47,8 @@ jobs:
           python -m legal_agent.evaluation.mutation --retrieval-first | tee retrieval_first_output.txt
           grep -q "retrieval_miss_quoted" retrieval_first_output.txt
       - name: Citation blindspots (structural axes)
+        # Exits non-zero on any control / positive-control false positive, an
+        # uncaught miss outside STILL_BLIND, or a STILL_BLIND case now caught.
         run: python -m legal_agent.evaluation.blindspots
       - name: Qualifier gate audit (Tier-3 false-reject sweep)
         # Standing gate (CONTRIBUTING.md): exits non-zero on any false reject

@@ -16,7 +16,11 @@ from legal_agent.anti_hallucination.verifier import (
 )
 from legal_agent.data.database import connect, init_db
 from legal_agent.data.seed import seed_source_hierarchy
-from legal_agent.evaluation.blindspots import load_blindspot_cases, load_positive_control_cases
+from legal_agent.evaluation.blindspots import (
+    STILL_BLIND,
+    load_blindspot_cases,
+    load_positive_control_cases,
+)
 
 
 @pytest.fixture
@@ -712,25 +716,13 @@ def test_fraction_axis_flags_a_share_the_article_never_states(live_conn):
 # The same cases `python -m legal_agent.evaluation.blindspots` scores, with the
 # same calling convention (full-corpus conn, empty retrieved_context).
 
-# The four cases the structural axes still cannot see. Three are a modal or
-# proviso changed inside a real, correctly-cited article (得→應, 得禁止→不得禁止,
-# an inverted 但書); the fourth is a 同法 reference whose inherited citation is
-# never compared against its article. Catching them needs a semantic axis, and
-# the one this repo has misfires on 43% of correct citations.
-#
-# strict=True on purpose: if a later change catches one of these, this test
-# goes red and says so. That is how the published 21/25 stays honest in both
-# directions.
-_STILL_BLIND = {
-    "modal_de_to_ying",
-    "modal_full_negation",
-    "proviso_reversal",
-    "anaphora_tong_fa_20",
-}
+# strict=True on purpose: if a later change catches one of STILL_BLIND, this
+# test goes red and says so. That is how the published 21/25 stays honest in
+# both directions.
 
 
 def _blindspot_param(case):
-    if case.id in _STILL_BLIND:
+    if case.id in STILL_BLIND:
         return pytest.param(
             case,
             id=f"{case.id}-{case.category}",
@@ -759,6 +751,36 @@ def test_positive_control_case_agrees_with_the_frozen_json(case, live_conn):
         f"{case.id} [{case.label}]: expected flag=False, got {flagged} — "
         f"reasons={[r.reason for r in results]}"
     )
+
+
+def test_the_blindspots_harness_exits_non_zero_on_a_score_regression(live_conn):
+    """The CI step runs `python -m legal_agent.evaluation.blindspots`; it used to
+    exit 0 at any score. Each failure the pytest cases above catch must also
+    turn its exit code red."""
+    import dataclasses
+
+    from legal_agent.evaluation.blindspots import (
+        gate_problems,
+        score_blindspots,
+        score_positive_control,
+    )
+
+    report, pc = score_blindspots(live_conn), score_positive_control(live_conn)
+    assert gate_problems(report, pc) == []
+
+    def flip(outcomes, case_id):
+        return [dataclasses.replace(o, flagged=not o.flagged) if o.case.id == case_id else o
+                for o in outcomes]
+
+    caught = next(o.case.id for o in report.miss_outcomes if o.case.id not in STILL_BLIND)
+    blind = next(iter(STILL_BLIND))
+    control = report.control_outcomes[0].case.id
+    for case_id in (caught, blind, control):
+        broken = dataclasses.replace(report, outcomes=flip(report.outcomes, case_id))
+        assert gate_problems(broken, pc), case_id
+    pc_flagged = dataclasses.replace(pc, outcomes=flip(pc.outcomes, pc.outcomes[0].case.id))
+    assert gate_problems(report, pc_flagged)
+    assert gate_problems(report, dataclasses.replace(pc, outcomes=pc.outcomes[1:]))
 
 
 # ── numerals and 文號 adjacency (found by audit, 2026-10-16) ──────────────────
