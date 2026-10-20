@@ -188,9 +188,10 @@ class Client:
             raise RuntimeError(f"bot-defense rejected {url}")
         return page
 
-    def search(self, title: str, sys_code: str = "", kw: str = "") -> str:
+    def search(self, title: str, sys_code: str = "", kw: str = "") -> str | None:
         """Submit the 進階查詢 form for one 案由 (and, if given, one full-text
-        term such as 「第429條」); returns the list URL (session-bound)."""
+        term such as 「第429條」); returns the list URL (session-bound), or None
+        when the site finds nothing."""
         self.get(BASE + "default.aspx")
         form_page = self.get(BASE + "Default_AD.aspx", referer=BASE + "default.aspx")
         form = dict(_HIDDEN_RE.findall(form_page))
@@ -204,7 +205,7 @@ class Client:
         result = self.get(BASE + "Default_AD.aspx", data=form, referer=BASE + "Default_AD.aspx")
         found = _LIST_RE.search(result)
         if not found:
-            raise RuntimeError(f"no result list for 案由 {title!r}")
+            return None
         return BASE + html.unescape(found.group(0))
 
 
@@ -238,8 +239,11 @@ def list_rows(client: Client, cache: Cache, title: str, sys_code: str = "",
         else:
             if list_url is None:
                 list_url = client.search(title, sys_code, kw)
-            raw = client.get(f"{list_url}&sort=DS&page={page}", referer=BASE + "Default_AD.aspx")
-            rows, total = parse_list(raw)
+            if list_url is None:          # no hits: cached as an empty page
+                rows, total = [], 0
+            else:
+                raw = client.get(f"{list_url}&sort=DS&page={page}", referer=BASE + "Default_AD.aspx")
+                rows, total = parse_list(raw)
             payload = {"title": title, "sys": sys_code, "kw": kw, "page": page, "total": total,
                        "rows": [row.__dict__ for row in rows]}
             path.write_text(json.dumps(payload, ensure_ascii=False, indent=1), encoding="utf-8")
