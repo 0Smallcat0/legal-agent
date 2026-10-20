@@ -22,6 +22,8 @@ the citation check, the confidence tier, the deadline quotes, the action ladder.
 The model writes the prose. **The whole pipeline runs with no model at all**,
 which is also how it is tested — no network, no API key.
 
+[![Open in Spaces](https://huggingface.co/datasets/huggingface/badges/resolve/main/open-in-hf-spaces-md.svg)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
+
 **[Try it without installing anything](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)** —
 the 引用查核 tab ships a pre-filled broken answer, so the whole story takes about
 thirty seconds to check for yourself.
