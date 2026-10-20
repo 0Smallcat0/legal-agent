@@ -803,6 +803,15 @@ def test_a_docnum_in_a_later_clause_still_ends_the_citations_claim(live_conn):
     assert r.flagged is False, r.reason
 
 
+@pytest.mark.parametrize("amount", ["數萬元", "十餘萬元", "三四千元"])
+def test_an_amount_that_states_no_number_is_not_reported_as_traceable(amount, live_conn):
+    """§72 caps at 一萬元. A vague amount parses to no number, so the amount axis
+    cannot grade it, and the answer must not read as fully traceable."""
+    results = verify_answer(f"依社會秩序維護法第72條,處{amount}罰鍰。", [], conn=live_conn)
+    assert results[0].unverified is True
+    assert "全數可回溯" not in verification_status_line(results)
+
+
 def test_a_multi_list_article_flags_only_an_item_above_every_list(live_conn):
     """民法§129 has two lists (一~三, then 一~五). Which one 「第4款」 means is
     undecidable, so it stays unverified; 「第6款」 is in neither and is a ghost."""

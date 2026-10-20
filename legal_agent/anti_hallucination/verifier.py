@@ -231,6 +231,15 @@ def _amounts(text: str) -> set[int]:
     return values
 
 
+def _has_vague_amount(text: str) -> bool:
+    """An 「…元」 that names no single amount (數萬元, 十餘萬元, 三四千元): the
+    amount axis has nothing to compare, so the claim is unverified, not clean."""
+    return any(
+        _parse_number(g) is None and g.strip(",，")
+        for g in _YUAN_RE.findall(text)
+    )
+
+
 # ── bare (no-「元」) penalty amounts — the wrong_amount blind spot that drops
 # the currency character entirely (「處罰鍰十萬」) instead of inflating it ────────
 _BARE_PENALTY_WORDS = ("罰鍰", "罰金", "罰款")
@@ -931,6 +940,8 @@ def verify_answer(
                 floor=prev_end, ceiling=next_start,
             )
             content_match, cm_reason = _content_consistent(claim_scope, source.content)
+            if content_match and _has_vague_amount(claim_scope):
+                axis_unverified = True
 
         # 項/款 existence, only for citations named here: an inherited id may
         # belong to a parent law whose numbering this content cannot speak to.

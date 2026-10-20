@@ -7,7 +7,7 @@ network. It grades the VERIFIER, not a model; per-kind figures are in
 evals/RESULTS.md §4. A kind not generated here has no recall number.
 
 Must-flag kinds: nonexistent_article, ghost_suffix, fake_statute,
-wrong_amount, bare_penalty_amount, docnum_adjacent_amount, direction_flip,
+wrong_amount, bare_penalty_amount, docnum_adjacent_amount, vague_amount, direction_flip,
 period_swap, period_direction_flip, fraction_tamper, out_of_force,
 ghost_paragraph, ghost_item(_multilist), anaphora_amount, anaphora_period,
 prefixed_statute, alias_typo, and subject_swap (only with a semantic_llm —
@@ -624,6 +624,16 @@ def run_mutation_test(
                 expect_flag=False, conn=conn,
                 retrieval_first=retrieval_first, retrieved_context=ctx,
             ))
+        # vague_amount — 「數萬元」 names no amount, so the amount axis cannot
+        # grade it. Graded on the status line: it must not claim full
+        # traceability (it did once the bare 萬 stopped reading as 0).
+        if source_amounts:
+            outcomes.append(_judge(
+                "vague_amount", ref,
+                f"依{ref},違者處新臺幣數萬元罰鍰。",
+                expect_flag=True, conn=conn, expect_status_line_catch=True,
+                retrieval_first=retrieval_first, retrieved_context=ctx,
+            ))
         # real_positional_amount (positive control) — the REAL amount written
         # digit by digit (10000 -> 一〇〇〇〇), as dates and amounts often are.
         if source_amounts and max(source_amounts) >= 10:
@@ -957,7 +967,7 @@ _ALWAYS_NONEMPTY_ON_FULL_CORPUS = (
     "anaphora_amount", "anaphora_period", "real_bare_amount",
     "docnum_adjacent_amount", "real_positional_amount",
     "ghost_item_multilist", "real_item_ref_multilist",
-    "docnum_before_citation", "real_docnum_own_clause",
+    "docnum_before_citation", "real_docnum_own_clause", "vague_amount",
     "period_direction_flip", "real_period_direction",
     "fraction_tamper", "real_fraction",
 )
