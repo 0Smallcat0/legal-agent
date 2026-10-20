@@ -56,6 +56,32 @@ def test_the_earliest_keyword_in_the_case_type_wins():
     assert case_type_family("返還代墊扶養費用") == "扶養"
 
 
+@pytest.mark.parametrize("case_type,family", [
+    ("返還借用物", "使用借貸"),
+    ("返還寄託物", "寄託"),
+    ("請求履行保證債務", "保證"),
+    ("違反社會秩序維護法", "秩序"),
+    ("給付保證金等", None),            # a deposit, not a guarantee
+])
+def test_families_sessions_ask_about_have_a_case_type_keyword(case_type, family):
+    assert case_type_family(case_type) == family
+
+
+def test_new_keywords_change_no_shipped_case_type():
+    """They exist to recognise judgments not yet in the corpus; every shipped
+    案由 must map exactly as it did before they were added."""
+    import json
+
+    from legal_agent.evaluation import judgment_relevance as jr
+
+    added = {"返還借用物", "使用借貸", "寄託", "保證債務", "連帶保證", "社會秩序維護法"}
+    shipped = json.loads((ROOT / "legal_agent" / "corpus" / "judgments_v1.json")
+                         .read_text(encoding="utf-8"))
+    for record in shipped:
+        assert not any(k in (record["case_type"] or "") for k in added), record["case_type"]
+    assert {k for k, _f in jr._CASE_TYPE_FAMILIES} >= added
+
+
 @pytest.mark.parametrize("case_type,uninformative", [
     ("損害賠償", True),
     ("損害賠償等", True),

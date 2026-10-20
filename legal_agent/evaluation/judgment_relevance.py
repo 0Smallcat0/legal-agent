@@ -105,6 +105,13 @@ _CASE_TYPE_FAMILIES: tuple[tuple[str, str], ...] = (
     ("退休金", "勞動"), ("職業災害", "勞動"),
     ("承攬", "承攬"), ("工程款", "承攬"), ("修復漏水", "承攬"),
     ("修繕費", "承攬"),
+    # Families sessions ask about that had no 案由 keyword at all, so no
+    # judgment could ever count for them (judgment_coverage, RESULTS §10).
+    # None of the 386 shipped 案由 contains these; they only name new ones.
+    ("返還借用物", "使用借貸"), ("使用借貸", "使用借貸"),
+    ("寄託", "寄託"),
+    ("保證債務", "保證"), ("連帶保證", "保證"),
+    ("社會秩序維護法", "秩序"),
     ("借款", "消費借貸"), ("清償債務", "消費借貸"), ("本票", "消費借貸"),
     ("消費款", "消費借貸"), ("信用卡", "消費借貸"),
     ("價金", "買賣"), ("貨款", "買賣"), ("分期買賣", "買賣"),
