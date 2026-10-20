@@ -33,7 +33,7 @@ identically.
 | wrong-premise detection | **32/32 (100%)** | same run |
 | out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second | `honesty_probe`, 35 cases, retrieval only |
 | retrieval recall, real user wording | **348/356 (98%)**, 5.9 unexpected articles per session | `real_recall`, 168 stored sessions, k=8, `dense_fallbacks` 0 |
-| the same, after a plain `pip install` (no dense index) | **320/356** | `real_recall`, `dense_fallbacks` 168/168 |
+| the same, after a plain `pip install` (no dense index) | **321/356** (published as 320; re-measured 321 on 2026-10-20, identical on 23906c0) | `real_recall`, `dense_fallbacks` 168/168 |
 | deadlines quoted from the retrieved articles | **69/168 sessions** | counted over the 168 stored sessions |
 | first action names the reader's own documents | **83/168 sessions** | counted, same sessions |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** | counted, same sessions |

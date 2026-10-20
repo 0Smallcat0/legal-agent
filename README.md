@@ -140,7 +140,7 @@ arithmetic. No model grades legal reasoning here, and none will. See
 retriever is BM25 plus a hand-written vocabulary table plus optional bge-m3
 embeddings, and the embeddings need a local index that is built rather than
 shipped — it is derived from your corpus and it is ~12 MB of floats. Straight
-after `pip install .` the retrieval half is lexical only: **recall 320/356
+after `pip install .` the retrieval half is lexical only: **recall 321/356
 rather than 348/356**, measured. To reach the published figure:
 
 ```bash

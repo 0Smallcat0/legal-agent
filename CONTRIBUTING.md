@@ -49,7 +49,7 @@ fingerprint first, and reads its cases from `evals/` (see
 **No model — deterministic, re-runs identically:**
 
 ```bash
-python -m legal_agent.evaluation.mutation                          # verifier recall, 19 seeded kinds
+python -m legal_agent.evaluation.mutation                          # verifier recall, 24 seeded kinds
 python -m legal_agent.evaluation.mutation --retrieval-first        # same, production call shape
 python -m legal_agent.evaluation.blindspots                        # structural blind spots (frozen 25-case set)
 python -m legal_agent.evaluation.qualifier_audit                   # Tier-3 name-qualifier gate, standing check
