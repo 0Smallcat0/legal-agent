@@ -142,13 +142,17 @@ def _scan_sources() -> list[tuple[str, str]]:
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
         except (json.JSONDecodeError, UnicodeDecodeError) as exc:
-            print(f"[qualifier_audit] 略過 {path}(無法解析為 JSON):{exc}")
-            continue
+            raise SystemExit(f"[qualifier_audit] {path} 無法解析為 JSON:{exc}") from exc
         for breadcrumb, s in _iter_json_strings(data):
             sources.append((f"evals/{path.name}:{breadcrumb}", s))
     for path in sorted(JOURNAL_DIR.glob("*.txt")):
         text = path.read_text(encoding="utf-8", errors="replace")
         sources.append((f"journal/{path.name}", text))
+    # Corpus rows alone supply citations, so assert_nonzero_scan cannot see an
+    # input directory that came back empty.
+    for prefix in ("evals/", "journal/"):
+        if not any(label.startswith(prefix) for label, _ in sources):
+            raise SystemExit(f"[qualifier_audit] {prefix} 沒有可掃描的內容 — 不是完整的 repo checkout")
     return sources
 
 
