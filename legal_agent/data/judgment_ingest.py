@@ -18,6 +18,7 @@ Measurements: evals/HISTORY.md.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from pathlib import Path
 
@@ -35,6 +36,7 @@ MAIN_HEADING = "主　　文"
 _PARTY_ROLES = (
     "原告", "被告", "上訴人", "被上訴人", "聲請人", "相對人",
     "債權人", "債務人", "法定代理人", "訴訟代理人", "複代理人", "參加人",
+    "被移送人",          # 社維法 rulings (秩 字別): the person fined
 )
 _PARTY_BLOCK_END = ("上列當事人間", "當事人間", "主文")
 # Party entries that name an organisation rather than a person.
@@ -94,10 +96,17 @@ def party_names(full_text: str | None) -> set[str]:
     return names
 
 
+# A non-party the 主文 names (「對訴外人沈○○之財產執行無效果時」) is in no
+# party block, so it is read where it stands. Masked (○) names do not match.
+_NON_PARTY_RE = re.compile(r"訴外人([^\s，、。;；之及與對○Ｏ]{2,4})")
+
+
 def names_in_main_text(full_text: str | None) -> set[str]:
-    """Party names that appear inside the 主文 itself."""
+    """Personal names — parties, or 訴外人 — that appear inside the 主文 itself."""
     block = main_text(full_text) or ""
-    return {name for name in party_names(full_text) if name in block}
+    names = {name for name in party_names(full_text) if name in block}
+    names |= {m for m in _NON_PARTY_RE.findall(block) if _looks_like_person(m)}
+    return names
 
 
 def redact(full_text: str | None) -> str:
