@@ -44,7 +44,7 @@ identically.
 | judgments on the page that are ones the question should cite | **87/100 (87%)**, 35/38 questions get one, **0/38 答非所問** (before: 18/63, 11/38, 17/38) — §11 | `judgment_qa`, 38 questions, focus |
 | the same, 12 questions **held out** | **27/32 (84%)**, 11/12, 0/12 答非所問 (before: 1/23, 1/12, 8/12) | `judgment_qa evals/judgment_qa_holdout_v1.json`, never tuned against |
 | reference judgments beside a golden-set answer | 11/30 cases, 10 carrying a 主文 award figure (30-case golden v2, 2026-07-25); the 32-case run after §8's respondent ban reads 7/32, 3 with an award | counted, not scored |
-| bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190); a second sample read 16/24 and 4/208, so the bare 67% reproduces and the gated delta is inside the harness's spread | `ablation` *(model)*, llama3.1 over golden_v2, `evals/ablation_v2.json` |
+| bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190); a second sample read 16/24 and 4/208, so the bare 67% reproduces and the gated delta is inside the harness's spread. qwen2.5:7b, one bare sample at temperature 0: **76/231 (33%) untraceable, 30/231 (13%) naming a law that does not exist**, vs 7/241 flagged gated — §12 | `ablation` *(model)*, llama3.1 over golden_v2, `evals/ablation_v2.json`; qwen `evals/ablation_qwen25_bare_t0.json` |
 | the Space's 分析研判 model, Qwen2.5-7B, against llama3.1 | citations flagged **7/241 vs 27/325**; three headings 26/27 vs 27/27 | `golden_set` *(model)*, golden_v2, Qwen as Ollama Q4 locally — §12 |
 | the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them (first run, before tuning: 7/27 and 9/16) | `realworld`, 16 臺中市 公寓大廈 調處案, labels from the case table's own 法令依據 column |
 | the same thing, on 17 cases **held out** | **12/23**, 5 of 17 answered with none of them | `realworld`, 臺北市 13 + 新北市 4, never tuned against |
@@ -1340,6 +1340,48 @@ claim — every citation verified, the reasoning wrong (the limit §7 measures).
 - **The Space's index build time**, beyond a bracket: the log has no
   timestamps, and `dense index ready` appeared between 3 and 14 minutes after
   startup (after the first answer, which therefore ran on BM25 alone).
+
+### §12.1 — the same model with no pipeline at all (2026-10-21)
+
+The gated column above says how often the Space's model is caught. This asks
+what a reader gets from that model with NO pipeline: the golden_v2 question sent
+straight to `qwen2.5:7b`, asked to cite the statutes it believes apply
+(`ablation --conditions bare --temperature 0`), every citation then checked.
+
+「Untraceable to the corpus」 mixes two things — a real law the 16-statute corpus
+does not hold, and a law that does not exist — so each citation is also checked
+against the 全國法規資料庫 open data (`--official`: law.moj.gov.tw ChLaw + ChOrder,
+11,803 laws and regulations with their articles, downloaded 2026-10-21):
+
+| golden_v2, bare | citations | in the corpus, verified | real law + real article, outside the corpus | real law, no such article | **no such law** |
+|---|---|---|---|---|---|
+| qwen2.5:7b, temperature 0 | 231 | 155 (67%) | 46 (20%) | 0 | **30 (13%)** |
+| llama3.1, temperature 0.2 (the stored v2 run) | 51 | 17 (33%) | 20 (39%) | 2 (4%) | **12 (24%)** |
+
+- Every untraceable qwen citation is of a statute outside the corpus; it never
+  misquoted a statute the corpus holds. The nonexistent ones are plausible
+  names: 「噪音防制法」 ×13 (the law is 噪音管制法), 「治安維護法」 ×9, 「地方自治法」,
+  「民事調解法」, and one in Simplified characters (「勞資争议处理法」).
+- Gated, the same model is flagged on 7 of 241 citations (above), so the pipeline
+  takes the share a reader would have to trust blindly from 33% to 2.9%, and a
+  nonexistent law never reaches the page unflagged.
+- **This is ONE sample.** Temperature 0 did not make Ollama repeatable on this
+  CPU: re-running the first five questions gave different answers on three
+  of them, and one of those went from 「1 nonexistent law」 to 「3 real laws with
+  no such article」 (`evals/ablation_qwen25_bare_t0_rerun.json`). The gap — 13%
+  of citations naming a law that does not exist, against 2.9% of all citations
+  flagged once gated — is far wider than that, but the per-bucket figures are
+  not a measured spread and should not be quoted to the percent.
+- Not measured: a frontier model (no API key in the environment that ran this),
+  and llama3.1 at temperature 0 (its row is the 0.2 run, re-bucketed with
+  `--from-json`, so the two rows are not a model comparison).
+
+```bash
+python -m legal_agent.evaluation.ablation evals/golden_v2.json --models qwen2.5:7b \
+    --temperature 0 --conditions bare --out run.json            # ~3 h on 4 CPU cores
+python -m legal_agent.evaluation.ablation evals/golden_v2.json --from-json run.json \
+    --official ChLaw.json ChOrder.json                          # the split above
+```
 
 ## More
 
