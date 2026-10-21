@@ -1929,6 +1929,77 @@ goodwill and bargaining power rather than by law alone — that makes them a str
 yardstick for a legal answer, though the two decided in court are not.
 Full-pipeline reasoning was read on one model, one run.
 
+### §7.1 — can an LLM judge catch the five inversions? No. (2026-10-21)
+
+The obvious answer to "four green axes, wrong direction" is LLM-as-a-Judge: ask a
+model whether the conclusion holds. This measures whether one would have caught
+the five inversions above **before** anyone wires it in. Nothing ships; README's
+「No model grades legal reasoning here」 still holds.
+
+Each judge gets the person's opening description and the generated answer from
+`evals/realworld_answers_run1.json`, never the outcome, and one question: is the
+direction of this conclusion tenable? Positives are the 5 `opposed` answers,
+negatives the 11 `agrees` answers, both from the blind coding above; the other 8
+enter neither rate. Temperature 0, seed 0, two passes per judge. Every prompt
+and threshold was written before the first run and never touched after — the
+judge-format templates are the models' own (Prometheus 2's
+`ABSOLUTE_PROMPT_WO_REF`, JudgeLM's `conv_judge_single` cut to one answer), and
+a score in the bottom 40% of the scale counts as a flag.
+
+| judge (local, 8 GB GPU) | wrong direction caught | right direction flagged anyway | flagged of all 24 |
+|---|---|---|---|
+| Prometheus 2 7B (Q4_K_M, 1–5, flag ≤2) | **0/5** | 0/11 | 1 |
+| JudgeLM 7B (Q4_K_M, 1–10, flag ≤4) | **5/5**, 4/5 | **11/11** | 22, 21 |
+| Qwen2.5-7B-Instruct (plain 站得住/站不住) | **3/5** | **8/11** | 17 |
+| Llama3.1-8B — the model that wrote the answers | **3/5**, 4/5 | **8/11** (+4 unreadable) | 18, 19 |
+
+Where two figures appear, the two passes differed (one case each, rent-07 —
+temperature 0 on Ollama is not bit-identical). By pool, official / derived:
+Prometheus 0/3, 0/2 caught; JudgeLM 3/3, 2/2 → 1/2; Qwen 2/3, 1/2 with 4/7, 4/4
+false; Llama 2/3, 1/2 → 2/2 with 5/7, 3/4 false.
+
+**None of the four separates the two groups.** Prometheus gave 22 of 24 answers
+a 5 — it reads a fluent, cited answer as tenable, the inversions included.
+JudgeLM gave 20 of 24 a 2: it flags everything, so its 5/5 is the 11/11 seen
+from the other side. The two general models flag 60–80% of the wrong answers
+and 73% of the right ones — a coin weighted at their base rate does the same.
+Llama's four unreadable verdicts all say 站不住 without the 「判定：」 line the
+prompt asked for; read leniently it becomes 4/5 caught and 10/11 false, which is
+worse, not better. A flag is also not a reason: Qwen's catch on apt-08 says the
+law backs the committee and the answer backed the resident — the outcome backed
+the resident and the answer backed the committee. It caught the case by misreading it.
+
+**The case that started this, outside the 24.** A hand-written answer of the
+Space's 2026-10-21 shape — 「依社會秩序維護法第72條向法院提告，請求法院處罰鄰居」
+(an administrative fine imposed by the police, presented as a lawsuit): Prometheus
+5/5 (tenable), Qwen 站得住, JudgeLM 2/10, Llama 站不住. Qwen passed it although
+the plain prompt names exactly this error as its example of 站不住. JudgeLM and
+Llama catching it means nothing at their base rates. One synthetic case, not a
+measurement — included because it is the case someone will ask about.
+
+**Reading.** At 7–8B, local, Traditional-Chinese legal text, a judge pass would
+either say nothing (Prometheus) or put a warning on three answers in four
+(JudgeLM, Qwen, Llama) — and a warning on three in four teaches a reader to
+ignore it, the 31% false-positive problem in the list below at more than twice the rate.
+The judge models are English-trained (Prometheus 2 on Mistral-7B, JudgeLM on
+LLaMA-1 with a 2048 context; the longest prompt here was 2,134 tokens); a larger
+or Chinese-trained judge is a different measurement and has not been run.
+PandaLM 7B was not run: it only compares two responses and has no
+single-answer verdict.
+
+**Limits.** 5 positives and 11 negatives: small enough that one case moves a
+rate by 9–20 points, which is why the per-case marks are printed. One run of
+answers (llama3.1), one coder on the labels (§7 above). Judgment prompts were
+not tuned, by design; a prompt tuned on these 16 would be graded on its own
+training set.
+
+```bash
+# needs Ollama with qwen2.5:7b, llama3.1:8b, and the two judge GGUFs imported
+# (repos, file names, sha256 and the import command are in the comment above JUDGES)
+python -m legal_agent.evaluation.judge_direction            # all judges, 2 passes
+python -m legal_agent.evaluation.judge_direction --report   # re-print evals/judge_direction_run1.json
+```
+
 ## §8 — the seat the user is sitting in
 
 **2026-08-15. The owner brought a live dispute of his own and he is the party
@@ -2120,6 +2191,12 @@ is not allowed to become a ruler.
 ## Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
+
+- **an LLM-as-a-Judge pass to catch answers pointing the wrong way** (§7.1).
+  Four local 7–8B judges against the 5 blind-coded inversions and 11 agreements:
+  Prometheus 2 caught 0/5 (scored 22 of 24 answers 5/5); JudgeLM, Qwen2.5 and
+  Llama3.1 caught 3–5/5 only by flagging 8–11 of the 11 right answers too. No
+  judge separates the groups better than its own base rate.
 
 - **marking 「…者」 as a statutory condition.** §8 found the thresholds reaching
   the page and never being read as thresholds, and 「…者」 is how an article names
