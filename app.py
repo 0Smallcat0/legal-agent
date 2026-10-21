@@ -423,9 +423,11 @@ def _space_llm(prompt: str) -> str:
     try:
         return _SPACE_LLM(prompt)
     except Exception as exc:
+        # gr.Error's str() is the repr of its message, quotes included.
+        reason = str(getattr(exc, "message", None) or exc)
         return _stub_llm(
             prompt,
-            f"模型這次沒有執行({str(exc)[:120]}),不產生推論。"
+            f"模型這次沒有執行({reason[:300]}),不產生推論。"
             "未登入的訪客每日 GPU 額度約 2 分鐘,登入 Hugging Face 為 5 分鐘;"
             "下方條文與處理順序不受影響。",
         )

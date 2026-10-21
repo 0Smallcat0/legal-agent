@@ -1008,12 +1008,28 @@ Ollama's `bge-m3`, everything else equal:
 Same hits, same refusals. The index is built in a thread at startup, so for
 those minutes the Space retrieves with BM25 alone (321/356 here, §1).
 
+**What the first deploy broke.** Deployed as measured above, every model call
+on the Space failed — twice in a row, not intermittently — with
+`RuntimeError: No CUDA GPUs are available`, raised in `spaces`' own worker
+start before any of this project's code ran. The cause was the embedding, not
+the model: a sentence-transformers forward pass in the Space's main process,
+which has no GPU, settles CUDA's device count as 0 there, and every
+`@spaces.GPU` worker is forked from that process. Reproduced under WSL with the
+Space's exact package set, one step per process: building the embedding model,
+tokenizing, or a bare attention op leave the worker able to start; one model
+forward does not, with `spaces` loaded or not, with `sdpa` or `eager`
+attention. The embedding model now runs in a separately started process
+(`retrieval/st_worker.py`) and the main process runs no torch op. Its vectors
+are bit-identical to the in-process ones (90 texts, max difference 0.0), and the
+same WSL run then forks a worker that starts, moves the weights to the card and
+generates.
+
 **What is NOT measured.**
 
 - **Speed and quota on the Space.** `hf_llm.GPU_SECONDS` = 90 is sized from the
   longest answer measured (1,574 tokens, below; it fits down to 18 tok/s). The
-  H200 slice's real throughput is unknown until deployed; `_generate` logs tokens
-  and seconds per call, so the container log answers it. A call is admitted only
+  Space's GPU (the Hub API reports `zero-a10g`) has no measured throughput yet;
+  `_generate` logs tokens and seconds per call, so the container log answers it. A call is admitted only
   while the visitor's remaining daily quota covers the 90 s (about 2 minutes a
   day unauthenticated, 5 with an account), so an unauthenticated visitor gets
   about one answer a day; out of quota, the page renders as with no model and

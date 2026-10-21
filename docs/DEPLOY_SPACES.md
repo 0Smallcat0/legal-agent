@@ -38,7 +38,14 @@ RUNTIME_ERROR | No @spaces.GPU function detected during startup
 ```
 
 That check is now met by real work: `hf_llm._generate` is the `@spaces.GPU`
-function, defined when `app.py` imports the backend at startup. The old
+function, defined when `app.py` imports the backend at startup.
+
+**No torch op may run in the main process.** One sentence-transformers forward
+there — on CPU — and every GPU call after it fails with `RuntimeError: No CUDA
+GPUs are available` from `spaces/zero/wrappers.py` `worker_init`, which the page
+used to show only as 「('RuntimeError')」 (2026-10-21; RESULTS.md §10). That is
+why the embedding runs in `retrieval/st_worker.py`'s own process. A GPU error
+now reaches the 分析研判 box with its message, so this one would read in full. The old
 `_zerogpu_probe` shim — a decorated function nothing called — is gone, and
 `git checkout main -- .` removes it from `hf-space` on the next sync.
 
