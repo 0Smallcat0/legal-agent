@@ -2,7 +2,7 @@
 
 Deterministic, no model: mutation, blindspots, qualifier_audit,
 paragraph_bounds_audit, real_recall, honesty_probe, judgment_relevance,
-realworld, calibrate (stub answers).
+judgment_coverage, realworld, calibrate (stub answers).
 Call a real model: golden_set, ablation, mutation --semantic, realworld --answers.
 """
 from __future__ import annotations

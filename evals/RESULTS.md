@@ -39,7 +39,10 @@ identically.
 | 存證信函 template, law quoted verbatim | **168/168 sessions** | counted, same sessions |
 | articles on the page the model skipped | **8 → 18 of 21 expected** | counted on the saved sessions |
 | first reference judgment states an awarded sum | **50/60 sessions** (shipped corpus; 54/60 on the full local harvest) | counted over 60 stored sessions |
-| that judgment is the same KIND of dispute as the question | **51/88 scorable (58%)**, 146/168 sessions carry one, 58/146 案由 too generic to tell | `judgment_relevance`, both sides derived |
+| that judgment is the same KIND of dispute as the question | **107/118 scorable (91%)**, 156/168 sessions carry one, 38/156 案由 too generic to tell (was 51/88, 146/168 before §11; the ranker now uses the grader's own table — read §11 before quoting) | `judgment_relevance`, both sides derived |
+| dispute families holding ≥3 same-kind judgments | **23/25**, 6 judgments short — only 僱傭 and 消費, which no 案由 can name (was 15/25, 25 short) — §10 | `judgment_coverage`, families of the 168 sessions |
+| judgments on the page that are ones the question should cite | **87/100 (87%)**, 35/38 questions get one, **0/38 答非所問** (before: 18/63, 11/38, 17/38) — §11 | `judgment_qa`, 38 questions, focus |
+| the same, 12 questions **held out** | **27/32 (84%)**, 11/12, 0/12 答非所問 (before: 1/23, 1/12, 8/12) | `judgment_qa evals/judgment_qa_holdout_v1.json`, never tuned against |
 | reference judgments beside a golden-set answer | 11/30 cases, 10 carrying a 主文 award figure (30-case golden v2, 2026-07-25); the 32-case run after §8's respondent ban reads 7/32, 3 with an award | counted, not scored |
 | bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190); a second sample read 16/24 and 4/208, so the bare 67% reproduces and the gated delta is inside the harness's spread | `ablation` *(model)*, llama3.1 over golden_v2, `evals/ablation_v2.json` |
 | the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them (first run, before tuning: 7/27 and 9/16) | `realworld`, 16 臺中市 公寓大廈 調處案, labels from the case table's own 法令依據 column |
@@ -50,7 +53,7 @@ Environment: local, zero paid API; models via Ollama on an RTX 4060 (8 GB).
 Corpus: **2,921 articles in force across 16 everyday-law statutes, plus one
 historical version** (a repealed slice of 違反社會秩序維護法案件處理辦法§11) and the
 police routing note, which is counted separately; 1,367 harvested judgments, 386
-of them shipped — see [`legal_agent/corpus/README.md`](../legal_agent/corpus/README.md).
+of them shipped, plus 49 fetched from the public 裁判書查詢 site (435) — see [`legal_agent/corpus/README.md`](../legal_agent/corpus/README.md).
 
 **Closed-world caveat**: "not traceable to the corpus" is exactly the promise the
 system makes — it never means "this statute does not exist."
@@ -851,6 +854,278 @@ Each of these looked obviously right and lost on the numbers:
   `anaphora_tong_fa_20`, each answer against its anchor article — it fired on
   **0 of 4**. It was never wired into the verifier; it was deleted (2026-10-16)
   rather than left printing a pass on every run.
+
+## §10 — does each kind of dispute have a judgment to point at? (2026-10-20, backfilled 2026-10-21)
+
+`judgment_relevance` grades the first judgment a page shows. This asks the
+question before it: for each kind of dispute the 168 stored sessions bring, how
+many shipped judgments are of that kind, and does a consultation about it get
+one on the page at all.
+
+```bash
+python -m legal_agent.evaluation.judgment_coverage                     # this table
+python -m legal_agent.data.fjud --fill                                  # fetch what is short (public site)
+python -m legal_agent.data.judgment_backfill "$LEGAL_AGENT_HOME/fjud_cache/docs" --dry-run
+```
+
+**Family** is derived from the session's own expected articles
+(`statute_family`, 民法's 編/章/節); a session can sit in two rows, and 38 of the
+168 name no family (cross-cutting articles only) and are not in the table.
+**附判決** = the page shows ≥1 reference judgment; **同類** = ≥1 of those shown
+has a 案由 of the session's family. Both use `judgment_relevance`'s focus (the
+answer cites the right law), so they are a ceiling. **庫存同類** = shipped
+judgments whose 案由 names the family AND that cite an article of it — the only
+ones the JOIN can bring to a page under that family. **待補** = short of 3, one
+page's worth (`related_judgments` shows three).
+
+Current state — 435 shipped judgments, the code at the end of §11, `dense_fallbacks` 0:
+
+| 家族 | 諮詢數 | 附判決 | 同類 | 庫存同類 | 待補 |
+|---|---|---|---|---|---|
+| 侵權 | 12 | 12 | 10 | 92 | 0 |
+| 勞動 | 12 | 11 | 10 | 7 | 0 |
+| 承攬 | 11 | 9 | 8 | 8 | 0 |
+| 繼承 | 11 | 11 | 9 | 15 | 0 |
+| 委任 | 9 | 9 | 8 | 9 | 0 |
+| 租賃 | 9 | 9 | 9 | 12 | 0 |
+| 買賣 | 8 | 8 | 7 | 6 | 0 |
+| 住戶 | 7 | 7 | 6 | 6 | 0 |
+| 共有 | 7 | 7 | 3 | 5 | 0 |
+| 所有權 | 7 | 6 | 4 | 21 | 0 |
+| 監護 | 6 | 6 | 6 | 31 | 0 |
+| 家暴 | 5 | 5 | 5 | 8 | 0 |
+| 扶養 | 5 | 5 | 5 | 6 | 0 |
+| 消費 | 5 | 5 | 0 | 0 | 3 |
+| 不當得利 | 4 | 4 | 3 | 5 | 0 |
+| 僱傭 | 4 | 4 | 0 | 0 | 3 |
+| 婚姻 | 4 | 4 | 4 | 13 | 0 |
+| 寄託 | 4 | 4 | 3 | 3 | 0 |
+| 保證 | 3 | 3 | 2 | 3 | 0 |
+| 消費借貸 | 3 | 3 | 2 | 20 | 0 |
+| 使用借貸 | 2 | 1 | 1 | 3 | 0 |
+| 擔保物權 | 2 | 2 | 1 | 3 | 0 |
+| 親子 | 2 | 2 | 1 | 5 | 0 |
+| 贈與 | 2 | 2 | 2 | 6 | 0 |
+| 秩序 | 1 | 1 | 1 | 12 | 0 |
+
+**23 of 25 families hold ≥3 same-kind judgments; the two short (6 in all) are
+僱傭 and 消費, which no 案由 can name** (below). Before the backfill it was 15/25,
+short 25. The rows that moved, before (386 judgments, base code) → now:
+
+| 家族 | 庫存同類(補件前) | 待補(補件前) | 同類(補件前) | 同類(現在) |
+|---|---|---|---|---|
+| 承攬 | 5 | 0 | 6 | 8 |
+| 委任 | 2 | 1 | 4 | 8 |
+| 租賃 | 6 | 0 | 4 | 9 |
+| 買賣 | 2 | 1 | 6 | 7 |
+| 住戶 | 6 | 0 | 4 | 6 |
+| 共有 | 5 | 0 | 4 | 3 |
+| 不當得利 | 5 | 0 | 1 | 3 |
+| 寄託 | 0 | 3 | 0 | 3 |
+| 保證 | 0 | 3 | 0 | 2 |
+| 使用借貸 | 0 | 3 | 0 | 1 |
+| 擔保物權 | 1 | 2 | 1 | 1 |
+| 贈與 | 0 | 3 | 0 | 2 |
+| 秩序 | 0 | 3 | 0 | 1 |
+
+By the route triage actually takes on the user's raw words (now):
+
+| 分流 | 諮詢數 | 附判決 | 同類 |
+|---|---|---|---|
+| ambiguous | 74 | 66 | 38 |
+| other:family | 21 | 21 | 19 |
+| other:labor | 17 | 15 | 11 |
+| other:rent | 16 | 16 | 11 |
+| other:consumer | 11 | 10 | 4 |
+| other:leak | 8 | 8 | 6 |
+| other:safety | 7 | 7 | 7 |
+| other:traffic | 6 | 6 | 4 |
+| noise | 5 | 5 | 5 |
+| other:space | 2 | 1 | 1 |
+| other:threat | 1 | 1 | 1 |
+
+What the table says, read plainly:
+
+- **Two of the zeros are the instrument, not the corpus.** No 案由 can be read
+  as 僱傭 (「確認僱傭關係」 is mapped to 勞動) or as 消費 (consumer disputes are
+  filed as 買賣/返還價金), so those rows are 0 whatever the corpus holds, and the
+  backfill skips them and says so. Merging 僱傭 into 勞動 on the session side
+  would be the obvious fix, and it would raise `judgment_relevance`'s own
+  number by re-drawing its grader; it was not done.
+- **Four families had no 案由 keyword at all** — 使用借貸, 寄託, 保證, 秩序.
+  Keywords were added (返還借用物/使用借貸, 寄託, 保證債務/連帶保證, 社會秩序維護法)
+  before any shipped judgment carried them; the backfilled ones now do, and a
+  test holds that each reads as its keyword's family.
+- **秩序's stock is 12, not 3**: 9 of them came in for §11's acceptance set,
+  which asks about 社維§72/§87 specifically (the family fill alone took three
+  §63/§66 rulings, which answer neither question).
+- 附判決/同類 above are with `dense_fallbacks` 0 (Ollama + bge-m3 in this
+  environment). The before column was re-measured the same way; it reproduces
+  the published `judgment_relevance` 146/168 and 51/88 exactly.
+
+### How the backfill got done
+
+**First attempt (2026-10-20 10:00 Asia/Taipei): blocked.** `judgment_backfill` was written
+and tested, but the 司法院 hosts are not reachable from the environment this
+was measured in — the outbound proxy answered `CONNECT data.judicial.gov.tw:443`
+with `403 Forbidden`, body 「request blocked: no rule or allowlist entry allows
+host "data.judicial.gov.tw"」, and the same for opendata.judicial.gov.tw,
+judgment.judicial.gov.tw, law.judicial.gov.tw and www.judicial.gov.tw. There
+were also no API credentials, and the run was at 10:00 Asia/Taipei, outside the
+API's 00:00–06:00 window. No judgment was added.
+
+**Second attempt, 2026-10-21 01:17 Asia/Taipei, with outbound network open.**
+The hosts are now reachable, but both sources need an account, and none was
+registered:
+
+- `GET https://opendata.judicial.gov.tw/api/Datasets?categoryTheme4Sys=051`
+  → 200. 裁判書 is 369 datasets, one RAR per month from 199601 to 202608
+  (the newest re-issued 「20261016Update」, e.g. 202608 = datasetId 59372,
+  fileSetId 72011), plus a `Delete-Infor` CSV (fileSetId 72012). Columns as
+  published: ID、JYEAR、JCASE、JNO、JDATE、JTITLE、JFULL、JPDF. Every one is
+  `categoryDataset: "B"`; the site's own front end renders the download link
+  only when `"A"===categoryDataset || isLogin`, and login sits behind a
+  Cloudflare Turnstile.
+- `GET /api/FilesetLists/72011/file` (and 72012, and `?preview=true`) → 500,
+  `{"succeeded":false,"message":"Entity \"GetFilesetListFileQuery\" (72011) was not found."}`;
+  `GET /api/Datasets/59372` and `/59005` (199601) → 500, the same 「not found」.
+  As a control, a category-A dataset on the same host (6876, fileSetId 8322)
+  answers 200 and serves its 950,580-byte file, so the endpoint works and the
+  refusal is the B category. `GET /api/MemberData` → 401.
+- `POST https://data.judicial.gov.tw/jdg/api/Auth` with a dummy user → 200,
+  `{"error":"驗證失敗"}` — the API host now answers (the 403 is gone, and this
+  was inside the 00:00–06:00 window), but it needs `JUDICIAL_USER` /
+  `JUDICIAL_PASSWORD`, and neither is set here. `GET /` on that host is an IIS
+  403 from the origin, not the proxy.
+
+**Third attempt (2026-10-21): the public search site, no account.**
+`https://judgment.judicial.gov.tw/FJUD/` — the same court's 裁判書查詢 — serves
+its 進階查詢 form and each judgment's full text to anyone. A bare client is
+refused by its bot defence (「The requested URL was rejected by bot-defense」);
+the headers a browser sends are enough. `data/fjud.py` submits 案由 (and, for
+§11, an article number as a full-text term), walks the result pages newest
+first, and turns each result page into the importer's flat record, so
+`judgment_backfill`, `parse_judgment` and the redaction are unchanged. It
+waits ≥3 s between any two requests (not lowerable), caches every list page
+and document under `LEGAL_AGENT_HOME`, and a re-run resumes from the cache.
+
+- Family fill: 68 requests, 19 judgments — 使用借貸/保證/寄託/秩序/贈與 3 each,
+  擔保物權 2, 委任/買賣 1 — exactly the shortfall. 秩序 takes 裁定 as well as
+  判決: 社維法 cases are decided by 裁定 (社會秩序維護法§45).
+- Situation fill (§11): 57 requests, 30 more.
+- Redaction found two holes on the way and both are closed: a 社維法 ruling
+  names its person as 被移送人 (not a role the party reader knew), and a 保證
+  judgment's 主文 named a 訴外人. Either would have shipped a full name; 5 of
+  the 49 now ship header-only. The 386 already shipped are byte-identical.
+
+## §11 — judgment citation acceptance set: are the judgments shown the ones that should be? (2026-10-21)
+
+```bash
+python -m legal_agent.evaluation.judgment_qa                                  # 38 questions, tuned on
+python -m legal_agent.evaluation.judgment_qa evals/judgment_qa_holdout_v1.json # 12 questions, held out
+```
+
+`evals/judgment_qa_v1.json` is 38 plain-words questions over 22 dispute
+families, each with the articles a careful person expects and the judgments the
+page should cite. Those judgments are not hand-picked: `expected_for` lists every
+shipped judgment whose 案由 is the question's family AND that cites one of its
+articles, and the list is frozen into the file (a test re-derives it). The
+held-out file is 12 more questions over the same families, written before any
+fix in this section and never run while choosing one.
+
+Every judgment shown is graded, not just the first:
+
+- **引用正確率** — shown judgments on the question's list / all shown;
+- **命中** — questions with ≥1 listed judgment among those shown;
+- **答非所問** — questions whose page shows judgments, none of the question's
+  family (the reader is pointed at another kind of dispute);
+- **無判決** — questions whose page shows none.
+
+`focus` = the answer cites the right law (the expected articles that reached the
+window — what stage3 passes when verification clears the answer); `window` =
+the answer cites nothing verifiable and stage3 falls back to the whole retrieval
+window. All runs: `dense_fallbacks` 0, every stage graded against the same
+frozen lists; a second run of the final code is byte-identical (the harness has
+no model in it, so its spread is zero).
+
+**Tuned on (38 questions)**
+
+| stage | judgments | focus 引用正確率 | 命中 | 答非所問 | 無判決 | window 引用正確率 | window 答非所問 |
+|---|---|---|---|---|---|---|---|
+| before | 386 | 18/63 (28.6%) | 11/38 | 17/38 | 10/38 | 9/92 (9.8%) | 21/38 |
+| family backfill (§10) | 405 | 29/72 (40.3%) | 17/38 | 10/38 | 9/38 | 18/94 (19.1%) | 14/38 |
+| fix 1: situation backfill | 435 | 48/95 (50.5%) | 23/38 | 10/38 | 4/38 | 29/103 (28.2%) | 14/38 |
+| fix 2: lexicon rows | 435 | 72/100 (72.0%) | 33/38 | 3/38 | 2/38 | 39/112 (34.8%) | 9/38 |
+| fix 3: same-kind first | 435 | **87/100 (87.0%)** | **35/38** | **0/38** | 2/38 | 54/112 (48.2%) | 3/38 |
+
+**Held out (12 questions)**
+
+| stage | judgments | focus 引用正確率 | 命中 | 答非所問 | 無判決 | window 引用正確率 | window 答非所問 |
+|---|---|---|---|---|---|---|---|
+| before | 386 | 1/23 (4.3%) | 1/12 | 8/12 | 3/12 | 1/32 (3.1%) | 10/12 |
+| family backfill (§10) | 405 | 8/30 (26.7%) | 4/12 | 6/12 | 2/12 | 6/33 (18.2%) | 6/12 |
+| fix 1: situation backfill | 435 | 8/30 (26.7%) | 4/12 | 6/12 | 2/12 | 7/33 (21.2%) | 6/12 |
+| fix 2: lexicon rows | 435 | 20/32 (62.5%) | 10/12 | 1/12 | 1/12 | 18/36 (50.0%) | 2/12 |
+| fix 3: same-kind first | 435 | **27/32 (84.4%)** | **11/12** | **0/12** | 1/12 | 23/36 (63.9%) | 1/12 |
+
+Without a dense index (a plain `pip install`), the final code reads 87/100,
+35/38, 1/38 tuned and 22/29, 10/12, 0/12 held out (focus).
+
+**Which causes, in which order.** Every miss gets one cause. After the family
+backfill (405) the tuned set's misses were: 語料無應引判決 10 · 檢索漏條文 8 ·
+被擠出前三 2 · 引錯家族 1. The fixes take them from the top:
+
+1. **語料無應引判決 (the corpus has no judgment for the situation).** Ten
+   questions' families had judgments, but none citing the question's own
+   article (a 租賃 stock of 修繕 cases does not answer 押金). `fjud --qa` asks
+   the site for the family's 案由 plus the article number as a full-text term
+   and keeps only records that serve the family AND cite one of the
+   question's articles: 30 judgments, 57 requests. This fixes its own metric
+   by construction — the honest gain is what it unblocks: the misses it
+   cleared turned out to be mostly 檢索漏條文 (12 after it).
+2. **檢索漏條文 (the expected article never reached the window).** Five
+   contract types' definition articles (使用借貸, 保證, 贈與, 抵押權, 寄託 of
+   money) plus 委任 reporting, 承攬 payment and 社維§72① were unreachable from
+   plain words, so stage3 fell back to the whole window and showed other
+   disputes. Eight lexicon rows, triggers in general words. One cost a real
+   session: 「也沒有當保證人」 fired the 保證 row, and §745/§749 attached to it
+   pushed §739 out of `adult-son-owes-money` (real_recall 347 → 346); §745 and
+   §749 now have triggers of their own and the session is back to 2/2.
+3. **引錯家族 (a judgment of another kind ranked first).** `related_judgments`
+   ranked by overlap, then by stating a sum, blind to whether a §179 judgment
+   is 返還不當得利 or 給付修繕費. Among equal overlap, a judgment whose 案由 is
+   the same kind as an article it shares now goes first, and keeps its seat
+   against the sums-first sort.
+
+Remaining misses (final, tuned, focus): 被擠出前三 2 — both are pages with NO
+judgment, because focus narrows to an article no listed judgment cites
+(`deposit-money-relative`: the window holds §603, the two listed cite §602;
+`ownership-encroach`: §796, the 19 listed cite §767) — and 檢索漏條文 1
+(`mortgage-cancel-paid`: neither §860 nor §767 reaches the window; it shows a
+拍賣抵押物 ruling). Held out: `ho-loan-use-scooter`, no judgment shown.
+
+**Every other published number, same environment, `dense_fallbacks` 0:**
+
+| harness | base code, 386 | base code, 435 | final |
+|---|---|---|---|
+| `real_recall` | — | 347/356 | 347/356 (published 348/356 is from another machine; base reads 347 here) |
+| `honesty_probe` | 18/20 · 2/15 | 18/20 · 2/15 | 18/20 · 2/15 (output identical) |
+| `judgment_relevance` | 51/88 (58%), 146/168 carry one | 65/99 (66%), 156/168 | **107/118 (91%)**, 156/168; generic 案由 58/146 → 38/156 |
+| `judgment_coverage` | 15/25 families, 25 short | 23/25, 6 short | 23/25, 6 short (僱傭, 消費 only) |
+| `mutation`, `--retrieval-first`, `blindspots`, `qualifier_audit` | | | output identical to base |
+
+**Read the 91% with this in mind.** Fix 3 ranks with the same 案由→family
+table `judgment_relevance` grades with (it moved to `retrieval/families.py` so
+the library no longer imports from a harness), and `judgment_qa`'s expected
+lists are drawn with it too. The grader and the ranker therefore agree by
+construction on what 「same kind」 means; the rise from 66% to 91% is the ranker
+learning the grader's definition, not independent evidence that a reader is
+better served. The table is coarse: `upstairs-leak` now counts as a match with
+a 損害賠償(交通) judgment, because both are 侵權. No session went from match
+to mismatch, and 共有's 同類 in §10 went from 4 to 3.
+
+What none of this measures: whether a judgment shown is the same SITUATION.
+A 返還寄託物 case about a warehouse and one about cash are both 「寄託」.
 
 ## More
 
