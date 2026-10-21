@@ -211,7 +211,10 @@ def run_ablation(
     in aggregates — one dead generation must not lose the batch. When
     `checkpoint_path` is set the report JSON is rewritten after every model.
     `conditions` runs one arm alone, when the other was measured elsewhere
-    on the same cases and settings.
+    on the same cases and settings. With `checkpoint_path`, the JSON is also
+    rewritten after every case, and a run pointed at an existing file resumes:
+    case-runs already there (errors aside) are kept and not asked again — a
+    CPU run of one model is hours, and a restarted container must not cost it.
     """
     if llm_factory is None:
         from legal_agent.dialogue.ollama_llm import ollama_llm
@@ -224,12 +227,22 @@ def run_ablation(
         cases = cases[:limit]
 
     report = AblationReport()
+    done: set[tuple[str, str, str]] = set()
+    if checkpoint_path is not None and Path(checkpoint_path).exists():
+        for raw in json.loads(Path(checkpoint_path).read_text(encoding="utf-8")):
+            if raw["answer"].startswith("[ERROR]"):
+                continue
+            run = CaseRun(**{**raw, "stats": CitationStats(**raw["stats"])})
+            report.runs.append(run)
+            done.add((run.model, run.case_id, run.condition))
     with corpus_connection(conn) as conn:
         for model in models:
             llm = llm_factory(model)
             for i, case in enumerate(cases, 1):
                 arms = ((_run_bare, "bare"), (_run_gated, "gated"))
                 for runner, condition in (a for a in arms if a[1] in conditions):
+                    if (model, case.get("id", ""), condition) in done:
+                        continue
                     run = None
                     for attempt in (1, 2):
                         try:
@@ -254,8 +267,8 @@ def run_ablation(
                     )
                 if on_progress:
                     on_progress(f"[{model}] {i}/{len(cases)} {case.get('id','')}")
-            if checkpoint_path is not None:
-                report.to_json(checkpoint_path)
+                if checkpoint_path is not None:
+                    report.to_json(checkpoint_path)
     return report
 
 

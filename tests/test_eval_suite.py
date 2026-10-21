@@ -174,6 +174,27 @@ def test_ablation_can_run_one_arm(real_conn):
     assert report.aggregate("fake-a", "gated").total == 0
 
 
+def test_ablation_resumes_from_its_checkpoint(real_conn, tmp_path):
+    out = tmp_path / "abl.json"
+    calls = []
+
+    def factory(model):
+        def llm(prompt):
+            calls.append(prompt)
+            return FAKE_ANSWER
+        return llm
+
+    first = run_ablation(FIXTURE, models=["fake-a"], llm_factory=factory, conn=real_conn,
+                         conditions=("bare",), limit=1, checkpoint_path=out)
+    assert len(first.runs) == 1 and len(calls) == 1
+    # Same file, whole set: the case already there is kept, only the rest is asked.
+    second = run_ablation(FIXTURE, models=["fake-a"], llm_factory=factory, conn=real_conn,
+                          conditions=("bare",), checkpoint_path=out)
+    assert len(second.runs) == 2 and len(calls) == 2
+    assert second.aggregate("fake-a", "bare") == first.aggregate("fake-a", "bare") + \
+        second.runs[1].stats
+
+
 def test_strip_think_plain_passthrough():
     assert strip_think("<think>abc</think>答案") == "答案"
     assert strip_think("答案") == "答案"
