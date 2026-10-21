@@ -46,6 +46,21 @@ def test_space_quota_error_renders_the_no_model_page(monkeypatch):
     assert "第" not in text.split("「分析研判」")[1]          # no citation invented on failure
 
 
+def test_a_gpu_worker_error_reaches_the_page_with_its_message(monkeypatch):
+    # ZeroGPU forwards only the class name of a worker exception unless it is a
+    # gr.Error; the deployed page read 「模型這次沒有執行('RuntimeError')」.
+    import app
+    from legal_agent.dialogue import hf_llm
+
+    def broken(*a):
+        raise RuntimeError("No CUDA GPUs are available")
+
+    monkeypatch.setattr(hf_llm, "_generate_unguarded", broken)
+    monkeypatch.setattr(app, "_SPACE_LLM", lambda p: hf_llm._generate(p, "m", 0.0, 1))
+    text = app._space_llm("prompt")
+    assert "(RuntimeError: No CUDA GPUs are available)" in text     # no repr quotes
+
+
 def test_analysis_llm_prefers_ollama_then_the_space_model_then_the_stub(monkeypatch):
     import app
 

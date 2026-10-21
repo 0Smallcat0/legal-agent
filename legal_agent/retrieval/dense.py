@@ -44,10 +44,11 @@ _BATCH = 64
 
 @lru_cache(maxsize=1)
 def _st_model():
-    from sentence_transformers import SentenceTransformer
+    # A separate process, CPU: a model forward in the Space's main process
+    # breaks every @spaces.GPU call after it (st_worker.py says why).
+    from legal_agent.retrieval.st_worker import STProcess
 
-    # CPU on purpose: on ZeroGPU a real GPU exists only inside @spaces.GPU.
-    return SentenceTransformer(ST_EMBED_MODEL, device="cpu")
+    return STProcess()
 
 
 def embed_texts(

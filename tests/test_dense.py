@@ -6,6 +6,8 @@ Run:  python -m pytest tests/test_dense.py -q
 """
 from __future__ import annotations
 
+import pytest
+
 from legal_agent.retrieval.dense import rrf_fuse
 
 A = ("甲法", "第1條", "2020-01-01")
@@ -114,3 +116,41 @@ def test_st_backend_embeds_in_process_and_never_calls_ollama(monkeypatch):
     monkeypatch.setattr(dense.urllib.request, "urlopen", no_ollama)
     out = dense.embed_texts(["甲", "乙"])
     assert out.dtype == np.float32 and out.shape == (2, 2)
+
+
+# A stand-in worker speaking st_worker's protocol: row i is [len(text_i), i].
+_FAKE_WORKER = """
+import json, sys
+import numpy as np
+from legal_agent.retrieval.st_worker import write_matrix
+for line in sys.stdin.buffer:
+    texts = json.loads(line)["texts"]
+    write_matrix(sys.stdout.buffer, np.array([[len(t), i] for i, t in enumerate(texts)]))
+"""
+
+
+def test_st_process_trades_text_for_rows_over_the_pipe_and_reuses_one_worker():
+    import sys
+
+    import numpy as np
+
+    from legal_agent.retrieval.st_worker import STProcess
+
+    proc = STProcess([sys.executable, "-c", _FAKE_WORKER])
+    first = proc.encode(["噪音", "押金不退"])
+    assert first.dtype == np.float32
+    assert first.tolist() == [[2.0, 0.0], [4.0, 1.0]]
+    worker = proc._proc
+    assert proc.encode(["甲"]).tolist() == [[1.0, 0.0]]
+    assert proc._proc is worker                 # not restarted per query
+    proc._proc.kill()
+
+
+def test_a_dead_worker_raises_so_retrieval_can_fall_back():
+    import sys
+
+    from legal_agent.retrieval.st_worker import STProcess
+
+    proc = STProcess([sys.executable, "-c", "import sys; sys.stdin.readline()"])
+    with pytest.raises(RuntimeError, match="exited"):
+        proc.encode(["甲"])

@@ -61,7 +61,26 @@ def preload(model_id: str | None = None, **from_pretrained) -> tuple:
     return _LOADED[model_id]
 
 
+def _visible(exc: Exception) -> Exception:
+    """ZeroGPU hands the caller only the CLASS NAME of an exception raised in
+    its GPU worker (the page read 「模型這次沒有執行('RuntimeError')」, 2026-10-21);
+    the message reaches only the owner's container log. A `gr.Error` is the one
+    kind it passes through whole, so the reason gets wrapped in one."""
+    try:
+        import gradio as gr
+    except ImportError:
+        return exc
+    return gr.Error(f"{type(exc).__name__}: {exc}"[:300])
+
+
 def _generate(prompt: str, model_id: str, temperature: float, max_new_tokens: int) -> str:
+    try:
+        return _generate_unguarded(prompt, model_id, temperature, max_new_tokens)
+    except Exception as exc:
+        raise _visible(exc) from exc
+
+
+def _generate_unguarded(prompt: str, model_id: str, temperature: float, max_new_tokens: int) -> str:
     import torch
 
     tokenizer, model = _LOADED[model_id]
