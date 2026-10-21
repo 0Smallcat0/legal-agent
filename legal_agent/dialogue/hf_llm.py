@@ -29,10 +29,11 @@ MAX_NEW_TOKENS = 2048
 # ZeroGPU admits a call against this, not against the time it ends up using: a
 # visitor whose remaining daily quota is below it is refused outright
 # (unauthenticated 2 min/day, free account 5), and a call that runs past it is
-# aborted. 90 s fits the longest measured answer (1,574 tokens, RESULTS.md §12)
-# down to 18 tok/s. The Space's own speed is not measured yet: _generate logs
-# it per call.
-GPU_SECONDS = 90
+# aborted. Measured on the Space: 593 tokens in 15.6 s from a 2,703-token
+# prompt, 38 tok/s (RESULTS.md §12). 60 s covers the 2,048-token cap (~54 s)
+# and the longest answer measured, 1,574 tokens (~41 s) — and gives an
+# unauthenticated visitor two answers a day where 90 s gave one.
+GPU_SECONDS = 60
 
 _LOADED: dict[str, tuple] = {}
 
