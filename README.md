@@ -80,7 +80,8 @@ to it.</sub>
 [RESULTS.md](evals/RESULTS.md) every number, its harness, and the ones that went
 down · [SPEC.md](SPEC.md) design · [CONTRIBUTING.md](CONTRIBUTING.md) the bar a
 change has to clear · [AGENTS.md](AGENTS.md) the same plus the measurement traps ·
-[DEPLOY_SPACES.md](docs/DEPLOY_SPACES.md) hosting
+[DEPLOY_SPACES.md](docs/DEPLOY_SPACES.md) hosting · [CHANGELOG.md](CHANGELOG.md)
+what changed
 
 ```bash
 pip install .[demo] && python app.py                     # the demo, locally

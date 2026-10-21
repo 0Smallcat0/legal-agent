@@ -974,10 +974,12 @@ Each of these looked obviously right and lost on the numbers:
 
 - **ranking reference judgments by 案由 family** — derivable at runtime from the
   articles already retrieved, no LLM, and it would obviously raise the 51/88.
-  That is exactly why it is not shipped: the harness scores by the same map, so
-  the ranker would be graded on its own target and the number would rise without
-  anything getting better. Shipping it needs a relevance signal the ranker does
-  not consult.
+  That is exactly why it was not shipped as the ranking: the harness scores by
+  the same map, so the ranker would be graded on its own target and the number
+  would rise without anything getting better. It shipped on 2026-10-21 only as a
+  tiebreak among equal article overlap (§11, fix 3), and §11 reads the 91% it
+  produced as the ranker learning the grader's table, not as independent
+  evidence.
 - **making the award sort a tiebreak instead of the primary key.**
   `related_judgments` sorts by shared-article count and then re-sorts the whole
   candidate list by 「states an award」, so a case sharing one article with a sum
