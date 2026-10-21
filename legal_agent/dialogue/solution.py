@@ -1,14 +1,15 @@
-"""Stage 4 — Solution output (spec §3.2). Rule-based, NO LLM, NO retrieval.
+"""Stage 4 — Solution output (spec §3.2). Rule-based, NO LLM, NO retrieval of its own.
 
-Give a RANKED escalation ladder for 住宅噪音, cheapest / lowest-effort FIRST and
-litigation LAST ("don't rush to sue" — spec §3.2). Rungs are selected from the
-collected facts (e.g. the 管委會 rung only for 公寓大廈; steps already tried are
-marked done and the next actionable rung is highlighted). Costs/times are
+A RANKED escalation ladder, cheapest / lowest-effort FIRST and litigation LAST
+("don't rush to sue" — spec §3.2). `build_solution_ladder` is the hand-built
+住宅噪音 ladder (管委會 rung only for 公寓大廈; tried steps marked done, the next
+actionable rung highlighted); `build_generic_ladder` covers every other domain;
+`build_respondent_ladder` serves the side being complained about. Costs/times are
 QUALITATIVE (免費 / 低 / 中 / 高) — no NT$ figures are invented.
 
-Mechanisms 3/4/5 are NOT here (next step). The `retrieved` argument is accepted
-for a future refinement (attaching verbatim article text to legal_basis) but is
-unused in v1.
+`retrieved` is Stage 3's retrieval window, reused, never re-queried: it supplies
+the verbatim deadline rung, the generic letter's 依據 lines, the authority rung,
+the respondent's thresholds, and the "also retrieved" block.
 """
 from __future__ import annotations
 
@@ -58,7 +59,6 @@ class SolutionLadder:
     note: str
     letter_template: str | None = None
     also_retrieved: str | None = None
-    specific_venue_suspected: bool = False
     # The complainant's heading is an escalation promise. A respondent is not
     # escalating anything, and the heading is the first line he reads.
     header: str = "建議處理順序(由低成本 → 高成本;打官司是最後手段):"
@@ -79,9 +79,7 @@ class SolutionLadder:
             lines.append(f"   下一步:{r.next_step}")
         lines.append("")
         lines.append("※ " + self.note)
-        # Measured: the 住宅噪音 rung said 「見 letter_template」 and nothing ever
-        # printed it — render() left it out and neither run.py nor app.py picked it
-        # up. A reader was pointed at a template that did not exist on the page.
+        # Rungs point at the letter template, so it must be on the page.
         if self.also_retrieved:
             lines.append("")
             lines.append(self.also_retrieved)
@@ -143,8 +141,6 @@ _TRIED_KEYWORDS = {
     "letter": ("存證",),
     "litigation": ("訴訟", "起訴", "提告", "告他"),
 }
-# §9 "特定場所" hints (near-neighbour home noise does NOT go this route).
-_SPECIFIC_VENUE = ("工廠", "娛樂", "營業", "營建", "擴音")
 
 
 def _is_apartment(building_type: str) -> bool:
@@ -159,11 +155,6 @@ def _already_tried(key: str, actions_taken: str) -> bool:
     return any(kw in a for kw in _TRIED_KEYWORDS.get(key, ()))
 
 
-def _is_specific_venue(noise_type: str) -> bool:
-    nt = noise_type or ""
-    return any(kw in nt for kw in _SPECIFIC_VENUE)
-
-
 GENERIC_NOTE = (
     "通用流程:主管機關依問題領域而異(勞資→勞工局、消費→消保官/消基會、"
     "租屋→地方政府住宅主管機關、車禍→鄉鎮市調解委員會/法院)。"
@@ -173,9 +164,9 @@ GENERIC_NOTE = (
 
 # Which authority actually handles a complaint, keyed by the statute the case
 # turned out to be about. Procedural pointers only — no legal claims, nothing
-# that needs to be verifiable against the corpus. Measured need: six lived
-# sessions all got the same 「勞工局/消保官/住宅主管機關等」 catch-all, which tells
-# a 打工族 nothing about where to actually file.
+# that needs to be verifiable against the corpus. (Six lived sessions had all
+# got the same 「勞工局/消保官/住宅主管機關等」 catch-all, which says nothing about
+# where to file.)
 _AUTHORITY_BY_STATUTE: tuple[tuple[str, str, str], ...] = (
     ("勞動基準法", "勞工局 / 勞動檢查機構申訴",
      "向工作地的勞工局(勞動檢查處)申訴,或申請勞資爭議調解;申訴可具名或匿名"),
@@ -205,24 +196,20 @@ _LEGAL_AID_RUNG = Rung(
 
 # A period only counts when the sentence that carries it is ABOUT a deadline —
 # 「二年以內」 in §949 is one, 「二年」 inside a definition is not. Both halves must
-# be present in the same sentence, and the sentence is quoted VERBATIM: measured
-# this round, the 8B model asked to spot deadlines invented 「半年內應催告」 for
-# 民法§254, which contains no period at all.
+# be present in the same sentence, and the sentence is quoted VERBATIM, because
+# the model invents deadlines (evals/HISTORY.md).
 _PERIOD = re.compile(r"[一二三四五六七八九十兩0-9]+\s*(?:年|個月|月|日|星期|週)")
 # A right dying — that is what the user has to act before.
 _LOSES_RIGHT = ("時效", "不行使", "消滅", "屆滿")
 # A period that is merely a window to do something in. Kept, but ranked below.
 _PLAIN_PERIOD = ("以內", "期間", "逾期")
 # 消保法§11-1's 「三十日以內之合理期間，供消費者審閱」 is a period the SELLER owes,
-# not a deadline the reader can miss. Measured: it was heading the list for the
-# 冷氣修四次 session, above the §365 六個月 that actually ends his claim.
+# not a deadline the reader can miss.
 _NOT_A_DEADLINE = ("審閱",)
 
 
-# Things a person says they already have. The first rung used to tell everyone
-# 「把事實與證據整理成一頁時間軸」 whether they had lost a moving box or a wedding
-# video; naming what THEY said they hold is the difference between a checklist and
-# an instruction. Nothing here is suggested — a word only appears if the user typed it.
+# Things a person says they already have, so the first rung names THEIR evidence.
+# Nothing here is suggested — a word only appears if the user typed it.
 _EVIDENCE_WORDS = (
     "合約", "契約", "收據", "發票", "匯款紀錄", "匯款單", "轉帳紀錄", "對話紀錄",
     "LINE", "簡訊", "email", "照片", "影片", "監視器", "錄音", "診斷證明", "估價單",
@@ -246,21 +233,16 @@ def _evidence_next_step(collected_facts: dict) -> str | None:
 def _also_retrieved_block(retrieved, cited) -> str | None:
     """Articles retrieval found that the ANSWER never mentioned, quoted verbatim.
 
-    Measured: the answer cites 20 of 56 retrieved articles across eight sessions, and
-    two attempts to make the 8B model cite more both backfired — ranking the tail by
-    the reader's wording cost expected articles (9→7), and ordering it to walk a
-    numbered list cut citations further (20/56 → 16/56). So the fix is not to argue
-    with the model: the articles it skipped are printed for the reader instead."""
+    The model cites few of the retrieved articles and prompting it to cite more
+    lost (evals/RESULTS.md §3), so the skipped ones are printed for the reader."""
     if not retrieved or not cited:
         return None
     wanted = {(sid, ano) for sid, ano in cited}
     missing = [s for s in retrieved if (s.statute_id, s.article_no) not in wanted]
     if not missing:
         return None
-    # An article that states a period is one the reader can be caught by, so it leads.
-    # Read end to end, the 買到贓車 page said his good faith defeated the claim and then
-    # printed §949 — 原占有人…二年以內…得請求回復其物 — three lines below, in the
-    # deadline rung only: §949 sat sixth in retrieval order and this list showed five.
+    # An article that states a period is one the reader can be caught by, so it
+    # leads — otherwise one sitting sixth in retrieval order never shows.
     missing.sort(key=lambda s: not _deadline_sentences([s]))
     body = "\n".join(
         f"・{s.statute_id}{s.article_no}:{(s.content or '').splitlines()[0]}"
@@ -278,10 +260,7 @@ def _generic_letter(retrieved, collected_facts: dict) -> str | None:
     — 主旨 demands that 台端 do something 以維本人權益, and 說明五 announces that the
     sender will 依法主張權利 if the deadline passes.
 
-    The docstring used to claim 「the tool does not draft assertions of fact or law
-    on anyone's behalf」, and that was false in the same way 「this can never
-    launder an invented statute」 was: true of the statute quotes, not of the
-    letter around them. It is a claimant's letter, and `build_generic_ladder`
+    So it is a claimant's letter, not a neutral one: `build_generic_ladder`
     withholds it from anyone who has not said they are the one asserting."""
     if not retrieved:
         return None
@@ -318,8 +297,7 @@ def _generic_letter(retrieved, collected_facts: dict) -> str | None:
 def _deadline_sentences(retrieved) -> list[tuple[str, str]]:
     """(article ref, verbatim sentence) for every retrieved article whose own text
     states a period. Nothing is paraphrased and nothing is computed. Sentences
-    about a right EXPIRING come first — measured, the plain-period ones were
-    crowding them out (§805's 報酬請求權 six months above §949's two years)."""
+    about a right EXPIRING rank ahead of plain-period ones."""
     ranked: list[tuple[int, str, str]] = []
     for statute in retrieved or []:
         ref = f"{statute.statute_id}{statute.article_no}"
@@ -377,10 +355,8 @@ def _authority_rung(retrieved) -> Rung:
 def _answer_first(retrieved, cited) -> list:
     """Retrieval order with the articles the ANSWER actually cited moved to the front.
 
-    Measured: 買到贓車's letter quoted §950/§805/§807 — 遺失物拾得 — because they head
-    the retrieval window, while §949 and §948, which the case turns on and which the
-    answer cited, sat sixth and eighth. Ranking by retrieval alone cannot tell whose
-    right an article states; the answer's own citations can."""
+    Retrieval rank cannot tell whose right an article states; the answer's own
+    citations can."""
     if not retrieved or not cited:
         return list(retrieved or [])
     wanted = {(sid, ano) for sid, ano in cited}
@@ -389,19 +365,11 @@ def _answer_first(retrieved, cited) -> list:
     return head + tail
 
 
-# Tried and NOT shipped: ranking the un-cited tail by how many character bigrams each
-# article shares with the reader's own sentence. Expected articles reaching the
-# letter's three 依據 lines went 9 → 7 across seven sessions — 買到贓車 and 借名登記
-# each lost one. Lexical overlap with a lay description is not a signal for which
-# article governs, and the retrieval order it replaced was already better.
-
-
-# The venue that actually hears this kind of dispute. Triage has told these five
-# apart since corpus v2 and every one of them was pointed at 「鄉鎮市調解委員會」,
-# which is right for a neighbour quarrel and wrong for most of the rest: a car
-# crash is paid by 強制險 long before anyone mediates, a consumer complaint has a
-# free hotline and a 消保官, and family matters are legally required to attempt
-# 調解 first. Free/low-cost steps stay ahead of paid ones, litigation stays last.
+# The venue that actually hears each kind of dispute. 「鄉鎮市調解委員會」 is right
+# for a neighbour quarrel and wrong for most of the rest: a car crash is paid by
+# 強制險 long before anyone mediates, a consumer complaint has a free hotline and a
+# 消保官, and family matters must attempt 調解 first. Free/low-cost steps stay
+# ahead of paid ones, litigation stays last.
 _GENERIC_MEDIATE = Rung(
     "mediate", "調解",
     "鄉鎮市(區)調解委員會或主管機關調解,免費且具執行力", (),
@@ -482,13 +450,9 @@ _DOMAIN_RUNGS: dict[str, list[Rung]] = {
 }
 
 
-# Rungs that only make sense when the READER is the one asserting a claim.
-# Measured 2026-08-15: every one of the nine domain rungs, plus negotiate,
-# authority and litigation, is phrased 申請 / 申訴 / 檢舉 / 聲請 — 「you go to an
-# authority and assert」. A landlord accused of keeping a deposit, an employer
-# under a labour complaint, a seller a buyer reported, a driver blamed for the
-# crash: each was handed 「report the other side」. 39bdece fixed the noise ladder
-# only, and the generic path is where four of the five triage domains live.
+# Rungs that only make sense when the READER is the one asserting a claim: each
+# is 申請 / 申訴 / 檢舉 / 聲請 against the other side. Handed to a landlord accused of
+# keeping a deposit, or a driver blamed for the crash, it says 「report the other side」.
 _ASSERTING_RUNGS = frozenset({
     "negotiate", "authority", "litigation",
     "labor_report", "consumer_hotline", "compulsory_insurance",
@@ -568,10 +532,8 @@ def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
         ),
         *_DOMAIN_RUNGS.get(domain, [_GENERIC_MEDIATE]),
         _authority_rung(retrieved),
-        # When retrieval came back EMPTY the honesty gate has just told the user
-        # 「這個問題我的資料庫沒有涵蓋」 — and then the ladder used to point at
-        # 蒐證 as the next step. The useful next step for a question this tool
-        # cannot answer is a free consultation with someone who can.
+        # When retrieval came back EMPTY the honesty gate has just said the corpus
+        # does not cover this, so the useful next step is a free consultation.
         replace(_LEGAL_AID_RUNG, recommended=not retrieved),
         Rung(
             "litigation", "民事訴訟(最後手段)",
@@ -611,12 +573,9 @@ def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
 
 
 # ── The respondent's side ────────────────────────────────────────────────────
-# Measured 2026-08-15 on the owner's own live dispute (journal/): run against the
-# party being complained about, this ladder recommended 報警(110) with 社維法§72 —
-# the article that fines him — printed as its 依據; and once his own words were
-# filed into fields it marked 管委會 and 報警 已嘗試 and recommended 調解, then
-# 存證信函, then 民事訴訟 against the neighbour who had complained about him. The
-# 存證信函 template said 請停止製造噪音, for him to send.
+# The complainant's ladder, handed to the party being complained about, tells him
+# to report himself (報警 with the 社維法§72 that fines him as 依據) and to sue the
+# neighbour who complained. See evals/RESULTS.md §8.
 #
 # Nothing here is an inverted ladder. There is no cheapest-first escalation for
 # someone who is not asserting a claim, and inventing one so there is something
@@ -720,7 +679,8 @@ def build_solution_ladder(collected_facts: dict, retrieved=None,
 
     Cheapest/lowest-effort first, litigation last; the 管委會 rung is included only
     for 公寓大廈; rungs already attempted are marked done and the first not-done rung
-    is flagged as the recommended next step. `retrieved` is unused in v1.
+    is flagged as the recommended next step. `retrieved` supplies the deadline
+    rung when it carries a time-limited article.
 
     `stance` is the seat the user is in. A respondent gets `build_respondent_ladder`
     instead — the rungs below are the complainant's actions, and handing them to
@@ -732,7 +692,6 @@ def build_solution_ladder(collected_facts: dict, retrieved=None,
     facts = collected_facts or {}
     building_type = facts.get("building_type", "")
     actions_taken = facts.get("actions_taken", "")
-    noise_type = facts.get("noise_type", "")
 
     rungs: list[Rung] = []
     for base in _BASE_RUNGS:
@@ -746,10 +705,6 @@ def build_solution_ladder(collected_facts: dict, retrieved=None,
             rungs[i] = replace(r, recommended=True)
             break
 
-    # The noise ladder ignored `retrieved` entirely, so the one scenario with a
-    # hand-built ladder was also the only one that never surfaced a period —
-    # measured on the owner's live run, where no deadline appeared anywhere and
-    # the reason was structural rather than a judgement that none applied.
     # A deadline is the only thing here that cannot be repaired once missed, so
     # it leads, exactly as it does in the generic ladder.
     deadline = _deadline_rung(retrieved)
@@ -760,5 +715,4 @@ def build_solution_ladder(collected_facts: dict, retrieved=None,
         rungs=rungs,
         note=EPA_NOTE,
         letter_template=LETTER_TEMPLATE,
-        specific_venue_suspected=_is_specific_venue(noise_type),
     )

@@ -106,28 +106,19 @@ def load_judgments(
     覆蓋先前取得之內容」. Overwritten rows count as inserted (they are the
     current content); only genuinely unchanged duplicates count as skipped.
     """
+    verb = "INSERT OR REPLACE" if replace else "INSERT OR IGNORE"
     inserted = skipped = 0
     for row in rows:
-        if replace:
-            conn.execute(
-                "INSERT OR REPLACE INTO judgments (jid, court, year, case_type, "
-                "issues, cited_articles, holding, full_text) VALUES "
-                "(:jid, :court, :year, :case_type, :issues, :cited_articles, "
-                ":holding, :full_text)",
-                row,
-            )
+        cursor = conn.execute(
+            f"{verb} INTO judgments (jid, court, year, case_type, issues, "
+            "cited_articles, holding, full_text) VALUES "
+            "(:jid, :court, :year, :case_type, :issues, :cited_articles, "
+            ":holding, :full_text)",
+            row,
+        )
+        if cursor.rowcount:
             inserted += 1
-            continue
-        try:
-            conn.execute(
-                "INSERT INTO judgments (jid, court, year, case_type, issues, "
-                "cited_articles, holding, full_text) VALUES "
-                "(:jid, :court, :year, :case_type, :issues, :cited_articles, "
-                ":holding, :full_text)",
-                row,
-            )
-            inserted += 1
-        except sqlite3.IntegrityError:
+        else:
             skipped += 1
     conn.commit()
     return inserted, skipped

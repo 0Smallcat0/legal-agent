@@ -33,12 +33,13 @@ Because output is consumed only by the owner (not distributed to third parties):
 > at runtime. The implementation puts the model behind a `str -> str` seam with
 > three interchangeable backends — `manual` (prints the assembled prompt to paste
 > into any chat; no key, no model), `ollama` (local, free; the default for real
-> use), and `anthropic` (paid). Selected in
-> [`legal_agent/config.py`](legal_agent/config.py).
+> use), and `anthropic` (paid). Selected with the environment variable
+> `LEGAL_AGENT_PROVIDER` (read in [`legal_agent/config.py`](legal_agent/config.py);
+> default `ollama`).
 >
 > Two consequences the original spec did not anticipate, both good. The whole
 > pipeline is testable against a fake model — no network and no key, which is how
-> all 433 tests run. And everything deterministic (retrieval, the verifier, the
+> the whole test suite runs. And everything deterministic (retrieval, the verifier, the
 > honesty tier, deadline quotes, the action ladder, the 存證信函 template) works
 > with **no model at all**, so the hosted demo needs neither GPU nor key.
 
@@ -253,11 +254,11 @@ Each layer maps to one package under `legal_agent/`:
 
 | Layer | Package | What it does |
 |---|---|---|
-| Data | `data/` | time-sliced SQLite corpus, hand-entry + official-XML ingest (single-open-slice guard), 裁判書API harvester, verbatim 主文 reader, one-call `bootstrap.ensure_corpus` |
+| Data | `data/` | time-sliced SQLite corpus, official-XML ingest (single-open-slice guard), 裁判書API harvester, verbatim 主文 reader, one-call `bootstrap.ensure_corpus` |
 | Retrieval | `retrieval/` | BM25 (jieba + CJK bigrams) + local bge-m3 dense via RRF with measured reserved seats; 口語→法條語彙 table used both to rank AND as an exact-phrase channel; point-in-time filter before ranking; reference-judgment join |
 | Anti-hallucination | `anti_hallucination/` | the five gates — verifier, honesty tier, three-section structure, anti-sycophancy |
 | Dialogue | `dialogue/` | four-stage clinic flow; model-driven intake with deterministic guards, scripted checklist as the no-model fallback; solution ladder |
-| Evaluation | `evaluation/` | golden set, seeded-error mutation test, bare-vs-gated ablation, threshold calibration, real-session recall |
+| Evaluation | `evaluation/` | one harness per published number — the full list, and which need a model, is in [CONTRIBUTING.md](CONTRIBUTING.md#the-harnesses) |
 
 Two design choices worth naming. **The LLM sits behind a `str -> str` seam**
 with three swappable backends — `manual` (free, paste into any chat), `ollama`
@@ -266,9 +267,9 @@ model: no network, no key. **Retrieval fires exactly once per consultation**, on
 the complete fact set after intake (multi-turn re-retrieval is the documented
 cause of RAG degradation) — enforced by a test, not a convention.
 
-**Scope today.** One jurisdiction (Taiwan). 2,922 articles across 16 everyday
-statutes plus a police routing note and the corpus's first capped historical
-slice, imported from the official 全國法規資料庫 bulk XML with the original
+**Scope today.** One jurisdiction (Taiwan). 2,921 articles across 16 everyday
+statutes, all in force, plus a police routing note and the corpus's first capped
+historical slice (one repealed version of 違反社會秩序維護法案件處理辦法§11), imported from the official 全國法規資料庫 bulk XML with the original
 hand-verified 11 articles kept as a character-for-character golden sample. One
 fully built scenario (住宅噪音) with its own checklist and action ladder; a
 generic clinic flow covers everything else. 1,367 judgments stay REFERENCE tier
@@ -296,6 +297,7 @@ python -m legal_agent.data.source_ingest proposals.json
 python -m legal_agent.data.judicial_api --limit 200
 ```
 
-Zero-setup alternative to a local model: set `LLM_PROVIDER = "manual"` in
-[`legal_agent/config.py`](legal_agent/config.py) and the agent prints the
-assembled prompt for you to paste into any chat — no model, no key.
+Zero-setup alternative to a local model: run with `LEGAL_AGENT_PROVIDER=manual`
+(an environment variable — no source edit; `pip install` puts `config.py` in
+site-packages) and the agent prints the assembled prompt for you to paste into
+any chat — no model, no key.

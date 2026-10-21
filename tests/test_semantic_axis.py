@@ -14,15 +14,9 @@ counter that makes that state visible, the way `real_recall` prints
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.anti_hallucination.semantic_check import (  # noqa: E402
+from legal_agent.anti_hallucination.semantic_check import (
     reset_semantic_unreached,
     semantic_consistent,
     semantic_unreached_count,

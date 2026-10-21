@@ -2,12 +2,10 @@
 
 The golden set scores the pipeline on cases written FOR the pipeline. This
 harness scores retrieval on 168 problems typed into the assistant as ordinary
-people type them — by the AUTHOR, not by outside users (`evals/HISTORY.md` §6
-and §7 name the first twelve), and vocabulary rows were curated against them
-through 2026-07-31, so this is a tuned-on number in the sense RESULTS.md §7
-spells out for 25/27. This line said 「nine」 for weeks after the file passed a
-hundred, and it was the only place the provenance was written down — the transcripts that exposed most of the 2026-07-25 defect
-list (evals/HISTORY.md §6).
+people type them — by the AUTHOR, not by outside users (`evals/HISTORY.md` §A6
+and §A7 name the first twelve). Vocabulary rows were curated against them
+through 2026-07-31, so this is a TUNED-ON number (in the sense RESULTS.md
+uses for 25/27).
 
 Deliberately narrow:
   * input is the user's own turns, so the number does not depend on how well
@@ -20,6 +18,9 @@ It measures RECALL, not legal correctness. A hit means the article reached the
 window the model may cite from; what the model then does with it is graded by
 the golden set and, for the parts that must be right, by the gates.
 
+Confirm the printed dense_fallbacks is 0 before comparing to a published
+number: without dense retrieval the hybrid silently degrades to pure BM25.
+
 Run:  python -m legal_agent.evaluation.real_recall [evals/real_sessions.json]
 """
 from __future__ import annotations
@@ -27,6 +28,9 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from pathlib import Path
+
+from legal_agent.config import PROJECT_ROOT
+from legal_agent.evaluation import corpus_connection
 
 
 @dataclass
@@ -47,8 +51,6 @@ class CaseRecall:
 class RecallReport:
     cases: list[CaseRecall]
     # Queries whose dense half silently failed and fell back to pure BM25.
-    # Without this the harness prints a number and never says which retriever
-    # produced it — see render() and RESULTS.md, 2026-08-05.
     dense_fallbacks: int = 0
 
     @property
@@ -63,17 +65,10 @@ class RecallReport:
     def rate(self) -> float:
         return (self.hit_total / self.expected_total) if self.expected_total else 0.0
 
-    # ── the other half of the trade ──────────────────────────────────────────
-    # Every figure in this project asked whether the right article REACHED the
-    # window; none asked what the reader had to wade through to find it. So a
-    # wider window could only ever look free. It is not: k=8 -> 12 puts 50% more
-    # articles in front of a person and into the model's prompt.
-    #
-    # Honest about what this can and cannot say. `expected_statutes` is not an
-    # exhaustive relevance label — an article outside it is not proven noise — so
-    # the ABSOLUTE precision below is a floor, not a verdict on quality. What IS
-    # valid is comparing settings on a fixed case set: if the window grows and
-    # the hit count does not, those seats went to something nobody asked for.
+    # ── window cost: what the reader wades through ──────────────────────────
+    # Without this a wider window always looks free. `expected_statutes` is not
+    # an exhaustive relevance label, so absolute precision is a FLOOR; only a
+    # comparison of settings on a fixed case set is meaningful.
     @property
     def window_total(self) -> int:
         return sum(len(c.window) for c in self.cases)
@@ -134,18 +129,11 @@ def run_real_recall(path, conn=None, k: int | None = None) -> RecallReport:
     )
 
     reset_dense_fallbacks()
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         cases = []
         for case in load_cases(path):
             expected = list(case.get("expected_statutes", []))
-            found = retrieve(case["query"], k=k or DEFAULT_K, conn=conn)
+            found = retrieve(case["query"], k=DEFAULT_K if k is None else k, conn=conn)
             window = [f"{s.statute_id}{s.article_no}" for s in found]
             cases.append(CaseRecall(
                 id=case.get("id", ""),
@@ -155,9 +143,6 @@ def run_real_recall(path, conn=None, k: int | None = None) -> RecallReport:
                 missed=[e for e in expected if e not in window],
                 window=window,
             ))
-    finally:
-        if own is not None:
-            own.close()
     return RecallReport(cases, dense_fallbacks=dense_fallback_count())
 
 
@@ -168,5 +153,5 @@ if __name__ == "__main__":   # python -m legal_agent.evaluation.real_recall [pat
     print_corpus_fingerprint()
     import sys as _sys
 
-    target = _sys.argv[1] if len(_sys.argv) > 1 else "evals/real_sessions.json"
+    target = _sys.argv[1] if len(_sys.argv) > 1 else PROJECT_ROOT / "evals" / "real_sessions.json"
     print(run_real_recall(target).render())

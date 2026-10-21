@@ -9,14 +9,8 @@ Run:  python -m pytest tests/test_stance.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.dialogue import triage  # noqa: E402
-from legal_agent.dialogue.flow import (  # noqa: E402
+from legal_agent.dialogue import triage
+from legal_agent.dialogue.flow import (
     MAX_INTAKE_TURNS,
     SessionState,
     Stage,
@@ -24,7 +18,7 @@ from legal_agent.dialogue.flow import (  # noqa: E402
     handle_turn,
     missing_fields,
 )
-from legal_agent.dialogue.solution import (  # noqa: E402
+from legal_agent.dialogue.solution import (
     build_generic_ladder,
     build_respondent_ladder,
     build_solution_ladder,
@@ -371,3 +365,13 @@ def test_the_complainants_ladder_is_untouched():
     ).render()
     assert "報警請警察到場" in text and "已嘗試" in text
     assert "民事訴訟" in text
+
+
+def test_the_stance_line_only_mentions_noise_on_a_noise_case():
+    assert "太吵" in triage.stance_line("respondent", "noise")
+    rent = triage.stance_line("respondent", "other:rent")
+    assert "被投訴的一方" in rent and "太吵" not in rent
+
+
+def test_the_stance_line_adds_no_noise_detail_unless_told_it_is_noise():
+    assert "太吵" not in triage.stance_line("respondent")

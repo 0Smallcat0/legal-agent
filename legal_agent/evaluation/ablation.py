@@ -1,6 +1,6 @@
 """Ablation — the same questions asked BARE (model answers from memory) vs
-GATED (full five-gate pipeline), per local model. Produces the project's
-headline numbers (SPEC §2.1: "when it errs, the user knows").
+GATED (full five-gate pipeline), per local model. Calls a real model, so it
+is not deterministic.
 
 Conditions
     bare   the golden question is sent straight to the model, which is asked to
@@ -12,9 +12,15 @@ Conditions
            verifier -> sections -> premise check). Citations the model
            over-reaches on are FLAGGED to the user.
 
-Closed-world caveat (stated wherever numbers are shown): the corpus is the
-11-entry hand-verified noise corpus, so "unverifiable" means NOT TRACEABLE to
-the corpus — the system's actual promise — not "fabricated in the real world".
+Closed-world caveat (stated wherever numbers are shown): "unverifiable" means
+NOT TRACEABLE to the corpus — the system's actual promise — not "fabricated in
+the real world".
+
+The 未回溯 column is NOT comparable across rows: bare verifies with conn= and
+an empty window (baseline = the whole corpus); gated inherits run_stage3's
+corpus_conn= call (baseline = the retrieved window, so an existing but
+unretrieved article lands there and is correctly not flagged). Only
+`flagged` is measured identically in both.
 
 Reasoning models (deepseek-r1, qwen3) emit <think>…</think>; it is stripped
 before verification so citations inside chain-of-thought don't count.
@@ -32,6 +38,7 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from legal_agent.anti_hallucination.verifier import VerificationResult, verify_answer
+from legal_agent.evaluation import corpus_connection
 from legal_agent.evaluation.golden_set import load_golden_set
 
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL)
@@ -120,12 +127,7 @@ class AblationReport:
             "* 未回溯的比較基準兩列不同 —— bare 對「整個語料庫」,gated 對"
             "「這次的檢索視窗」。只有 flagged 兩列同義,可直接相比。",
             "",
-            # The old header said 「corpus查無」 for both rows and that was wrong.
-            # bare verifies with conn= and an empty window, so its baseline is the
-            # WHOLE CORPUS. gated inherits run_stage3's call, which passes only
-            # corpus_conn=, so its baseline is the RETRIEVED WINDOW — an article
-            # that exists but was not retrieved lands in this column and is
-            # correctly NOT flagged. Only `flagged` is measured identically.
+            # 未回溯* differs in baseline per row; see module docstring.
             f"{'model':<20}{'cond.':<7}{'citations':<10}{'未回溯*':<10}"
             f"{'金額不符':<9}{'非現行':<8}{'flagged'}",
         ]
@@ -213,20 +215,13 @@ def run_ablation(
 
         llm_factory = lambda m: ollama_llm(model=m, timeout=600.0)  # noqa: E731
 
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
 
     cases = load_golden_set(golden_path)
     if limit is not None:
         cases = cases[:limit]
 
     report = AblationReport()
-    try:
+    with corpus_connection(conn) as conn:
         for model in models:
             llm = llm_factory(model)
             for i, case in enumerate(cases, 1):
@@ -257,9 +252,6 @@ def run_ablation(
                     on_progress(f"[{model}] {i}/{len(cases)} {case.get('id','')}")
             if checkpoint_path is not None:
                 report.to_json(checkpoint_path)
-    finally:
-        if own is not None:
-            own.close()
     return report
 
 

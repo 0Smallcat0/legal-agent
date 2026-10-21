@@ -7,19 +7,17 @@ Run:  python -m pytest tests/test_judicial_json.py -q
 from __future__ import annotations
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.judicial_json import (  # noqa: E402
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.judicial_json import (
     load_judgments,
     parse_file,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 FIXTURE = ROOT / "tests" / "fixtures" / "judicial_sample.json"
 KNOWN = {"民法", "社會秩序維護法", "噪音管制法"}

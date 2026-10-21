@@ -1,11 +1,12 @@
 """Honesty-threshold calibration (SPEC roadmap: "calibrate the honesty
 threshold" against the golden set).
 
-`MARGINAL_SCORE_THRESHOLD` ships as an uncalibrated placeholder — BM25
-magnitudes depend on the corpus. This module turns the golden set into the
-calibration signal: for every case with an `expected_tier`, take the observed
-top BM25 score, sweep candidate thresholds, and report the threshold that
-maximizes tier accuracy.
+BM25 magnitudes depend on the corpus, so both honesty thresholds go stale
+silently when the corpus or retrieval changes. This module turns the golden
+set into the calibration signal: for every case with an `expected_tier`,
+take the observed top BM25 score, sweep both thresholds (insufficient floor
+and marginal band), and report the pair that maximizes tier accuracy. It
+prints; it does not edit honesty.py.
 
 The honesty tier is decided BEFORE the LLM runs (retrieval scores only), so
 calibration needs NO real model: the CLI runs the golden set with a trivial
@@ -40,9 +41,7 @@ class CalibrationResult:
     default_threshold: float
     default_accuracy: float
     insufficient_threshold: float = INSUFFICIENT_SCORE_THRESHOLD
-    # The insufficient floor is swept too: it was calibrated on the 11-article
-    # corpus (scores 4-42) and left fixed while corpus v2 pushed the same scores
-    # to 30-330, so out-of-scope questions sailed straight over a floor of 6.
+    # The insufficient floor is swept too (see sweep_threshold).
     best_insufficient: float | None = None
     default_insufficient: float = INSUFFICIENT_SCORE_THRESHOLD
 
@@ -114,11 +113,9 @@ def sweep_threshold(
 ) -> CalibrationResult:
     """Sweep BOTH thresholds — the insufficient floor and the marginal band.
 
-    Sweeping only the marginal threshold hid a live defect: the floor was
-    calibrated at 6.0 on the 11-article corpus and never revisited, while
-    corpus v2 lifted every score by an order of magnitude. Out-of-scope
-    questions (商標搶註, 虛擬貨幣課稅) scored 30-40 — far over the floor — and
-    were answered as if the corpus covered them.
+    Sweeping only the marginal band once hid a stale floor that let every
+    out-of-scope question through (evals/HISTORY.md A7). Ties prefer the
+    lower floor, then the lower marginal threshold.
     """
     candidates = _candidates(points)
     pairs = [

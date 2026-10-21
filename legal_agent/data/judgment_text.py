@@ -1,37 +1,25 @@
 """裁判主文 extraction — verbatim slice + the awarded amount.
 
-Same discipline as the statutes corpus: VERBATIM or nothing. 主文 (the
-operative order) is STRUCTURALLY delimited in Taiwanese judgments, so slicing
-it out is not an NLP guess — it is bounded by its own heading line and the
-next section heading. 爭點/裁判要旨 stay unparsed (judicial_json.py keeps them
-NULL): summarising reasoning IS an NLP task, and faking it would poison every
-consumer downstream.
+VERBATIM or nothing. 主文 is STRUCTURALLY delimited (its heading line to the
+next section heading), so slicing it is not an NLP guess. 爭點/裁判要旨 stay
+NULL: summarising reasoning is NLP, and faking it would poison consumers.
 
-Three properties of real judgment text drove this design (measured against the
-harvested corpus, 2026-07-23):
-
-  1. The heading is written 「主　　　文」 / 「主　文」 — IDEOGRAPHIC SPACES
-     between the characters, so a plain "主文" search misses it entirely. It
-     also appears INSIDE body text quoting 民訴§436-18 (「判決書得僅記載主
-     文」), so the heading must be anchored as a standalone line.
-  2. The block wraps at a fixed width with indented continuation lines; a
-     per-line scan splits sentences (and amounts) in half. Lines are rejoined
-     before sentences are split.
-  3. 主文 carries THREE kinds of money: the award (應給付), 訴訟費用 (court
-     costs) and 假執行擔保 (security for provisional execution). Reporting any
-     of them as "the award" would be a lie, so only 給付 sentences that carry
-     neither of the other two markers are read.
-
-Small-claims judgments (小額) write amounts in 大寫 numerals
-(貳萬伍仟玖佰肆拾伍元); those are normalised to the standard forms and parsed
-by the SAME numeral parser the verifier uses — one implementation, not two.
+Properties of real judgment text this relies on:
+  1. The heading is padded with IDEOGRAPHIC SPACES (「主　　　文」) and 「主文」
+     also occurs in body text (民訴§436-18), so it is anchored as a standalone
+     line.
+  2. The block wraps with indented continuations; lines are rejoined before
+     sentences are split, or amounts split in half.
+  3. 主文 carries three kinds of money — the award, 訴訟費用 and 假執行擔保 —
+     so only 給付 sentences free of the other two markers are read.
+大寫 numerals (小額 judgments) go through the verifier's own numeral parser.
 """
 from __future__ import annotations
 
 import re
 from dataclasses import dataclass
 
-from legal_agent.anti_hallucination.verifier import _parse_number
+from legal_agent.anti_hallucination.verifier import _YUAN_RE, _parse_number
 
 # Standalone heading lines. \s matches U+3000 (IDEOGRAPHIC SPACE) in Unicode
 # mode, which is exactly how courts pad these headings.
@@ -42,27 +30,16 @@ _SECTION_AFTER_MAIN_RE = re.compile(
     re.MULTILINE,
 )
 
-# 大寫 (anti-tamper) numerals -> the standard forms the shared parser knows.
-_FORMAL_DIGITS = str.maketrans({
-    "壹": "一", "貳": "二", "參": "三", "肆": "四", "伍": "五",
-    "陸": "六", "柒": "七", "捌": "八", "玖": "九",
-    "拾": "十", "佰": "百", "仟": "千",
-})
-_AMOUNT_RE = re.compile(
-    r"([0-9０-９,，零〇一二三四五六七八九十百千萬億兩"
-    r"壹貳參肆伍陸柒捌玖拾佰仟]+)\s*元"
-)
 
 # A 主文 sentence states the award only when it ORDERS payment and is not
 # about costs or security — both of which also carry 元 amounts.
 _AWARD_MARKERS = ("給付", "賠償")
 _NOT_AWARD_MARKERS = ("訴訟費用", "程序費用", "擔保", "假執行", "免為")
 
-# Every harvested judgment opens the same way, and both lines are verbatim:
-#   line 1  臺灣宜蘭地方法院民事簡易判決      <- court + what kind of ruling it is
-#   line 2  114年度宜簡字第406號              <- the 案號 a person can actually look up
-# The API's jid (「LTEV,114,羅簡,192,20260630,2」) is a database key; showing it
-# to a user beside an answer told them nothing and hid the 判決/裁定 distinction.
+# Every harvested judgment opens with two verbatim lines:
+#   line 1  臺灣宜蘭地方法院民事簡易判決      <- court + kind of ruling
+#   line 2  114年度宜簡字第406號              <- the 案號 a person can look up
+# (The API's jid is only a database key.)
 _COURT_LINE_RE = re.compile(r"^\s*(\S*法院\S*)\s*$", re.MULTILINE)
 _CASE_NO_RE = re.compile(r"^\s*(\S*年度\S*第\s*\d+\s*號)\s*$", re.MULTILINE)
 
@@ -116,8 +93,9 @@ def award_amounts(block: str | None) -> list[int]:
             continue
         if any(m in sentence for m in _NOT_AWARD_MARKERS):
             continue
-        for raw in _AMOUNT_RE.findall(sentence):
-            value = _parse_number(raw.translate(_FORMAL_DIGITS))
+        # The shared parser reads 大寫 numerals (壹貳參…拾佰仟) directly.
+        for raw in _YUAN_RE.findall(sentence):
+            value = _parse_number(raw)
             if value is not None and value not in amounts:
                 amounts.append(value)
     return amounts
@@ -131,37 +109,17 @@ def awards(full_text: str | None) -> tuple[int, ...]:
 
 
 # ── who got what: the 主文 read one SENTENCE at a time ───────────────────────
-# The obvious ruler — test the whole 主文 block for 「之訴駁回」 — measures about
-# 12% false positives on the shipped 386, and every one of them labels a WIN as
-# a loss. That is the worst direction of error for a block whose purpose is to
-# tell a reader that someone lost. The known shapes it gets wrong, all pinned as
-# regression cases in tests/test_judgment_outcome.py:
-#
-#   「原告先位之訴駁回」 followed by 確認…特留分存在 and 命被告塗銷 — the primary
-#      claim failed and the alternative one succeeded;
-#   「原判決廢棄。被上訴人在第一審之訴駁回」 — the APPELLANT won outright, and the
-#      dismissal falls on the other side;
-#   「緊急處置之聲請駁回」 beside two granted injunctions — one sub-application
-#      refused, the main relief given;
-#   「其餘上訴駁回」 after a 廢棄 — the appellate wording for a partial loss, which
-#      a 「其餘之訴駁回」 test never sees;
-#   「再審之訴駁回」 — procedural, and says nothing about the underlying case.
-#
-# The cause is a LEVEL error, not a shortage of markers: `award_amounts` above
-# already decides sentence by sentence, and the outcome has to keep the same
-# discipline. A 主文 is a list of operative orders; the case-level result is a
-# function of that list, never a substring test on the block.
-#
-# And an appellate 主文 is relative to the parties' POSITIONS: one sentence is a
-# win for the appellant and a loss for the respondent. An outcome that does not
-# name WHO is misleading on its own, so `Outcome` carries the role words
-# verbatim from the 主文 and refuses to render a verdict without them.
+# A whole-block 「之訴駁回」 test measures ~12% false positives, all labelling a
+# WIN as a loss (先位 dismissed but 備位 granted; 「被上訴人在第一審之訴駁回」;
+# one sub-application refused; 再審之訴駁回 — pinned in
+# tests/test_judgment_outcome.py). A 主文 is a list of operative orders, so the
+# outcome is a function of that list, like `award_amounts`. And on appeal one
+# sentence is a win for one side and a loss for the other, so `Outcome` names
+# WHO, verbatim from the 主文, and renders no verdict without it.
 
-# Role words, most specific first: 再審原告 must be matched before 原告, and the
-# mover in an appeal is 上訴人 even though 原告 may also appear in the text.
-# Matched on the ROLE WORDS, not on the proceeding noun — a first-instance 主文
-# routinely ends 「原告其餘假執行之聲請駁回」, and testing for a bare 「聲請」 read
-# that as a petition and named the wrong mover.
+# Role words, most specific first (再審原告 before 原告; 上訴人 is the mover on
+# appeal). Matched on ROLE WORDS, not the proceeding noun: 「原告其餘假執行之
+# 聲請駁回」 is not a petition.
 _ROLES: tuple[tuple[tuple[str, ...], str, str], ...] = (
     (("再審原告", "再審被告", "再審之訴"), "再審原告", "再審被告"),
     (("上訴人", "被上訴人"), "上訴人", "被上訴人"),
@@ -179,11 +137,8 @@ _VACATE_RE = re.compile(r"廢棄")
 # Costs decide nothing on the merits; a clerical correction decides nothing at
 # all. Both routinely carry 駁回 or 廢棄 in the same sentence.
 _NOT_OPERATIVE = ("訴訟費用", "程序費用", "裁判費", "更正為", "補充為")
-# 「原告應於本裁定送達後十日內補正…，逾期未補正，即駁回原告之訴」 is an order to
-# cure a defect. Read literally it carries both an 應-order and a 駁回, so it
-# was landing in `granted` and in `denied` depending on which clause won — a
-# procedural 裁定 scoring as a merits result in BOTH directions. It decides
-# nothing: the dismissal is conditional and in the future.
+# 「…補正，逾期未補正，即駁回原告之訴」 is an order to cure a defect: the
+# dismissal is conditional and future, so it decides nothing either way.
 _CONDITIONAL_RE = re.compile(r"逾期.{0,8}(?:即)?駁回|補正")
 
 
@@ -219,12 +174,9 @@ def _is_relief(sentence: str, mover: str, respondent: str) -> bool:
     """Does this sentence give the MOVER something?
 
     An 「應…」 order is relief only when the party ordered to act is the other
-    side. That is not pedantry: on appeal the roles swap, so 「被告應給付原告」
-    and 「上訴人應給付被上訴人」 are the same grammar pointing opposite ways, and
-    a rule that reads 應 as a win regardless would invert every cross-appeal.
-    The obligor is the role word NEAREST to 應 on its left — IPCV's injunctions
-    open 「聲請人…為相對人供擔保後，相對人應將…」, where the first role word in the
-    sentence is the mover and the obligor is the one after it.
+    side: 「被告應給付原告」 and 「上訴人應給付被上訴人」 point opposite ways. The
+    obligor is the role word NEAREST to 應 on its left (「聲請人…為相對人供擔保
+    後，相對人應將…」).
     """
     if _RELIEF_RE.search(sentence):
         return True
@@ -310,11 +262,9 @@ def outcome(full_text: str | None) -> Outcome:
 
 
 def format_awards(amounts) -> str:
-    """Human label for the ordered payments. Deliberately NOT a single
-    headline number: 29% of the harvested awards order SEVERAL payments (one
-    real case orders six defendants 16.5萬–167.2萬 separately), and printing
-    the largest as 「判賠 X 元」 would misstate the case. One amount is
-    reported exactly; several are reported as their range, marked 多筆."""
+    """Human label for the ordered payments. NOT a single headline number:
+    29% of harvested awards order several payments, and printing the largest
+    would misstate the case. One amount is exact; several are a range, 多筆."""
     values = sorted(set(amounts or ()))
     if not values:
         return ""

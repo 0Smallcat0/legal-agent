@@ -20,15 +20,19 @@ Golden file schema (a JSON list of cases):
       "expected_premise_flag": bool,      # optional, auto-scored (Mechanism 5)
       "notes": str                        # optional
     }
-The real ~20-30 cases are authored separately (human-verified) and dropped in as
-a JSON file; a tiny INVENTED fixture lives under tests/fixtures/ for this
-harness's own tests.
+The human-verified set is evals/golden_v2.json (32 cases); a tiny INVENTED
+fixture lives under tests/fixtures/ for this harness's own tests.
+
+Run at temperature 0 (the __main__ entry does so for ollama): at 0.2 the
+same code spanned 73.1–80.8% across five runs.
 """
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
 from pathlib import Path
+
+from legal_agent.evaluation import corpus_connection
 
 
 @dataclass
@@ -239,19 +243,9 @@ def _run_case(case: dict, llm, conn) -> CaseResult:
 def run_golden_set(golden_path, llm, conn=None) -> Scorecard:
     """Run every golden case through the pipeline with the injected `llm` and score
     statute coverage. `llm` is real at runtime, a fake in tests."""
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         cases = load_golden_set(golden_path)
         results = [_run_case(c, llm, conn) for c in cases]
-    finally:
-        if own is not None:
-            own.close()
     return Scorecard(results)
 
 
@@ -268,12 +262,8 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.golden_set <golde
     from legal_agent import config
     from legal_agent.run import build_runtime_llm  # reuses the model/key config checks
 
-    # A GRADER samples at temperature 0, or it measures the dice. ollama_llm's
-    # own docstring has said exactly that since it gained the parameter — and
-    # this entry point went on using build_runtime_llm()'s 0.2 default, which is
-    # how the Tier-1 scorecard came to swing 73.1–80.8% strict coverage across
-    # five runs of identical code. At 0.0, consecutive runs are identical.
-    # Measured 2026-08-05; see RESULTS.md.
+    # A grader samples at temperature 0, or it measures the dice (see module
+    # docstring). build_runtime_llm() would use its 0.2 default.
     if config.LLM_PROVIDER == "ollama":
         from legal_agent.dialogue.ollama_llm import ollama_llm
 

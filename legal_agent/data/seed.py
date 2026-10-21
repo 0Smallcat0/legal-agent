@@ -1,11 +1,8 @@
-"""Seed source_hierarchy with Taiwan's authority levels (spec §1.4).
+"""Seed source_hierarchy with the five authority levels (spec §1.4).
 
-This MUST run before any statute / 法源 is inserted: statutes.hierarchy_level
-carries a foreign key to source_hierarchy(level). The seeder is idempotent — safe
-to run repeatedly (existing rows are left untouched).
-
-Convention (spec §1.4): LOWER rank = HIGHER authority.
-The description column is an optional one-line gloss (not legal text).
+MUST run before any statute / 法源 is inserted: statutes.hierarchy_level is a
+foreign key to source_hierarchy(level). Idempotent. LOWER rank = HIGHER
+authority; description is a one-line gloss, not legal text.
 """
 from __future__ import annotations
 

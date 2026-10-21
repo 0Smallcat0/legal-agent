@@ -7,17 +7,11 @@ Run:  python -m pytest tests/test_retriever.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
-from legal_agent.retrieval.retriever import retrieve  # noqa: E402
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.seed import seed_source_hierarchy
+from legal_agent.retrieval.retriever import retrieve
 
 
 @pytest.fixture
@@ -516,3 +510,10 @@ def test_owner_occupied_keeps_the_building_articles_that_mention_a_tenant():
 
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_the_public_retrieve_honours_k_zero(shipped_conn):
+    """`k or DEFAULT_K` used to turn an explicit k=0 into the tuned window."""
+    import legal_agent
+
+    assert legal_agent.retrieve("退租後房東不退押金", k=0, conn=shipped_conn) == []

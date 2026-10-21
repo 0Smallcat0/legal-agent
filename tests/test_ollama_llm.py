@@ -5,16 +5,11 @@ Run:  python -m pytest tests/test_ollama_llm.py -q
 from __future__ import annotations
 
 import json
-import sys
-from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent import config, run  # noqa: E402
-from legal_agent.dialogue import ollama_llm as ol  # noqa: E402
+from legal_agent import config, run
+from legal_agent.dialogue import ollama_llm as ol
 
 
 class _FakeResp:

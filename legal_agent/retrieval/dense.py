@@ -1,36 +1,22 @@
 """Dense retrieval via local Ollama embeddings — the hybrid half that closes
 BM25's vocabulary gap.
 
-Measured motivation (2026-07-18 live simulation): the query 「雇主不給加班費」
-cannot lexically reach 勞基法§24, whose text says 「延長工作時間之工資」 —
-zero token overlap, BM25 rank >20. Embedding cosine between those two phrases
-is 0.70: the semantic bridge BM25 cannot build.
+「雇主不給加班費」 shares no token with 勞基法§24 (「延長工作時間之工資」); their
+embedding cosine is 0.70. Model: bge-m3 (nomic-embed-text was measured and
+rejected on Traditional-Chinese legal text; ranks in evals/HISTORY.md).
 
-Model choice is MEASURED, not assumed (4-query everyday-law benchmark,
-target-article rank): nomic-embed-text failed outright on Traditional-Chinese
-legal text (加班費→408, 網購→925, 遺產→1524 — with its task prefixes) and was
-rejected; **bge-m3** took the same exam and won (網購 消保§19 → rank 1,
-遺產 民法§1138 → rank 1, 押金 → 2, 加班費 None→37). See evals/RESULTS.md.
+  * OPTIONAL — no Ollama or no index -> callers fall back to pure BM25. That
+    fallback is SILENT (AGENTS.md trap 2); retriever.dense_fallback_count()
+    counts it.
+  * No new dependencies — urllib + numpy (via rank_bm25).
+  * Fusion is RRF: rank-based, no tuned weights, deterministic.
 
-Same philosophy as every model in this project:
-  * OPTIONAL — no Ollama, no index -> callers fall back to pure BM25.
-  * Zero new Python dependencies — urllib (stdlib) + numpy (already shipped
-    transitively with rank_bm25).
-  * Fusion is RRF (reciprocal rank fusion): rank-based, no score-scale tuning,
-    no learned weights — deterministic and explainable.
-
-The corpus index (current slices only) is cached beside the DATABASE — i.e.
-under `Path(config.DB_PATH).parent`, which is `LEGAL_AGENT_HOME` (the platform
-per-user data dir by default), NOT the repo:
+The index (current slices only) is cached beside the DATABASE, under
+`Path(config.DB_PATH).parent` (`LEGAL_AGENT_HOME`), NOT the repo:
     <config.DB_PATH>/../dense_bgem3.npy        float32 [N, 1024] L2-normalized
     <config.DB_PATH>/../dense_bgem3.keys.json  [[statute_id, article_no, effective_from], ...]
-Rebuilt automatically when the corpus's current-slice key set changes.
-
-These two lines used to name a repo-relative `db/` directory, which this module
-has never computed. Such a directory does exist in the checkout and does hold
-files by these names — orphans no code path reaches, already mistaken for the
-live index twice. `legal_agent.corpus_fingerprint()` prints the resolved
-database path; trust it over any path written in prose, this docstring included.
+A repo-relative `db/` holding files by these names is an orphan no code reads;
+`legal_agent.corpus_fingerprint()` prints the real path.
 """
 from __future__ import annotations
 
@@ -91,8 +77,8 @@ def ensure_index(
     model: str = EMBED_MODEL,
 ) -> tuple[list[tuple[str, str, str]], np.ndarray]:
     """Load the cached corpus index, rebuilding iff the current-slice key set
-    changed. Returns (keys, matrix). Raises when Ollama is unreachable AND no
-    valid cache exists — callers fall back to BM25."""
+    changed. Returns (keys, matrix). Raises when Ollama is unreachable and no
+    valid cache exists."""
     stem = Path(stem)
     npy, keys_json = stem.with_suffix(".npy"), stem.with_suffix(".keys.json")
     keys, texts = _current_slices(conn)
@@ -152,9 +138,11 @@ def rrf_fuse(
 
 
 if __name__ == "__main__":  # python -m legal_agent.retrieval.dense  (build/refresh index)
-    import sqlite3 as _sqlite3
+    from legal_agent.data.bootstrap import ensure_corpus
+    from legal_agent.data.database import connect
 
-    _conn = _sqlite3.connect(config.DB_PATH)
+    ensure_corpus()
+    _conn = connect(config.DB_PATH)
     try:
         _keys, _matrix = ensure_index(_conn)
     finally:

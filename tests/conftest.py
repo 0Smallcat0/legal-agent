@@ -39,3 +39,16 @@ def load_noise_fixture(conn) -> tuple[int, int]:
     from legal_agent.data.source_ingest import load_proposals
 
     return load_proposals(NOISE_FIXTURE, conn)
+
+
+@pytest.fixture(scope="session")
+def shipped_conn():
+    """The shipped corpus, built if missing — so a test that checks a published
+    number runs on a fresh checkout instead of skipping."""
+    from legal_agent.data.bootstrap import ensure_corpus
+    from legal_agent.data.database import connect
+
+    ensure_corpus()
+    conn = connect(config.DB_PATH)
+    yield conn
+    conn.close()

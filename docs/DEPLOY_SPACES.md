@@ -55,7 +55,7 @@ sdk_version: 6.20.0
 app_file: app.py
 pinned: false
 license: mit
-short_description: Legal RAG with a citation verifier graded at 11,904/11,904.
+short_description: Legal RAG with a citation verifier graded on 24 error kinds
 ---
 ```
 
@@ -124,10 +124,9 @@ deletion that never crossed. `git rm` it.
 
 Then:
 
-> The frontmatter's `short_description` and the README's tests badge both carry
-> NUMBERS, so they go stale on their own schedule — check them against
-> `evals/RESULTS.md` during the sync rather than copying the old block forward.
-> Both were stale on 2026-08-06 (10,437/10,437 and 433 tests).
+> The frontmatter's `short_description` carries a NUMBER, so it goes stale on its
+> own schedule — check it against `evals/RESULTS.md` during the sync rather than
+> copying the old block forward. It was stale on 2026-08-06 (10,437/10,437).
 >
 > **Do not guard the shim re-apply on the string `spaces.GPU`.** That phrase now
 > appears in `main`'s own `app.py` docstring describing this requirement, so a
@@ -167,10 +166,10 @@ healthy deploy read as a hung one.
 container keeps serving throughout the build, so
 `curl -o /dev/null -w "%{http_code}"` answers 200 the whole time — and `sha` in
 the API is the commit being DEPLOYED, not the one running. Ask the app what it
-is instead; the tests badge is a number that changes on almost every deploy:
+is instead, by grepping for a string your commit changed:
 
 ```bash
-curl -sL https://<space-subdomain>.hf.space/config | grep -o "[0-9]\+ 項測試通過"
+curl -sL https://<space-subdomain>.hf.space/config | grep -o "<text only the new build renders>"
 ```
 
 Gradio renders the hero client-side, so the page HTML does not carry it —

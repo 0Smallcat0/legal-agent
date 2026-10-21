@@ -1,14 +1,9 @@
-"""One call that makes a fresh clone runnable: schema + corpus, idempotent.
+"""One call that makes a fresh install runnable: schema + corpus, idempotent.
 
-This lived inside `app.py`, so the terminal entry point and the README needed
-four separate commands to reach the state the web demo reached by itself. Cheap
-to call from anywhere: when the corpus is already loaded it returns immediately
-without touching the proposal files.
-
-Also the home of `corpus_fingerprint()` — which corpus is this process actually
-reading, and does it carry everything the package shipped. The knowledge needed
-to answer that (the proposal files, the judgment file, and where the database
-resolves to) already lives here, so the answer belongs here too.
+Cheap to call from anywhere: when the corpus is complete it returns without
+reading the proposal files. Also home of `corpus_fingerprint()` — which
+database this process reads, and whether it carries everything the package
+shipped.
 """
 from __future__ import annotations
 
@@ -24,16 +19,12 @@ from legal_agent.data.judgment_ingest import load_judgments
 from legal_agent.data.seed import seed_source_hierarchy
 from legal_agent.data.source_ingest import load_proposals
 
-# Source of truth for the shipped corpus. The old hand-typed noise seed is
-# superseded by the official-XML proposal — loading both would create duplicate
-# current slices for the same article.
+# Source of truth for the shipped corpus. (The old hand-typed noise seed is not
+# loaded: with the official-XML proposal it would duplicate current slices.)
 PROPOSALS = (
     "moj_bulk_v1_proposal.json",
-    # The gap batch. Triage classifies traffic and labor cases, and the ladder
-    # tells a hurt rider to claim 強制險 first — while the statute that says they
-    # may ("不論加害人有無過失" — 強制汽車責任保險法§7) was not in the corpus at
-    # all, so that rung carried no legal basis. Labor had the same hole: 勞基法
-    # alone, with 勞保條例 / 就服法 / 性平法 absent.
+    # Gap batch: statutes triage routes to (強制汽車責任保險法, 勞保條例, 就服法,
+    # 性平法) that the bulk batch lacked.
     "moj_gap_v1_proposal.json",
     "noise_routing_proposal.json",
 )
@@ -54,20 +45,11 @@ def corpus_size(conn: sqlite3.Connection) -> int:
 def _statutes_are_short(conn: sqlite3.Connection) -> bool:
     """Does the table hold fewer articles than the shipped proposals carry?
 
-    Grouped by statute_id and compared per statute, which costs one aggregate
-    over ~17 rows (about 0.2ms measured) rather than pulling ~2,900 keys. The
-    comparison is sound in the only direction that happens: articles are added
-    to this table, never removed, so a count below the shipped one means an
-    article is genuinely absent.
-
-    This used to be `if not corpus_size(conn)` — load the proposals ONLY when
-    the corpus is completely empty. Anyone whose database predates a proposal
-    file therefore stayed on the old corpus forever, with nothing on screen to
-    say so. The author already reasoned through this exact hole for judgments,
-    two lines further down, and carved them out of the early return; statutes
-    never got the same treatment. The orphaned database in the repo tree is the
-    evidence it really happened — 2,562 rows, which is bulk + noise with the
-    361-article gap batch missing.
+    One aggregate per statute (~0.2ms), not ~2,900 keys. Sound because articles
+    are only ever added, so a count below the shipped one means one is absent.
+    Checking only for an EMPTY table would leave a database that predates a
+    proposal file (e.g. 2,562 rows without the 361-article gap batch) stale
+    forever.
     """
     try:
         have = dict(
@@ -120,27 +102,43 @@ def judgment_count(conn: sqlite3.Connection) -> int:
 
 
 def _ensure_judgments(conn: sqlite3.Connection) -> int:
-    """Load the shipped reference judgments once. Returns the row count.
+    """Make sure every shipped reference judgment is present. Returns the row count.
 
-    Harvested judgments (from `data/judicial_api.py`) live in the same table, so
-    a populated table is left alone: the shipped file is a floor, never an
-    overwrite.
+    Harvested judgments (from `data/judicial_api.py`) live in the same table.
+    The shipped file is a floor, never an overwrite: rows already present are
+    ignored. Loaded whenever any shipped jid is missing, so a partial harvest
+    cannot keep the shipped judgments out; a complete table is only read.
     """
-    existing = judgment_count(conn)
-    if existing:
-        return existing
     shipped = config.CORPUS_DIR / JUDGMENTS
-    if shipped.exists():
+    jids = shipped_judgment_ids()
+    if jids and _present_count(conn, jids) < len(jids):
         load_judgments(shipped, conn)
     return judgment_count(conn)
 
 
+@lru_cache(maxsize=1)
+def shipped_judgment_ids() -> tuple[str, ...]:
+    """The jids the package ships (parsed once per process)."""
+    shipped = config.CORPUS_DIR / JUDGMENTS
+    if not shipped.exists():
+        return ()
+    return tuple(r["jid"] for r in json.loads(shipped.read_text(encoding="utf-8")))
+
+
+def _present_count(conn: sqlite3.Connection, jids: tuple[str, ...]) -> int:
+    """How many of `jids` the table holds — a read, so a loaded DB is not written."""
+    try:
+        marks = ",".join("?" * len(jids))
+        return conn.execute(
+            f"SELECT COUNT(*) FROM judgments WHERE jid IN ({marks})", jids
+        ).fetchone()[0]
+    except sqlite3.OperationalError:      # judgments table not created yet
+        return 0
+
+
 # ── which corpus am I reading, and is all of it there? ───────────────────────
-# Two agents once computed two different answers to the same question on this
-# repo because each had opened a different database, and NEITHER run carried a
-# signal saying which. Both mistakes were made by throwaway scripts that
-# hardcoded a path. So the fix has to make "check which corpus I am looking at"
-# cheaper than hardcoding: one public call, one line of output.
+# Scripts that hardcode a DB path can silently read a different database than
+# the harnesses; checking must be cheaper than hardcoding: one call, one line.
 
 
 @dataclass(frozen=True)

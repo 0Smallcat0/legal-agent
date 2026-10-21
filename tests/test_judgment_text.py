@@ -8,15 +8,9 @@ Run:  python -m pytest tests/test_judgment_text.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.data.judgment_text import (  # noqa: E402
+from legal_agent.data.judgment_text import (
     award_amounts,
     awards,
     format_awards,

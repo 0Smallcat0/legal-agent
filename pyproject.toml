@@ -43,7 +43,12 @@ include = ["legal_agent*"]
 # The corpus ships INSIDE the package so a fresh install can build its own
 # database — `pip install legal-agent` then works with no git clone.
 [tool.setuptools.package-data]
-legal_agent = ["corpus/*.json", "prompts/*", "data/*.sql"]
+legal_agent = ["corpus/*.json", "data/*.sql"]
+
+[tool.pytest.ini_options]
+# A parametrize over a case file that came back empty is a failure, not a skip
+# (an emptied positive-control file used to pass as 「got empty parameter set」).
+empty_parameter_set_mark = "fail_at_collect"
 
 [tool.ruff]
 target-version = "py310"

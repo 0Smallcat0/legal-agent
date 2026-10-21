@@ -42,16 +42,14 @@ def ollama_llm(
     fmt: when set ("json" or a JSON schema), Ollama constrains the output to valid
     JSON — used by the intake so a small local model reliably returns the
     structured {reply, facts, ready} object instead of drifting into free prose.
-    temperature: sampling temperature (default 0.2, the prior hard-coded value);
-    graders/checkers pass 0.0 so repeated runs measure the model, not the dice.
-    num_predict: generation cap. Without it a small model can ramble unboundedly
-    on a long retrieval prompt — measured 2026-07-21: one golden case decoded
-    7 472 tokens at 42 t/s and rode straight into the 180 s client timeout. A
-    well-formed answer here is < 1 500 tokens; 2 048 caps the tail, ~50 s worst
-    case, and a truncated answer still passes through the verifier honestly.
+    temperature: sampling temperature (default 0.2); graders/checkers pass 0.0 so
+    repeated runs measure the model, not the dice.
+    num_predict: generation cap, so a small model cannot ramble into the client
+    timeout. A well-formed answer is < 1 500 tokens; 2 048 caps the tail, and a
+    truncated answer still passes through the verifier honestly.
     think: pass False to switch a reasoning model's <think> phase off. Left None
-    the key is not sent at all, so servers and models that do not know it behave
-    exactly as before. See the retry below for why None is not the same as False.
+    the key is not sent at all, so servers and models that do not know it are
+    unaffected. See the retry below for why None is not the same as False.
     """
     model = model or config.OLLAMA_MODEL
     think = config.OLLAMA_THINK if think is None else think
@@ -84,15 +82,10 @@ def ollama_llm(
         answer = data.get("response", "")
 
         # A reasoning model can spend the ENTIRE generation budget inside its
-        # <think> phase and return an empty answer. Measured 2026-08-06 on
-        # qwen3:4b: response 0 chars, thinking 2 564 chars, done_reason
-        # 「length」 — the pipeline then had a well-retrieved, fully-verified
-        # page with nothing written on it. Diagnosed from the response rather
-        # than from a list of model names, because the next thinking model will
-        # not be on that list: an empty answer WITH thinking text is the
-        # signature, and the retry disables thinking and doubles the cap
-        # (2 048 was still short: think=False alone came back truncated at
-        # done_reason 「length」; 4 096 finished at 「stop」).
+        # <think> phase and return an empty answer. Diagnosed from the response,
+        # not a list of model names: an empty answer WITH thinking text is the
+        # signature. The retry disables thinking AND doubles the cap, because
+        # think=False alone still truncated at 2 048.
         if not answer.strip() and (data.get("thinking") or "").strip() and think is None:
             # Suppressed: an older server or a model that rejects `think` leaves
             # the empty answer alone, which stage3 already reports loudly.

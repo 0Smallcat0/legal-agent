@@ -5,20 +5,14 @@ Run:  python -m pytest tests/test_judicial_api.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.data.judicial_api import (  # noqa: E402
+from legal_agent.data.judicial_api import (
     _load_env,
     is_substantive_civil,
     jdoc_to_record,
 )
-from legal_agent.data.judicial_json import parse_judgment  # noqa: E402
+from legal_agent.data.judicial_json import parse_judgment
 
 
 def test_jdoc_to_record_flattens_nested_fulltext():

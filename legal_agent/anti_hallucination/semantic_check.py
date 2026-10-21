@@ -12,12 +12,9 @@ Design constraints, in order:
   2. Conservative on every failure path. LLM unreachable, garbage output,
      missing fields -> (True, "") = NOT flagged. A checker that cries wolf on
      its own infrastructure errors gets turned off by its user.
-  3. Injected, never constructed. `semantic_llm: Callable[[str], str]` follows
-     the same seam as the reasoning model (config.LLM_PROVIDER) — tests inject
-     fakes, the CLI wires a local Ollama, no key and no network by default.
-  4. Judged by the same harness it joins: mutation.py grades this axis with
-     seeded subject swaps (`--semantic`), so its catch rate is MEASURED per
-     model, not assumed.
+  3. Injected, never constructed (`semantic_llm: Callable[[str], str]`):
+     tests inject fakes, the CLI wires a local Ollama.
+  4. Measured per model by `mutation --semantic` (seeded subject swaps).
 """
 from __future__ import annotations
 
@@ -41,15 +38,9 @@ _PROMPT_TEMPLATE = (
 
 _JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
-# Constraint 2 (conservative on every failure path) has a sharp edge: a checker
-# that answers 「consistent」 when it never reached a model is indistinguishable,
-# from the outside, from one that ran and approved. On 2026-08-06 a measurement
-# of this axis returned a clean 0 flags on 9 planted swaps and 120 controls
-# because Ollama was down — and the failure direction is the FLATTERING one, so
-# it reads as 「0 false positives」 rather than as an outage.
-# `real_recall` already prints `dense_fallbacks` for exactly this reason. Same
-# fix here: count the verdicts that were never actually rendered, so a harness
-# can refuse to publish a number the model had no part in.
+# Constraint 2 fails in the flattering direction: a call that never reached a
+# model reads exactly like an approval, so an outage looks like "0 false
+# positives". Count those calls so a harness can refuse to publish the number.
 _UNREACHED = 0
 
 

@@ -27,6 +27,7 @@ number is only as external as its weakest label.
 
 Run:  python -m legal_agent.evaluation.realworld [evals/realworld_v1.json]
       python -m legal_agent.evaluation.realworld --answers   # + LLM, human read
+      python -m legal_agent.evaluation.realworld --direction # blind-coded direction, no model
 """
 from __future__ import annotations
 
@@ -34,11 +35,13 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
-DEFAULT_CASES = "evals/realworld_v1.json"
-# The answer-side coding for one recorded run. Separate file because it is
-# per-run: the outcome side belongs to the case and never changes, the answer
-# side is a property of one model at one temperature.
-DEFAULT_CODING = "evals/realworld_answer_coding_run1.json"
+from legal_agent.config import PROJECT_ROOT
+from legal_agent.evaluation import corpus_connection
+
+DEFAULT_CASES = PROJECT_ROOT / "evals/realworld_v1.json"
+# The answer-side coding for one recorded run: separate because it belongs to
+# one model at one temperature, while the outcome side belongs to the case.
+DEFAULT_CODING = PROJECT_ROOT / "evals/realworld_answer_coding_run1.json"
 
 
 @dataclass
@@ -148,16 +151,11 @@ class BadLabelError(ValueError):
 
 
 # ── direction: does the answer point the same way the case actually ended? ───
-# hit@k says the right article reached the window. It says nothing about which
-# way the answer then argued. One full-pipeline pass over the eight rental
-# disputes reasoned OPPOSITE to the recorded outcome in four of them, and
-# `flagged_count` was 0 in all eight — the four verification axes certify that a
-# cited article is real, never that it points your way.
-#
-# That 4/8 was one hand-read of one run and could as easily have been 2/8 or
-# 6/8. This makes it re-runnable WITHOUT auto-grading legal reasoning, which
-# this file's docstring refuses and will go on refusing. The trick is that
-# neither coding pass is allowed to see the other side:
+# hit@k says the right article reached the window, not which way the answer
+# then argued; the verification axes certify a cited article is real, never
+# that it points your way (RESULTS.md has the measured runs). This counts
+# direction WITHOUT auto-grading legal reasoning: neither coding pass may see
+# the other side:
 #
 #   1. the outcome fields are coded from the case record, never from an answer;
 #   2. the answer fields are coded from the generated text alone, by someone who
@@ -165,9 +163,8 @@ class BadLabelError(ValueError):
 #      which deliberately carries no `real_outcome`;
 #   3. the comparison is arithmetic.
 #
-# Nobody is ever asked whether they AGREE with an answer. Both sides are coded
-# into the same closed vocabulary and the counting is deterministic, the way
-# `judgment_relevance` derives both of its sides rather than hand-labelling one.
+# Nobody is asked whether they AGREE with an answer; both sides use the same
+# closed vocabulary and the counting is deterministic.
 #
 # 「asker」 is whoever wrote `initial_text`; 「other_party」 is whoever they are up
 # against. 「unclear」 is a real answer and must stay available — forcing a coder
@@ -340,11 +337,8 @@ def render_directions(matches: list[DirectionMatch], run: dict | None = None) ->
 def check_labels(document: dict, conn) -> None:
     """Every governing article must exist in the corpus, or the whole run is a
     bad ruler: a label the corpus can never match scores 0 no matter how good
-    retrieval is, and the harness would report a confident wrong miss.
-
-    This is not hypothetical. The first run of this file labelled 民法 as
-    「中華民國民法」 (the corpus spells 刑法 that way, 民法 not) and published a
-    fake 1/9. Fail loudly instead — see RESULTS.md §5 on bad rulers.
+    retrieval is, and the harness would report a confident wrong miss
+    (RESULTS.md records the 「中華民國民法」 mislabel that once did).
     """
     rows = {
         f"{sid}{ano}"
@@ -368,8 +362,7 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
     """Retrieve for every case, grade the honesty tier, and score hit@k against
     the article the deciding authority cited. `llm` is optional and only feeds
     the side-by-side print — it never affects a score."""
-    from legal_agent.anti_hallucination.honesty import grade_honesty
-    from legal_agent.retrieval.lexicon import expansions
+    from legal_agent.anti_hallucination.honesty import grade_honesty, lexicon_hit
     from legal_agent.retrieval.retriever import (
         DEFAULT_K,
         dense_fallback_count,
@@ -379,27 +372,18 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
 
     reset_dense_fallbacks()
     document = load_document(path)
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         check_labels(document, conn)
         results = []
         for case in document["cases"]:
             query = case["initial_text"]
-            scored = retrieve_scored(query, k=k or DEFAULT_K, conn=conn)
+            scored = retrieve_scored(query, k=DEFAULT_K if k is None else k, conn=conn)
             retrieved = [s for s, _ in scored]
             scores = [sc for _, sc in scored]
             window = [f"{s.statute_id}{s.article_no}" for s in retrieved]
-            phrases = expansions(query)
-            lexicon_hit = any(
-                phrase in (s.content or "") for s in retrieved for phrase in phrases
+            tier = grade_honesty(
+                retrieved, scores, lexicon_hit=lexicon_hit(retrieved, query), query=query,
             )
-            tier = grade_honesty(retrieved, scores, lexicon_hit=lexicon_hit, query=query)
             expected = [_ref(e) for e in case["governing_statutes"]]
             analysis = None
             if llm is not None:
@@ -419,9 +403,6 @@ def run_realworld(path=DEFAULT_CASES, conn=None, k: int | None = None,
                 real_outcome=case["real_outcome"],
                 analysis=analysis,
             ))
-    finally:
-        if own is not None:
-            own.close()
     return OutcomeReport(
         results,
         dense_fallbacks=dense_fallback_count(),
@@ -442,8 +423,7 @@ if __name__ == "__main__":   # python -m legal_agent.evaluation.realworld [path]
     want_direction = "--direction" in _sys.argv[1:]
     target = argv[0] if argv else DEFAULT_CASES
     if want_direction:
-        # Deterministic and needs no model: both codings are already on disk,
-        # which is the whole point — the number re-runs without re-rolling it.
+        # Deterministic, no model: both codings are already on disk.
         _doc = load_document(target)
         _coding_file = Path(DEFAULT_CODING)
         _raw = (

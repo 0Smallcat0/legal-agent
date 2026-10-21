@@ -1,9 +1,7 @@
-"""Honesty tier, both directions (evals/RESULTS.md, 2026-08-06).
+"""Honesty tier, both directions.
 
-The golden set carries 5 out-of-scope cases. That is enough to notice the tier
-is over-confident and far too few to decide anything: a signal tuned to separate
-5 cases is fitted, and this project retracted a published number the day before
-for exactly that. So the probe is a purpose-built ruler with both error
+The golden set carries only 5 out-of-scope cases — too few to tune against
+without fitting. So the probe is a purpose-built ruler with both error
 directions in it:
 
     20 out-of-scope   — each governed by a statute verified ABSENT from the
@@ -13,9 +11,8 @@ directions in it:
                         Refusing is a false refusal: the answer was there and
                         the reader was turned away.
 
-Two numbers come out, and they trade against each other. Reporting only the
-first is how the floor at 70 spent a week refusing 勞基法§11 資遣 (top 39.19)
-while answering 15 of 20 questions the corpus cannot support.
+Two numbers come out, and they trade against each other; reporting only the
+first once hid a floor that falsely refused in-scope questions (HISTORY.md).
 
 Deliberately narrow, like real_recall:
   * retrieval only — the tier is decided from scores BEFORE the LLM, so this
@@ -33,7 +30,10 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 
-DEFAULT_CASES = "evals/honesty_probe_v1.json"
+from legal_agent.config import PROJECT_ROOT
+from legal_agent.evaluation import corpus_connection
+
+DEFAULT_CASES = PROJECT_ROOT / "evals/honesty_probe_v1.json"
 
 
 @dataclass
@@ -113,21 +113,13 @@ class ProbeReport:
 
 def run_honesty_probe(path=DEFAULT_CASES, conn=None) -> ProbeReport:
     """Grade every probe case exactly as Stage 3 would, retrieval only."""
-    from legal_agent.anti_hallucination.honesty import grade_honesty
+    from legal_agent.anti_hallucination.honesty import grade_honesty, lexicon_hit
     from legal_agent.dialogue.stage3 import assemble_dense_query, assemble_fact_query
     from legal_agent.retrieval import retriever
-    from legal_agent.retrieval.lexicon import expansions
 
     cases = json.loads(Path(path).read_text(encoding="utf-8"))
     retriever.reset_dense_fallbacks()
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         results = []
         for case in cases:
             facts = dict(case.get("facts", {}))
@@ -145,25 +137,19 @@ def run_honesty_probe(path=DEFAULT_CASES, conn=None) -> ProbeReport:
             )
             retrieved = [s for s, _ in scored]
             scores = [sc for _, sc in scored]
-            phrases = expansions(fact_query)
-            lexicon_hit = any(
-                p in (s.content or "") for s in retrieved for p in phrases
-            )
+            hit = lexicon_hit(retrieved, fact_query)
             results.append(ProbeCase(
                 id=case.get("id", ""),
                 expected_tier=case.get("expected_tier", ""),
                 must_not_refuse=bool(case.get("must_not_refuse")),
                 absent_statute=case.get("absent_statute"),
                 tier=grade_honesty(
-                    retrieved, scores, lexicon_hit=lexicon_hit, query=fact_query,
+                    retrieved, scores, lexicon_hit=hit, query=fact_query,
                 ),
                 top_score=max(scores) if scores else 0.0,
-                lexicon_hit=lexicon_hit,
+                lexicon_hit=hit,
                 window=[f"{s.statute_id}{s.article_no}" for s in retrieved],
             ))
-    finally:
-        if own is not None:
-            own.close()
     return ProbeReport(results, dense_fallbacks=retriever.dense_fallback_count())
 
 

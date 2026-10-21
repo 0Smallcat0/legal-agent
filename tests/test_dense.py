@@ -6,13 +6,7 @@ Run:  python -m pytest tests/test_dense.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.retrieval.dense import rrf_fuse  # noqa: E402
+from legal_agent.retrieval.dense import rrf_fuse
 
 A = ("甲法", "第1條", "2020-01-01")
 B = ("乙法", "第2條", "2020-01-01")

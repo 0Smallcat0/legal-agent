@@ -5,15 +5,10 @@ Run:  python -m pytest tests/test_dialogue.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.dialogue import intake, triage  # noqa: E402
-from legal_agent.dialogue.flow import SessionState, Stage, handle_turn  # noqa: E402
+from legal_agent.dialogue import intake, triage
+from legal_agent.dialogue.flow import SessionState, Stage, handle_turn
 
 
 # ── Stage 1: triage ──────────────────────────────────────────────────────────
@@ -268,3 +263,8 @@ if __name__ == "__main__":
     import pytest
 
     raise SystemExit(pytest.main([__file__, "-q"]))
+
+
+def test_every_checklist_field_has_a_label():
+    keys = {f.key for checklist in intake.CHECKLISTS.values() for batch in checklist for f in batch}
+    assert keys <= set(intake.FIELD_LABELS), sorted(keys - set(intake.FIELD_LABELS))
