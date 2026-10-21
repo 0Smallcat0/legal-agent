@@ -1024,17 +1024,24 @@ are bit-identical to the in-process ones (90 texts, max difference 0.0), and the
 same WSL run then forks a worker that starts, moves the weights to the card and
 generates.
 
+**On the Space, after the fix (2026-10-21).** The neighbour-noise question
+got a model-written 分析研判 with 3 citations, all traceable, and the container
+log read `hf_llm: 593 tokens in 15.6s (prompt 2703)` — 38 tok/s on what the Hub
+API calls `zero-a10g`. One call, so one speed, not a distribution.
+`hf_llm.GPU_SECONDS` went from 90 to 60 on it: the 2,048-token cap takes ~54 s
+at that speed, the longest answer measured (1,574 tokens, below) ~41 s. A call
+is admitted only while the visitor's remaining daily quota covers it (about 2
+minutes a day unauthenticated, 5 with an account), so 60 s is two answers a day
+unauthenticated where 90 s was one; out of quota, the page renders as with no
+model and says why. That answer also shows what the gates do not catch: its
+fourth step proposes suing under 社會秩序維護法§72, a police fine, not a civil
+claim — every citation verified, the reasoning wrong (the limit §7 measures).
+
 **What is NOT measured.**
 
-- **Speed and quota on the Space.** `hf_llm.GPU_SECONDS` = 90 is sized from the
-  longest answer measured (1,574 tokens, below; it fits down to 18 tok/s). The
-  Space's GPU (the Hub API reports `zero-a10g`) has no measured throughput yet;
-  `_generate` logs tokens and seconds per call, so the container log answers it. A call is admitted only
-  while the visitor's remaining daily quota covers the 90 s (about 2 minutes a
-  day unauthenticated, 5 with an account), so an unauthenticated visitor gets
-  about one answer a day; out of quota, the page renders as with no model and
-  says why.
-- **bf16.** The Space runs bf16, which an 8 GB card cannot hold. The closest
+- **Speed beyond that one call.** Load on the shared GPU may slow a call past
+  60 s; it is then aborted and the page says so.
+- **bf16 quality.** The Space runs bf16, which an 8 GB card cannot hold. The closest
   local run is the Space's own code path — `LEGAL_AGENT_PROVIDER=hf`,
   `LEGAL_AGENT_EMBED=st`, `hf_llm`, after both fixes — with the same 7B weights
   in bitsandbytes nf4. Six of the 27 prompts (above 2,885 tokens) ran out of
@@ -1055,7 +1062,9 @@ generates.
   before the two fixes): the gates flagged 67 of its 255 citations and 26 of 27
   answers lost their headings — proof the gates run on that path, and that a 0.5B
   model is not a candidate.
-- **The Space's CPU** for the index build.
+- **The Space's index build time**, beyond a bracket: the log has no
+  timestamps, and `dense index ready` appeared between 3 and 14 minutes after
+  startup (after the first answer, which therefore ran on BM25 alone).
 
 ## More
 
