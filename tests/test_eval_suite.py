@@ -7,6 +7,7 @@ Run:  python -m pytest tests/test_eval_suite.py -q
 """
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -193,6 +194,28 @@ def test_ablation_resumes_from_its_checkpoint(real_conn, tmp_path):
     assert len(second.runs) == 2 and len(calls) == 2
     assert second.aggregate("fake-a", "bare") == first.aggregate("fake-a", "bare") + \
         second.runs[1].stats
+
+
+def test_untraceable_bare_citations_are_split_by_the_national_law_list(real_conn, tmp_path):
+    """FAKE_ANSWER cites 社維法§72 (in the corpus) and 噪音管制法§99. Against a
+    national list that holds 噪音管制法 with no §99, the second is a real law
+    with no such article; against one without 噪音管制法, no such law."""
+    from legal_agent.evaluation.ablation import CaseRun, classify_bare, load_official
+
+    moj = tmp_path / "ChLaw.json"
+    moj.write_text(json.dumps({"Laws": [{"LawName": "噪音管制法", "LawArticles": [
+        {"ArticleNo": "第 6 條"}, {"ArticleNo": "第 15-1 條"}]}]}, ensure_ascii=False),
+        encoding="utf-8")
+    official = load_official([moj])
+    assert official["噪音管制法"] == {"第6條", "第15-1條"}
+
+    report = run_ablation(FIXTURE, models=["m"], llm_factory=lambda m: (lambda _p: FAKE_ANSWER),
+                          conn=real_conn, conditions=("bare",))
+    counts = classify_bare(report.runs, FIXTURE, official, conn=real_conn)["m"]
+    assert counts["corpus verified"] == 2 and counts["real law, no such article"] == 2
+    assert classify_bare(report.runs, FIXTURE, {}, conn=real_conn)["m"]["no such law"] == 2
+    gated = [CaseRun("x", "m", "gated", FAKE_ANSWER, report.runs[0].stats)]
+    assert classify_bare(gated, FIXTURE, official, conn=real_conn) == {}
 
 
 def test_strip_think_plain_passthrough():
