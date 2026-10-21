@@ -7,20 +7,18 @@ number depends on, including the one that was wrong first time round.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.evaluation.judgment_relevance import (  # noqa: E402
+from legal_agent.evaluation.judgment_relevance import (
     _CROSS_CUTTING,
     case_type_family,
     is_uninformative,
     statute_family,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize("ref,family", [
@@ -71,16 +69,12 @@ def test_generic_case_types_are_not_scored_either_way(case_type, uninformative):
     assert is_uninformative(case_type) is uninformative
 
 
-def test_the_harness_runs_end_to_end(tmp_path):
+def test_the_harness_runs_end_to_end(tmp_path, shipped_conn):
     """Integration on a SLICE, not all 168: retrieval is the slow part and the
     published figure is the harness's job, not the suite's. Twelve sessions
     exercise every branch and keep the run inside the suite's budget."""
     import json
 
-    from legal_agent.config import DB_PATH
-
-    if not Path(DB_PATH).exists():
-        pytest.skip("no corpus in this checkout")
     from legal_agent.evaluation.judgment_relevance import run_judgment_relevance
 
     sessions = json.loads(

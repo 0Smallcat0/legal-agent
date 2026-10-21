@@ -4,7 +4,7 @@ Every measured figure in this project has a harness behind it. The numbers
 COPIED out of those harnesses into README badges, the demo's hero line and the
 CLI greeting have nothing behind them, and on 2026-08-06 that cost four separate
 rounds of fixes in one day: the greeting still said 「11 部民生法規」 and the demo
-footer 「2,560 條」 long after the corpus reached 16 statutes and 2,922 articles;
+footer 「2,560 條」 long after the corpus reached 16 statutes and 2,921 articles;
 the Space advertised 10,437/10,437 after the mutation denominators were
 re-measured; the tests badge and the demo hero each lagged a commit behind twice.
 
@@ -15,38 +15,35 @@ sentence disagrees with it.
 from __future__ import annotations
 
 import re
-import sqlite3
-import sys
 from pathlib import Path
 
-import pytest
-
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
 
 
-def _corpus_counts() -> tuple[int, int, int] | None:
-    """(statutes, articles, judgments) as the prose counts them, or None.
+def _corpus_counts(conn) -> tuple[int, int, int]:
+    """(statutes, articles, judgments) as the prose counts them.
 
-    The prose says 「16 部民生法規 2,922 條+警察分工實務指引」 — the police routing
-    note is described SEPARATELY, so it is excluded from both counts here rather
-    than the numbers being hardcoded to match. 15 法律 + 1 命令 = 16.
+    The prose says 「16 部民生法規 2,921 條現行條文+1 個歷史版本+警察分工實務指引」.
+    The police routing note is described SEPARATELY, so it is excluded from both
+    counts here rather than the numbers being hardcoded to match. 15 法律 + 1 命令
+    = 16. Articles are counted as distinct CURRENT articles (`effective_to IS
+    NULL`), not rows: 違反社會秩序維護法案件處理辦法§11 also carries one repealed
+    historical slice, and counting rows called that one article two — the prose
+    said 「2,922 條」 while `mutation` said 2,921 in force.
     """
-    from legal_agent.config import DB_PATH
+    statutes, articles = conn.execute(
+        "SELECT COUNT(DISTINCT statute_id), "
+        "COUNT(DISTINCT statute_id || '|' || article_no) FROM statutes "
+        "WHERE hierarchy_level != '行政實務見解' AND effective_to IS NULL"
+    ).fetchone()
+    # The prose counts the SHIPPED judgments; a machine that has also harvested
+    # more holds extra rows, which is legal (CorpusFingerprint: above the floor).
+    from legal_agent.data.bootstrap import shipped_judgment_ids
 
-    if not Path(DB_PATH).exists():
-        return None
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        statutes, articles = conn.execute(
-            "SELECT COUNT(DISTINCT statute_id), COUNT(*) FROM statutes "
-            "WHERE hierarchy_level != '行政實務見解'"
-        ).fetchone()
-        (judgments,) = conn.execute("SELECT COUNT(*) FROM judgments").fetchone()
-    finally:
-        conn.close()
-    if not articles:
-        return None
+    jids = shipped_judgment_ids()
+    (judgments,) = conn.execute(
+        f"SELECT COUNT(*) FROM judgments WHERE jid IN ({','.join('?' * len(jids))})", jids
+    ).fetchone()
     return statutes, articles, judgments
 
 
@@ -54,16 +51,13 @@ def _read(name: str) -> str:
     return (ROOT / name).read_text(encoding="utf-8")
 
 
-def test_every_prose_corpus_count_matches_the_corpus():
+def test_every_prose_corpus_count_matches_the_corpus(shipped_conn):
     """The first sentence a user reads is the one that rots first.
 
     Both the CLI greeting and the demo footer are what a person sees BEFORE
     anything else, and both were three statutes and 362 articles out of date.
     """
-    counts = _corpus_counts()
-    if counts is None:
-        pytest.skip("no corpus in this checkout")
-    statutes, articles, judgments = counts
+    statutes, articles, judgments = _corpus_counts(shipped_conn)
     expected = [
         # README — the sentence that frames the whole worked example
         ("README.md", f"{articles:,} articles across {statutes} everyday statutes"),
@@ -73,8 +67,8 @@ def test_every_prose_corpus_count_matches_the_corpus():
         # the CLI's opening line
         ("legal_agent/run.py", f"語料為 {statutes} 部民生法規"),
         # the demo: footer disclaimer, 法規檢索 tab, hero line
-        ("app.py", f"{statutes} 部民生法規 {articles:,} 條"),
-        ("app.py", f"{statutes} 部民生法規、{articles:,} 條條文"),
+        ("app.py", f"{statutes} 部民生法規 {articles:,} 條現行條文"),
+        ("app.py", f"{statutes} 部民生法規、{articles:,} 條現行條文"),
         ("app.py", f"{judgments} 篇實際判決佐證"),
     ]
     wrong = [(name, text) for name, text in expected if text not in _read(name)]
@@ -84,54 +78,30 @@ def test_every_prose_corpus_count_matches_the_corpus():
     )
 
 
-_BADGE = re.compile(r"tests-(\d+)%20passing")
-_HERO = re.compile(r"(\d+) 項測試通過")
-# The setup blocks in AGENTS.md and CONTRIBUTING.md. Anchored to the COMMAND
-# rather than to the digits, because `docs/DEPLOY_SPACES.md` records 「Both were
-# stale on 2026-08-06 (10,437/10,437 and 433 tests)」 as history — a sentence
-# about a number that WAS wrong must stay wrong, and a looser pattern would
-# rewrite the record of the mistake.
-_SETUP = re.compile(r"python -m pytest -q\s+#\s*(\d+) tests")
-
-
-def _stated_test_counts() -> dict[str, int]:
-    """Every place the suite size is written down by hand.
-
-    Started as two (badge, hero) and missed the two a newcomer reads FIRST: the
-    setup blocks said 438 and 433 while the suite was at 468. The check that
-    exists to stop this rot was itself only half-applied.
-    """
-    found = {
-        "README.md badge": _BADGE.search(_read("README.md")),
-        "app.py hero": _HERO.search(_read("app.py")),
-        "AGENTS.md setup": _SETUP.search(_read("AGENTS.md")),
-        "CONTRIBUTING.md setup": _SETUP.search(_read("CONTRIBUTING.md")),
-    }
-    missing = [name for name, m in found.items() if m is None]
-    assert not missing, f"these stated test counts moved or vanished: {missing}"
-    return {name: int(m.group(1)) for name, m in found.items()}
-
-
-def test_the_stated_test_counts_agree():
-    """Cheap half of the check, and it runs even on a partial suite: four files
-    are updated by hand, so they drift apart before they drift from reality."""
-    stated = _stated_test_counts()
-    assert len(set(stated.values())) == 1, f"stated test counts disagree: {stated}"
-
-
-def test_the_stated_test_count_is_not_behind_reality(request):
-    """The expensive half: compare against what pytest actually collected.
-
-    Only meaningful on a full run — a subset collects fewer tests, and failing
-    then would punish `pytest tests/test_x.py`. So this asserts one direction:
-    the stated number may not be LOWER than the collected one, which is exactly
-    the way it rots (someone adds tests and the badge stays put).
-    """
-    collected = request.session.testscollected
-    stated = _stated_test_counts()
-    value = next(iter(stated.values()))
-    if collected < value:
-        pytest.skip(f"partial run ({collected} collected) — nothing to compare")
-    assert value == collected, (
-        f"{collected} tests collected but the prose says {value}: {stated}"
+# ── the mutation / blindspots headline, held to the same rule ───────────────
+# 11,904/11,904 was typed by hand into four files and drifted. Its replacement,
+# the per-kind table, is recomputed here from the shipped corpus: every figure
+# must appear verbatim in the table evals/RESULTS.md publishes.
+def test_the_mutation_and_blindspots_numbers_match_a_live_run(shipped_conn):
+    from legal_agent.evaluation.blindspots import score_blindspots
+    from legal_agent.evaluation.mutation import (
+        _ALWAYS_NONEMPTY_ON_FULL_CORPUS,
+        run_mutation_test,
     )
+
+    report = run_mutation_test(shipped_conn)
+    blindspots = score_blindspots(shipped_conn)
+    results = _read("evals/RESULTS.md")
+
+    # Per kind, next to its own name: a bare substring passed a regressed
+    # alias_typo (1/2) because 「1/2」 appears elsewhere in the file. Iterating
+    # the gated list, not report.kinds, catches a kind that generated nothing.
+    missing = []
+    for kind in dict.fromkeys((*_ALWAYS_NONEMPTY_ON_FULL_CORPUS, *report.kinds)):
+        bucket = report._bucket(kind)
+        needle = f"{sum(1 for o in bucket if o.ok):,}/{len(bucket):,}"
+        if not bucket or not re.search(rf"`{kind}`[\s|]*\*\*{re.escape(needle)}\*\*", results):
+            missing.append((kind, needle))
+    if blindspots.target_headline not in results:
+        missing.append(("blindspots", blindspots.target_headline))
+    assert not missing, f"live numbers not found verbatim in evals/RESULTS.md: {missing}"

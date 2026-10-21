@@ -22,14 +22,46 @@ jobs:
         run: pip install .[dev,demo]
       - name: Lint
         run: python -m ruff check legal_agent app.py tests
+      - name: Build the corpus
+        # Before the tests, not after: the tests that compare published numbers
+        # against the shipped corpus need it, and used to skip silently here.
+        run: python -c "import legal_agent; legal_agent.ensure_corpus()"
       - name: Run tests
+        # Includes the blindspots suite: every case in evals/blindspots_v1.json
+        # and the positive-control file, with the four still-blind cases
+        # xfail(strict=True) in tests/test_verifier.py.
         run: python -m pytest -q
-      # The library used to be un-installable: every path hung off the repo
-      # root, so an installed copy looked in site-packages for a corpus that was
-      # never shipped there. Proving `pip install` succeeds is only half of it —
-      # this runs the INSTALLED package from a directory with no checkout in it,
-      # so that failure mode cannot come back unnoticed.
+      - name: Verifier mutation coverage (full corpus)
+        # __main__ exits non-zero on any missed mutation, any control or
+        # per-axis positive-control false positive, or any kind that generates
+        # zero cases on the shipped corpus.
+        run: python -m legal_agent.evaluation.mutation
+      - name: Verifier mutation coverage (retrieval-first)
+        # Production call shape (dialogue/stage3.py). Gated only on the
+        # retrieval_miss_quoted status line; the other axes run hot in this
+        # mode by design (see evals/RESULTS.md). pipefail so the harness's own
+        # exit code survives the tee.
+        shell: bash
+        run: |
+          set -o pipefail
+          python -m legal_agent.evaluation.mutation --retrieval-first | tee retrieval_first_output.txt
+          grep -q "retrieval_miss_quoted" retrieval_first_output.txt
+      - name: Citation blindspots (structural axes)
+        # Exits non-zero on any control / positive-control false positive, an
+        # uncaught miss outside STILL_BLIND, or a STILL_BLIND case now caught.
+        run: python -m legal_agent.evaluation.blindspots
+      - name: Qualifier gate audit (Tier-3 false-reject sweep)
+        # Standing gate (CONTRIBUTING.md): exits non-zero on any false reject
+        # or any laundering probe that is let through.
+        run: python -m legal_agent.evaluation.qualifier_audit
+      # Runs the INSTALLED package from a directory with no checkout in it,
+      # so a corpus that only resolves from the repo root cannot come back.
       - name: Use the installed package outside the repo
+        # A fresh home: the default one was built above, and ensure_corpus()
+        # on a built home never reads the shipped JSON, so a wheel with no
+        # corpus in it passed this step.
+        env:
+          LEGAL_AGENT_HOME: ${{ runner.temp }}/fresh-home
         run: |
           mkdir -p "$RUNNER_TEMP/elsewhere"
           cd "$RUNNER_TEMP/elsewhere"

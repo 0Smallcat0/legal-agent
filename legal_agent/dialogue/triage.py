@@ -1,9 +1,13 @@
-"""Stage 1 — Triage (spec §3.2). Rule-based v1: NO retrieval, NO LLM.
+"""Stage 1 — Triage (spec §3.2). Rule-based: NO retrieval, NO LLM.
 
-Coarse-classify the opening complaint by keyword rules into `noise` (the only
-built scenario) vs. `other` (leak / threat / pets / odor / space -> generic flow
-not built yet) vs. `ambiguous` (e.g. "我有惡鄰居" -> ask a discriminating
-question instead of answering). The LLM classifier is a later step.
+Coarse-classify the opening complaint by keyword rules into `noise` (the one
+scenario with a hand-built checklist and ladder), `other:<domain>` (personal
+safety, rent / labor / consumer / traffic / family, neighbour leak / threat /
+pets / odor / space — all served by the generic flow), or `ambiguous` (e.g.
+"我有惡鄰居" -> ask one discriminating question instead of answering). Both
+intake paths, including the model-driven one, classify with these rules.
+
+Also infers which side of the complaint the user is on (`classify_stance`).
 """
 from __future__ import annotations
 
@@ -23,33 +27,23 @@ _NOISE = [
     "噪音", "吵", "大聲", "喧嘩", "喧囂", "吠", "狗叫", "音響", "卡拉ok", "ktv",
     "深夜", "半夜", "三更", "施工", "裝修", "分貝", "低頻", "震動", "擾人", "安寧",
     "聲音", "腳步", "拖家具", "喇叭", "重低音", "打鼓", "樂器",
-    # People report the BEHAVIOUR, not the word 「噪音」. Measured on a lived
-    # session: 「樓上小孩每天晚上跑跳到十一二點,還會拖椅子」 — the textbook
-    # complaint for the one scenario with a hand-built ladder — classified as
-    # ambiguous, so it got the generic flow and never saw 報警/管委會/存證信函.
+    # People report the BEHAVIOUR, not the word 「噪音」 (「樓上小孩跑跳、拖椅子」).
     "跑跳", "跑來跑去", "拖椅子", "拖桌", "蹦蹦", "砰砰", "哭鬧", "尖叫",
     "打球", "跳繩", "甩門", "摔門", "彈鋼琴", "唱歌",
 ]
 # Personal-safety complaints are checked BEFORE noise, and that ordering is the
-# whole point. Measured on a lived session: 「前男友…半夜按我家電鈴,還在我上班的
-# 地方等我,我很害怕」 hit the noise keyword 「半夜」, so someone describing being
-# stalked was handed the noise questionnaire — 「你住公寓大廈還是透天?」 — and the
-# answer came back citing 社維法§72 深夜喧嘩 and the 噪音 routing principle.
-# HARM words only. Relationship words (前夫/前妻/前男友/分手) were in this list
-# for one round and misfired immediately: a divorced father asking about
-# visitation was told 「你描述的涉及人身安全…請撥 110」 and had his question
-# answered out of 家暴法. Being someone's ex is not a safety signal.
+# whole point: 「前男友…半夜按我家電鈴…我很害怕」 hits the noise word 「半夜」, and a
+# stalking victim must not get the noise questionnaire.
+# HARM words only. Relationship words (前夫/前妻/前男友/分手) misfire — a divorced
+# father asking about visitation is not a safety case.
 _SAFETY = [
     "家暴", "暴力", "打我", "動手", "恐嚇", "威脅", "跟蹤", "騷擾", "糾纏",
     "保護令", "很害怕", "會怕", "性騷", "跟監", "堵我", "等我下班",
     "一直傳訊息", "按我家電鈴",
 ]
 
-# The everyday domains the corpus actually covers. Without these rows the
-# rule-based triage knew only 噪音 plus five neighbour disputes, so a plainly
-# stated 「退租後房東說牆壁有釘孔要扣我兩個月押金」 fell through to 「ambiguous」 and
-# the web demo replied 「這是租屋、勞資、消費、車禍、家事,還是鄰里的問題?」 —
-# asking the user to classify what they had just described.
+# The everyday domains the corpus covers, plus the neighbour disputes. A plainly
+# stated domain must not fall through to 「ambiguous」 and be asked to classify itself.
 _OTHER = [
     ("rent", "租屋", ["押金", "退租", "房東", "房客", "承租", "租約", "租金",
                      "二房東", "續租", "違約金"]),
@@ -68,12 +62,9 @@ _OTHER = [
 
 
 # ── Which side of the complaint the user is on ───────────────────────────────
-# Measured 2026-08-15 on the owner's own live dispute (journal/): every question
-# in NOISE_CHECKLIST, all five rungs of the noise ladder and the 存證信函 template
-# were written for the party MAKING the complaint. Run against a respondent's
-# description the ladder recommended 報警(110) citing 社維法§72 — the article that
-# fines him — and, once his own words were filed into fields, 調解 → 存證信函 →
-# 民事訴訟 against the neighbour who had complained about him.
+# The checklists, ladders and letter templates are written for the party MAKING
+# the complaint; handed to a respondent they tell him to report himself
+# (evals/RESULTS.md §8).
 #
 # So the seat is inferred where the sentence says it, and ASKED where it does
 # not. It is never assumed silently: an assumption nobody states is one the
@@ -82,9 +73,8 @@ STANCE_QUESTION = (
     "先確認一件事,因為它會改變後面每一題的意思:"
     "是別人製造的聲音吵到你,還是有人反映/投訴你這邊太吵?"
 )
-# The same question outside the noise scenario. Four of the five triage domains
-# live on the generic path, and its ladder is the complainant's too: 申訴, 檢舉,
-# 申請理賠, 存證信函, 提告.
+# The same question outside the noise scenario: the generic ladder is the
+# complainant's too (申訴, 檢舉, 申請理賠, 存證信函, 提告).
 STANCE_QUESTION_GENERIC = (
     "先確認一件事,因為它會改變後面每一題的意思:"
     "是你要向對方主張什麼,還是對方在向你要求或指控什麼?"
@@ -96,12 +86,13 @@ def stance_question(problem_type: str | None) -> str:
 
 # "Someone is complaining about ME." Phrases only — a bare 「我被」 or 「投訴」
 # cannot tell the two sides apart, and a wrong stance is worse than no stance.
-#「被鄰居投訴」 does not contain 「被投訴」, and the owner's own sentence is exactly
-# that shape. One pattern covers 被X投訴 / 被X檢舉 / 被X反映 for any short X,
-# instead of a row per neighbour noun.
+# 「被鄰居投訴」 does not contain 「被投訴」, so one pattern covers 被X投訴 /
+# 被X檢舉 / 被X反映 for any short X, instead of a row per neighbour noun.
 _BEING_COMPLAINED_ABOUT = re.compile(
     r"被[^,,。.;;\s]{0,6}?(?:投訴|檢舉|申訴|反映|抗議|舉發|報警)"
 )
+# 「要我直接付給他們」 / 「要我先還」: money demanded of me, a few words between.
+_DEMANDED_OF_ME = re.compile(r"要我[^,,。.;;\s]{0,4}?(?:還|付|賠|退)")
 _RESPONDENT = [
     # Outside the noise scenario the same seat is described differently: the
     # landlord accused of keeping a deposit, the employer under a complaint, the
@@ -114,6 +105,9 @@ _RESPONDENT = [
     "說我製造", "嫌我吵", "嫌我太吵", "被投訴", "被檢舉", "被反映", "被抗議",
     "鄰居說我", "樓下說我", "樓上說我", "隔壁說我", "來勸導我", "勸導我",
     "指控我", "怪我", "我被說", "說我這邊",
+    # Money being demanded FROM me, including the stance question's own second
+    # option (「對方在向你要求」), which the loose 對方 row used to read backwards.
+    "向我要", "跟我要", "要我退", "要我還", "要求我付", "要求我退", "要求我還",
 ]
 # "The noise is reaching ME." The historical default of this whole path, stated
 # explicitly so that 「neither」 becomes a real answer instead of a silent guess.
@@ -125,8 +119,18 @@ _COMPLAINANT = [
     # Without these rows almost every rent/labour/consumer session would fall to
     # None and be asked a question its own sentence already answered.
     "不還我", "不讓我", "不給我", "沒還我", "沒給我", "沒付我", "欠我",
-    "不處理", "不修", "不退", "拒絕", "我要退", "想拿回", "跟我要",
+    "不處理", "不修", "不退", "拒絕", "我要退", "想拿回", "扣我",
+    # How people answer the stance question when they are the asserting side.
+    "要回", "討回", "拿回", "追回", "我要主張", "我主張", "向他主張",
+    "我要告", "我想告", "我要提告", "我想提告", "我要求", "我想要求",
+    "我要申訴", "我想申訴", "我要檢舉", "我想檢舉",
+    "我要向", "我想向", "我要跟", "我想跟",
 ]
+
+# A bare 「前者」 / 「後者」 only means something right after the stance question,
+# whose first option is always the asserting side.
+_FIRST_OPTION = ("前者", "第一個", "第一種", "前面那個", "前一個")
+_SECOND_OPTION = ("後者", "第二個", "第二種", "後面那個", "後一個")
 
 
 def classify_stance(message: str) -> str | None:
@@ -137,20 +141,44 @@ def classify_stance(message: str) -> str | None:
     two because it is the seat this whole path was built in.
     """
     low = (message or "").lower()
-    if _BEING_COMPLAINED_ABOUT.search(low) or _hits(low, _RESPONDENT):
+    if (_BEING_COMPLAINED_ABOUT.search(low) or _DEMANDED_OF_ME.search(low)
+            or _hits(low, _RESPONDENT)):
         return "respondent"
     if _hits(low, _COMPLAINANT):
         return "complainant"
     return None
 
 
+def classify_stance_reply(message: str) -> str | None:
+    """`classify_stance` for the turn that answers the stance question, which may
+    also name an option by position. Short replies only: in a long sentence
+    「前面那個」 points at something else."""
+    stance = classify_stance(message)
+    if stance is not None:
+        return stance
+    low = (message or "").strip().lower()
+    if len(low) > 12:
+        return None
+    if _hits(low, list(_FIRST_OPTION)):
+        return "complainant"
+    if _hits(low, list(_SECOND_OPTION)):
+        return "respondent"
+    return None
+
+
 STANCE_LABELS = {
-    "respondent": "被投訴的一方(有人反映你這邊太吵)",
-    "complainant": "提出投訴的一方(別人的聲音吵到你)",
+    "respondent": "被投訴的一方",
+    "complainant": "提出投訴的一方",
+}
+# The parenthetical names the dispute, so it only fits a noise case: a
+# landlord accused over a deposit is not 「你這邊太吵」.
+_NOISE_STANCE_DETAIL = {
+    "respondent": "(有人反映你這邊太吵)",
+    "complainant": "(別人的聲音吵到你)",
 }
 
 
-def stance_line(stance: str | None) -> str:
+def stance_line(stance: str | None, problem_type: str | None = None) -> str:
     """The one visible line that makes the system's assumption correctable.
 
     Silence reads as endorsement — the same lesson the verification section
@@ -161,7 +189,9 @@ def stance_line(stance: str | None) -> str:
             "【本次假設】還沒確認你是哪一方,下面預設你是提出投訴的一方;"
             "若相反請說一句,我改。"
         )
-    return f"【本次假設】你是{STANCE_LABELS[stance]}。如果反了,直接說一句,我改。"
+    is_noise = (problem_type or "").split(":")[-1] == "noise"
+    detail = _NOISE_STANCE_DETAIL[stance] if is_noise else ""
+    return f"【本次假設】你是{STANCE_LABELS[stance]}{detail}。如果反了,直接說一句,我改。"
 
 
 @dataclass(frozen=True)
@@ -198,10 +228,7 @@ def classify(message: str) -> TriageResult:
         return TriageResult("noise", "noise")
     for cat, label, keywords in _OTHER:
         if _hits(low, keywords):
-            # No message: the domain is reported as a one-line acknowledgement by
-            # the dialogue layer. It used to explain the system's own plumbing
-            # (「住宅噪音有專屬問診流程,其他問題走通用流程(同一套檢索與五道關卡…)」)
-            # before asking its first question — implementation detail, said to
-            # someone who came with a problem.
+            # No message: the dialogue layer acknowledges the domain in one line,
+            # without explaining the system's own plumbing.
             return TriageResult("other", f"other:{cat}", label=label)
     return TriageResult("ambiguous", None, question=DISCRIMINATING_QUESTION)

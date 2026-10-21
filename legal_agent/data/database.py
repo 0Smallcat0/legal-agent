@@ -1,14 +1,8 @@
 """SQLite connection, schema, and the single write path into `statutes`.
 
-Responsibility: open connections to the local SQLite database, create the three
-tables defined in schema.sql (spec §1.4), and own the one INSERT that every
-ingest route goes through. It does NOT fetch or generate legal data — deciding
-WHAT to persist belongs to the ingest modules; this one only persists it.
-
-`insert_statute` used to live in `cli.py`, which meant `data/source_ingest.py`
-imported from the interactive command-line tool: the data layer depending on the
-presentation layer, and anyone importing the ingest path dragging argparse and a
-prompt loop along with it. Same SQL, correct home.
+Opens connections, creates the schema.sql tables (spec §1.4), and owns the one
+INSERT every statute ingest route goes through. Deciding WHAT to persist
+belongs to the ingest modules.
 """
 from __future__ import annotations
 
@@ -28,9 +22,8 @@ def connect(db_path: str | Path) -> sqlite3.Connection:
       check is actually enforced (SQLite leaves it OFF by default).
     - ``row_factory = sqlite3.Row`` so callers read columns by name.
     """
-    # The default DB now lives in a per-user data directory that does not exist
-    # on a fresh install, and sqlite3 does not create it — it raises
-    # 「unable to open database file」, which reads like a permission problem.
+    # The default per-user data dir may not exist yet, and sqlite3 would raise a
+    # misleading 「unable to open database file」 instead of creating it.
     if str(db_path) != ":memory:":
         Path(db_path).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(str(db_path))
@@ -43,8 +36,7 @@ def init_db(db_path: str | Path) -> None:
     """Create the schema by executing schema.sql. Idempotent.
 
     Safe to run repeatedly — schema.sql uses ``CREATE TABLE IF NOT EXISTS``.
-    Creates NO rows: seeding source_hierarchy with the four authority levels
-    (spec §1.4) is the first task of the data-population step, not this one.
+    Creates no rows; data/seed.py seeds source_hierarchy.
     """
     ddl = SCHEMA_PATH.read_text(encoding="utf-8")
     conn = connect(db_path)
@@ -54,15 +46,6 @@ def init_db(db_path: str | Path) -> None:
     finally:
         conn.close()
 
-
-# Shipped since step 1 (kept here as the layer's map):
-#   - seed_source_hierarchy() lives in data/seed.py (5 levels incl. 行政實務見解).
-#   - point-in-time slice queries live in retrieval/retriever.py (_load_in_force).
-#   - the statute importer lives in data/moj_xml.py (official bulk XML ->
-#     human-reviewed proposal JSON -> data/source_ingest.py).
-#   - the judgment importer lives in data/judicial_json.py (裁判書開放API
-#     JSON -> judgments rows; cited_articles via the verifier's grammar).
-# (no open TODOs — every importer in the spec's data layer is built)
 
 def insert_statute(conn: sqlite3.Connection, statute: Statute) -> None:
     """Insert one statute time-slice. Raises sqlite3.IntegrityError on a

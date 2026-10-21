@@ -1,7 +1,7 @@
 """Stage 3 — assemble facts -> retrieve ONCE -> LLM answer (retrieval-first) ->
 verify, with Mechanisms 3/4/5 wired in (spec §3.2, §3.3, §2.2/§2.3/§2.4/§2.5/§2.6).
 
-Mechanism 4 is now THREE sections sorted by 位階: 法律明文 (rank<=3) / 實務見解
+Mechanism 4 is THREE sections sorted by 位階: 法律明文 (rank<=3) / 實務見解
 (rank 4-5, must carry a 非法律明文 disclaimer) / 分析研判. The LLM is
 DEPENDENCY-INJECTED and bound LAZILY (after the insufficient short-circuit).
 Retrieval fires EXACTLY ONCE (retrieve_scored) on the complete fact set (§3.3).
@@ -24,6 +24,7 @@ from legal_agent.anti_hallucination.honesty import (
     MARGINAL_PREFIX,
     grade_honesty,
     insufficient_text,
+    lexicon_hit,
 )
 from legal_agent.anti_hallucination.sycophancy import check_premise
 from legal_agent.anti_hallucination.verifier import VerificationResult
@@ -90,7 +91,6 @@ class Stage3Result:
     answer: str
     retrieved: list[Statute]
     verifications: list[VerificationResult]
-    retrieval_count: int
     retrieval_scores: list[float] | None = None
     flagged_count: int = 0
     # Mechanism 3 — three-tier honesty.
@@ -118,11 +118,10 @@ def assemble_fact_query(collected_facts: dict) -> str:
 
 
 # GENERIC-flow content fields carry the semantic core; process facts
-# (timeline, actions_taken) are dense noise — measured: 勞基§24 ranks 34 on
-# the full fact string, 5 on problem+goal alone. Scenario checklists (noise)
-# deliberately DON'T focus: there 「報過警」/「管委會」 are content, and
-# focusing measurably hurt golden coverage — their dense half keeps the full
-# fact string (assemble returns None).
+# (timeline, actions_taken) are dense noise (勞基§24 ranks 34 on the full fact
+# string, 5 on problem+goal alone). The noise checklist deliberately does NOT
+# focus — there 「報過警」/「管委會」 are content — so its dense half keeps the
+# full fact string (assemble returns None).
 _DENSE_QUERY_FIELDS = ("problem", "goal")
 
 
@@ -160,11 +159,8 @@ def build_model_input(retrieved: list[Statute], collected_facts: dict) -> str:
         + _render_articles(retrieved)
         + "\n\n===== 使用者陳述的事實 =====\n"
         + _render_facts(collected_facts)
-        # The trailing reminder used to end 「若不足以回答,請說『現有資料不足』」,
-        # and a local 8B model appended that line to answers that had just
-        # analysed five articles — the reader gets a full answer stamped
-        # 「資料不足」. Insufficiency is graded by the honesty tier in code; the
-        # model only needs to say it INSIDE its analysis, when it is true.
+        # Insufficiency is graded by the honesty tier in code; the model is only
+        # told to say it INSIDE its analysis, and not to stamp it on a full answer.
         + "\n\n請根據上述法源回答。若法源確實不足以回答,請在「分析研判」段直接寫"
           "「現有資料不足」並建議諮詢律師——不要在已經做出分析的答案後面再補這句。"
     )
@@ -173,11 +169,7 @@ def build_model_input(retrieved: list[Statute], collected_facts: dict) -> str:
 def default_anthropic_llm() -> Callable[[str], str]:
     """Bind the REAL Anthropic client (built here, not at import). NEVER called in
     tests — run_stage3 is always handed a fake `llm` there."""
-    try:
-        from dotenv import load_dotenv
-        load_dotenv(config.PROJECT_ROOT / ".env")
-    except Exception:
-        pass
+    config.load_env()
 
     import anthropic  # lazy: tests never need the SDK imported
 
@@ -203,10 +195,9 @@ def default_anthropic_llm() -> Callable[[str], str]:
     return llm
 
 
-# The model appends this to 分析研判 even when it has just written four numbered
-# points off thirteen retrieved articles — measured on the 婚攝 session, and the
-# prompt's condition ("only when 法律明文 is 「(無)」") did not hold it. A reader who
-# reaches 「現有資料不足」 stops reading, so it is removed HERE rather than hoped for.
+# The model appends this to 分析研判 even after a full analysis, despite the
+# prompt's condition. A reader who reaches 「現有資料不足」 stops reading, so it is
+# removed HERE rather than hoped for.
 _BOILERPLATE = re.compile(
     r"[\s　]*現有資料不足[,，。]?\s*(?:建議諮詢律師)?[。.]?[\s　]*$|"
     r"^[\s　]*現有資料不足[,，。]?\s*(?:建議諮詢律師)?[。.]?[\s　]*",
@@ -227,15 +218,18 @@ def _drop_insufficient_boilerplate(answer: str) -> str:
 
 
 _CJK = re.compile(r"[一-鿿]+")
-_HEADING = re.compile(r"^\*\*(法律明文|實務見解|分析研判)\*\*\s*$", re.MULTILINE)
+# 「**法律明文**」 and 「### 法律明文」 alike: Qwen2.5 writes the second on every
+# answer (RESULTS.md §10), and a bold-only pattern skipped this gate for it.
+_HEADING = re.compile(
+    r"^(?:#{1,6}[ \t]*)?\*{0,2}(法律明文|實務見解|分析研判)\*{0,2}[ \t]*[:：]?[ \t]*$",
+    re.MULTILINE,
+)
 _MOVED_NOTE = "(以下由「法律明文」移入:這幾句不是條文原文,是模型的推論)"
 
 
 def _is_verbatim(line: str, corpus: str) -> bool:
     """True when a run of the line's own characters appears in the retrieved text.
-    Punctuation is dropped from BOTH sides — measured: comparing a stripped line
-    against unstripped corpus text called 民法§226 and §541 paraphrases when they
-    were quoted word for word."""
+    Punctuation is dropped from BOTH sides, or verbatim quotes read as paraphrase."""
     text = "".join(_CJK.findall(line))
     if len(text) < 14:
         return True          # too short to judge; headings, numbering, 「(無)」
@@ -245,11 +239,9 @@ def _is_verbatim(line: str, corpus: str) -> bool:
 def _move_model_prose_out_of_statute_section(answer: str, retrieved) -> str:
     """「法律明文」 must hold statute text, not the model's reasoning about it.
 
-    Measured over eight sessions: 4 of 30 bullets under that heading were the
-    model's own inference, and in the 業務 session they were backwards — §169 makes
-    the COMPANY answer for holding the salesman out, and the line under 法律明文 told
-    the reader HE was the agent. Such lines are moved into 分析研判 rather than
-    deleted: they are the model's to say, just not under that heading."""
+    Under that heading a lay reader takes the model's inference as law. Such lines
+    are moved into 分析研判 rather than deleted: they are the model's to say, just
+    not under that heading."""
     if not retrieved or not answer:
         return answer
     corpus = "".join(_CJK.findall(" ".join((s.content or "") for s in retrieved)))
@@ -269,8 +261,8 @@ def _move_model_prose_out_of_statute_section(answer: str, retrieved) -> str:
 
     body = "\n".join(kept).strip()
     if not body:
-        # Every bullet was the model's own prose — 業務簽的約 came out that way. The
-        # articles WERE retrieved, so the section is rebuilt from them in code rather
+        # Every bullet was the model's own prose. The articles WERE retrieved,
+        # so the section is rebuilt from them in code rather
         # than left as 「(無)」, which would hide the law behind the model's silence.
         body = "\n".join(
             f"{i}. {s.statute_id}{s.article_no}:{(s.content or '').splitlines()[0]}"
@@ -284,6 +276,30 @@ def _move_model_prose_out_of_statute_section(answer: str, retrieved) -> str:
     for i in range(1, len(parts) - 1, 2):
         rebuilt += f"**{parts[i]}**\n" + sections[parts[i]].strip("\n") + "\n\n"
     return rebuilt.rstrip() + "\n"
+
+
+_PRACTICE_LEVELS = {"函釋", "行政實務見解"}
+
+
+def _restore_empty_practice_section(answer: str, retrieved) -> str:
+    """Write 「實務見解 (無)」 back when the model dropped that heading and nothing
+    of that rank was retrieved — what the prompt tells it to write, and what the
+    section would truthfully say. Qwen2.5 drops it on 7 of 27 answers (RESULTS.md
+    §10); without this, all seven get UNSEGMENTED_NOTICE although the law and
+    the analysis ARE separated. When a 函釋 was retrieved the gap is real and the
+    notice stays."""
+    if not answer or any(s.hierarchy_level in _PRACTICE_LEVELS for s in retrieved):
+        return answer
+    law, practice, analysis = split_sections(answer)
+    if practice is not None or law is None or analysis is None:
+        return answer
+    heads = {m.group(1): m for m in _HEADING.finditer(answer)}
+    if "法律明文" not in heads or "分析研判" not in heads:
+        return answer
+    at = heads["分析研判"].start()
+    if at < heads["法律明文"].start():
+        return answer
+    return answer[:at] + "**實務見解**\n(無)\n\n" + answer[at:]
 
 
 def run_stage3(
@@ -318,24 +334,16 @@ def run_stage3(
     scores = [sc for _, sc in scored]
 
     premise_flag = check_premise(user_text) if user_text else False
-    # Did a curated 口語→法條 phrase land on something we actually retrieved?
-    # That is coverage evidence a length-sensitive BM25 score cannot express.
-    from legal_agent.retrieval.lexicon import expansions as _expansions
-
-    phrases = _expansions(fact_query)
-    lexicon_hit = any(
-        phrase in (statute.content or "")
-        for statute in retrieved
-        for phrase in phrases
+    tier = grade_honesty(
+        retrieved, scores, lexicon_hit=lexicon_hit(retrieved, fact_query), query=fact_query,
     )
-    tier = grade_honesty(retrieved, scores, lexicon_hit=lexicon_hit, query=fact_query)
 
     if tier == "insufficient":   # short-circuit BEFORE the LLM (never fabricate)
         refusal = insufficient_text(fact_query)
         return Stage3Result(
             answer=refusal,
             retrieved=[], verifications=[],
-            retrieval_count=0, retrieval_scores=[], flagged_count=0,
+            retrieval_scores=[], flagged_count=0,
             honesty_tier="insufficient", honesty_label=refusal,
             law_section=None, practice_section=None, analysis_section=None,
             sections_ok=False, practice_disclaimer_ok=False,
@@ -347,18 +355,17 @@ def run_stage3(
 
     answer = _drop_insufficient_boilerplate(llm(build_model_input(retrieved, collected_facts)))
     answer = _move_model_prose_out_of_statute_section(answer, retrieved)
+    answer = _restore_empty_practice_section(answer, retrieved)
 
-    # The model produced nothing. Measured 2026-08-06 swapping in qwen3:4b, which
-    # config.py's own comment invites: a thinking model spends the whole
-    # `num_predict` budget inside <think> and returns an empty string. Every gate
-    # then passed it — tier 「normal」, 0 flagged citations, sections_ok False and
-    # nobody reading it — so the reader got a GREEN 「充分」 bar over a blank page.
-    # A blank answer is a failure, not a confident one; say so instead of grading it.
+    # The model produced nothing (e.g. a thinking model spent the whole
+    # `num_predict` budget inside <think>). Every gate would pass it, so the reader
+    # would get a GREEN 「充分」 bar over a blank page. A blank answer is a failure,
+    # not a confident one; say so instead of grading it.
     if not answer.strip():
         return Stage3Result(
             answer=MODEL_EMPTY_TEXT,
             retrieved=retrieved, verifications=[],
-            retrieval_count=len(retrieved), retrieval_scores=scores, flagged_count=0,
+            retrieval_scores=scores, flagged_count=0,
             honesty_tier=tier, honesty_label=MODEL_EMPTY_TEXT,
             law_section=None, practice_section=None, analysis_section=None,
             sections_ok=False, practice_disclaimer_ok=False,
@@ -381,10 +388,8 @@ def run_stage3(
 
     law_section, practice_section, analysis_section = split_sections(answer)
     sections_ok = all(s is not None for s in (law_section, practice_section, analysis_section))
-    # Tolerate the shape, label the gap. A model that answers well but ignores the
-    # three headings used to have its work silently un-guaranteed: `sections_ok`
-    # was computed and then read by nobody, so the reader could not tell verbatim
-    # law from model prose. Keep the answer, say what is not guaranteed about it.
+    # Tolerate the shape, label the gap: keep an answer that ignores the three
+    # headings, and tell the reader verbatim law and model prose are not separated.
     if not sections_ok:
         # The tier label owns the first line when there is one — it is the
         # 僅供參考 warning and must not be pushed below anything.
@@ -420,7 +425,6 @@ def run_stage3(
         answer=answer,
         retrieved=retrieved,
         verifications=verifications,
-        retrieval_count=len(retrieved),
         retrieval_scores=scores,
         flagged_count=flagged,
         honesty_tier=tier,

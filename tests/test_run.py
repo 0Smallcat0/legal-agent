@@ -5,19 +5,14 @@ Run:  python -m pytest tests/test_run.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent import config, run  # noqa: E402
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
-from legal_agent.dialogue import stage3  # noqa: E402
+from legal_agent import config, run
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.seed import seed_source_hierarchy
+from legal_agent.dialogue import stage3
 
 
 @pytest.fixture

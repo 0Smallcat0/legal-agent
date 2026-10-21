@@ -6,18 +6,13 @@ Run:  python -m pytest tests/test_manual_llm.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent import config, run  # noqa: E402
-from legal_agent.dialogue import stage3  # noqa: E402
-from legal_agent.dialogue.manual_llm import END_SENTINEL, manual_llm  # noqa: E402
+from legal_agent import config, run
+from legal_agent.dialogue import stage3
+from legal_agent.dialogue.manual_llm import END_SENTINEL, manual_llm
 
 
 def _scripted(lines):

@@ -20,15 +20,19 @@ Golden file schema (a JSON list of cases):
       "expected_premise_flag": bool,      # optional, auto-scored (Mechanism 5)
       "notes": str                        # optional
     }
-The real ~20-30 cases are authored separately (human-verified) and dropped in as
-a JSON file; a tiny INVENTED fixture lives under tests/fixtures/ for this
-harness's own tests.
+The human-verified set is evals/golden_v2.json (32 cases); a tiny INVENTED
+fixture lives under tests/fixtures/ for this harness's own tests.
+
+Run at temperature 0 (the __main__ entry does so for ollama): at 0.2 the
+same code spanned 73.1–80.8% across five runs.
 """
 from __future__ import annotations
 
 import json
 from dataclasses import dataclass
 from pathlib import Path
+
+from legal_agent.evaluation import corpus_connection
 
 
 @dataclass
@@ -56,6 +60,11 @@ class CaseResult:
     # layer's real coverage (and its domain gaps) is visible instead of assumed.
     judgment_count: int = 0
     judgment_award_count: int = 0           # of those, how many carry a 主文 figure
+    # The two things on the page the MODEL decides (coverage above is mostly
+    # retrieval's): how many citations it wrote, and whether it kept the three
+    # headings. None when the tier refused before the model ran.
+    citation_count: int = 0
+    sections_ok: bool | None = None
 
 
 @dataclass
@@ -112,6 +121,10 @@ class Scorecard:
         return (self.premise_correct / self.premise_checked) if self.premise_checked else 0.0
 
     @property
+    def answered(self) -> list[CaseResult]:
+        return [c for c in self.cases if c.sections_ok is not None]
+
+    @property
     def cases_with_judgments(self) -> int:
         return sum(1 for c in self.cases if c.judgment_count)
 
@@ -130,6 +143,10 @@ class Scorecard:
             f"{self.premise_correct}/{self.premise_checked}({self.premise_accuracy:.0%})",
             f"參考裁判涵蓋:{self.cases_with_judgments}/{self.total} 案有裁判可掛"
             f"(其中 {self.cases_with_award} 案讀得到判賠金額)——僅計數,不計分",
+            f"模型作答 {len(self.answered)} 案:三段格式齊全 "
+            f"{sum(1 for c in self.answered if c.sections_ok)}/{len(self.answered)}｜"
+            f"引用 {sum(c.citation_count for c in self.answered)} 筆,被標記 "
+            f"{sum(c.flagged_citation_count for c in self.answered)} 筆",
             "",
             "⚠ 本表只『自動計分法條涵蓋』(expected_statutes 是否被引用或檢索到)。",
             "  法律判斷是否正確,必須由『人工』比對下方 [代理人回答] 與 [預期行動];",
@@ -233,25 +250,17 @@ def _run_case(case: dict, llm, conn) -> CaseResult:
         premise_ok=None if expected_premise is None else result.premise_flag == expected_premise,
         judgment_count=len(refs),
         judgment_award_count=sum(1 for r in refs if getattr(r, "awards", ())),
+        citation_count=len(result.verifications or ()),
+        sections_ok=None if result.honesty_tier == "insufficient" else bool(result.sections_ok),
     )
 
 
 def run_golden_set(golden_path, llm, conn=None) -> Scorecard:
     """Run every golden case through the pipeline with the injected `llm` and score
     statute coverage. `llm` is real at runtime, a fake in tests."""
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         cases = load_golden_set(golden_path)
         results = [_run_case(c, llm, conn) for c in cases]
-    finally:
-        if own is not None:
-            own.close()
     return Scorecard(results)
 
 
@@ -268,16 +277,16 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.golden_set <golde
     from legal_agent import config
     from legal_agent.run import build_runtime_llm  # reuses the model/key config checks
 
-    # A GRADER samples at temperature 0, or it measures the dice. ollama_llm's
-    # own docstring has said exactly that since it gained the parameter — and
-    # this entry point went on using build_runtime_llm()'s 0.2 default, which is
-    # how the Tier-1 scorecard came to swing 73.1–80.8% strict coverage across
-    # five runs of identical code. At 0.0, consecutive runs are identical.
-    # Measured 2026-08-05; see RESULTS.md.
+    # A grader samples at temperature 0, or it measures the dice (see module
+    # docstring). build_runtime_llm() would use its 0.2 default.
     if config.LLM_PROVIDER == "ollama":
         from legal_agent.dialogue.ollama_llm import ollama_llm
 
         _llm = ollama_llm(temperature=0.0)
+    elif config.LLM_PROVIDER == "hf":
+        from legal_agent.dialogue.hf_llm import hf_llm
+
+        _llm = hf_llm(temperature=0.0)
     else:
         _llm = build_runtime_llm()   # exits cleanly if MODEL/key not set
     print(run_golden_set(_sys.argv[1], llm=_llm).render())

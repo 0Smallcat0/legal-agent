@@ -4,15 +4,10 @@ Run:  python -m pytest tests/test_statute_text.py -q
 """
 from __future__ import annotations
 
-import sys
 from html import escape
-from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-import legal_agent  # noqa: E402
-from legal_agent.data.statute_text import mark_provisos, proviso_spans  # noqa: E402
+import legal_agent
+from legal_agent.data.statute_text import mark_provisos, proviso_spans
 
 # Verbatim from the corpus — the article the respondent's side turns on.
 _793 = (

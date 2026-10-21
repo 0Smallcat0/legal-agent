@@ -31,3 +31,9 @@ gradio>=4.0.0            # Zero-key demo UI (verifier playground / retrieval exp
 #
 # The 全國法規資料庫 bulk-XML importer streams with stdlib xml.etree — lxml
 # turned out to be unnecessary.
+
+# ── The Space's model stack (hf-space only; RESULTS.md §10 versions) ──
+torch==2.8.0
+transformers==5.20.2
+accelerate==1.15.0
+sentence-transformers==6.1.0

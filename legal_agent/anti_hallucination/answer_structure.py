@@ -1,6 +1,6 @@
 """Gate 4 — separate 法律明文 / 實務見解 / 研判 (spec §2.5, three-section form).
 
-A legal answer now has THREE labelled parts, sorted by the source's 位階:
+A legal answer has three labelled parts, sorted by the source's 位階:
     「法律明文」 — 憲法 / 法律 / 命令 (rank <=3): verifiable black-letter law.
     「實務見解」 — 函釋 / 行政實務見解 (rank 4-5): must open with a disclaimer that
                    this is NOT statutory text, only for reference.
@@ -34,11 +34,9 @@ def _find(heading: str, text: str) -> int:
     return text.find(heading)
 
 
-# Models emit the headings as markdown (「**法律明文**」). Splitting on the bare
-# heading therefore leaves the opening 「**」 dangling at the END of the previous
-# section and the closing 「**」 stuck to the heading — the user reads a stray
-# 「**」 on its own line between every section. Strip the decoration; keep the
-# text itself byte-for-byte.
+# Models emit the headings as markdown (「**法律明文**」), so splitting on the
+# bare heading leaves stray 「**」 at section edges. Strip the decoration; keep
+# the text itself byte-for-byte.
 _DECOR = " \t*#_\r\n:："
 
 
@@ -48,9 +46,8 @@ def _tidy(block: str, heading: str) -> str:
     return f"{heading}\n{body}" if body else heading
 
 
-# A section whose body is just 「(無)」 says something true: there was nothing to
-# report. Callers use this to avoid warning about a missing disclaimer on a
-# section that has no content to disclaim.
+# A body of just 「(無)」 means nothing to report; callers skip the missing-
+# disclaimer warning for such a section.
 _EMPTY_BODIES = {"", "無", "(無)", "（無）", "N/A", "n/a"}
 
 

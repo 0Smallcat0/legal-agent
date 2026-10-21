@@ -4,8 +4,7 @@ The judgment layer's correctness was never in doubt: `related_judgments` JOINs
 on articles the pipeline already retrieved, so a case cannot appear unless it
 cites the same law. That is relevance to an ARTICLE, guaranteed by code.
 
-Relevance to the reader's DISPUTE was never measured. RESULTS.md carried it as
-a debt with n=1 evidence. This harness supplies the number.
+This harness measures relevance to the reader's DISPUTE.
 
 What the reader actually sees
 ─────────────────────────────
@@ -26,10 +25,9 @@ Honest about what it cannot say. Same family is a NECESSARY condition, not a
 sufficient one: two 租賃 cases can still be different situations, so the match
 rate is a CEILING on usefulness, the way `real_recall.precision` is a floor.
 And 「損害賠償」 — the single commonest 案由 — names no dispute at all; those are
-reported as UNLABELLED rather than scored either way, because the field the
-reader would have to judge by is empty. Counting them as hits would flatter the
-number; counting them as misses would blame the layer for the court's filing
-vocabulary.
+reported as UNLABELLED rather than scored either way: counting them as hits
+would flatter the number, as misses would blame the layer for the court's
+filing vocabulary.
 
 Run:  python -m legal_agent.evaluation.judgment_relevance [evals/real_sessions.json]
 """
@@ -39,6 +37,9 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
+
+from legal_agent.config import PROJECT_ROOT
+from legal_agent.evaluation import corpus_connection
 
 # ── side 1: session -> family, from the articles a careful person expects ──
 # Ranges are 民法's own structure (編/章/節). A range is written where the whole
@@ -267,20 +268,13 @@ def run_judgment_relevance(path, conn=None, k: int | None = None) -> RelevanceRe
     )
 
     reset_dense_fallbacks()
-    own = None
-    if conn is None:
-        from legal_agent.config import DB_PATH
-        from legal_agent.data.database import connect
-
-        own = connect(DB_PATH)
-        conn = own
-    try:
+    with corpus_connection(conn) as conn:
         report = RelevanceReport()
         for case in json.loads(Path(path).read_text(encoding="utf-8")):
             expected = list(case.get("expected_statutes", []))
             families = sorted({f for f in (statute_family(e) for e in expected)
                                if f and f not in _CROSS_CUTTING})
-            found = retrieve(case["query"], k=k or DEFAULT_K, conn=conn)
+            found = retrieve(case["query"], k=DEFAULT_K if k is None else k, conn=conn)
             focus = {(s.statute_id, s.article_no) for s in found
                      if f"{s.statute_id}{s.article_no}" in set(expected)}
             refs = related_judgments(found, conn=conn, focus=focus or None)
@@ -306,9 +300,6 @@ def run_judgment_relevance(path, conn=None, k: int | None = None) -> RelevanceRe
                     entry.verdict = ("match" if entry.shown_family in families
                                      else "mismatch")
             report.cases.append(entry)
-    finally:
-        if own is not None:
-            own.close()
     report.dense_fallbacks = dense_fallback_count()
     return report
 
@@ -320,5 +311,5 @@ if __name__ == "__main__":   # python -m legal_agent.evaluation.judgment_relevan
 
     enable_utf8_stdout()
     print_corpus_fingerprint()
-    target = _sys.argv[1] if len(_sys.argv) > 1 else "evals/real_sessions.json"
+    target = _sys.argv[1] if len(_sys.argv) > 1 else PROJECT_ROOT / "evals" / "real_sessions.json"
     print(run_judgment_relevance(target).render())

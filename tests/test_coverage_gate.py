@@ -8,13 +8,7 @@ from going stale the way the floor did.
 from __future__ import annotations
 
 import json
-import sqlite3
-import sys
 from pathlib import Path
-
-import pytest
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from legal_agent.anti_hallucination.coverage import (
     ABSENT_DOMAINS,
@@ -37,20 +31,9 @@ _STUB = Statute(
 )
 
 
-def _corpus_statute_ids() -> set[str] | None:
-    """The statutes actually shipped, or None in a bare checkout."""
-    from legal_agent.config import DB_PATH
-
-    if not Path(DB_PATH).exists():
-        return None
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        return {r[0] for r in conn.execute("SELECT DISTINCT statute_id FROM statutes")}
-    finally:
-        conn.close()
 
 
-def test_every_absent_statute_is_really_absent_from_the_corpus():
+def test_every_absent_statute_is_really_absent_from_the_corpus(shipped_conn):
     """INVARIANT 1 — the table self-destructs when the corpus catches up.
 
     The insufficiency floor was calibrated on an 11-article corpus and left
@@ -58,9 +41,7 @@ def test_every_absent_statute_is_really_absent_from_the_corpus():
     questions sailed over it for a week. A row here naming a statute we DO carry
     is the same silent staleness, so it is a test failure instead.
     """
-    ids = _corpus_statute_ids()
-    if ids is None:
-        pytest.skip("no corpus in this checkout")
+    ids = {r[0] for r in shipped_conn.execute("SELECT DISTINCT statute_id FROM statutes")}
     present = sorted(name for name in ABSENT_DOMAINS if name in ids)
     assert not present, (
         f"these statutes are IN the corpus and must not be vetoed: {present}"

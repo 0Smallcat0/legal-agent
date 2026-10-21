@@ -26,7 +26,7 @@ number moves**.
 ```bash
 pip install .          # library: verify + retrieval. 3 deps, no GPU, ~30s
 pip install .[dev]     # + pytest and ruff
-python -m pytest -q    # 573 tests, ~60s
+python -m pytest -q    # ~70s
 ```
 
 The corpus ships inside the package and the database builds itself on first
@@ -44,7 +44,7 @@ Every one of these produced a wrong number that was believed for a while.
    test run and a CLI run share it.
 2. **Dense retrieval fails SILENTLY.** Without Ollama + `bge-m3` +
    `python -m legal_agent.retrieval.dense`, hybrid retrieval degrades to pure
-   BM25 and recall drops 348/356 → 320/356 with no error. The harnesses print
+   BM25 and recall drops 348/356 → 321/356 with no error. The harnesses print
    `dense_fallbacks`; **confirm it is 0 before comparing any number to a
    published one.**
 3. **The golden-set grader must run at temperature 0.** At 0.2 the same code
@@ -73,18 +73,10 @@ Every one of these produced a wrong number that was believed for a while.
 
 ## The harnesses
 
-```bash
-python -m legal_agent.evaluation.mutation                          # verifier recall
-python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # statute coverage (needs a model)
-python -m legal_agent.evaluation.real_recall                       # 168 real sessions
-python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse
-python -m legal_agent.evaluation.judgment_relevance                # reference tier
-python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # threshold sweep
-```
-
-`mutation`, `real_recall`, `honesty_probe` and `judgment_relevance` need no LLM
-and are deterministic.
-`golden_set` and `ablation` call a real model and are not.
+The full list, split into the ones that need no model (deterministic) and the
+ones that call a real model (not), is kept in one place:
+[`CONTRIBUTING.md` → The harnesses](CONTRIBUTING.md#the-harnesses). The current
+figure each one produces is in [`evals/RESULTS.md` §1](evals/RESULTS.md).
 
 ## Before you propose a change
 

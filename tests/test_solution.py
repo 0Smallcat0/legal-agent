@@ -4,13 +4,7 @@ Run:  python -m pytest tests/test_solution.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.dialogue.solution import (  # noqa: E402
+from legal_agent.dialogue.solution import (
     _deadline_sentences,
     build_generic_ladder,
     build_solution_ladder,
@@ -100,6 +94,18 @@ def test_the_letter_template_is_rendered_and_quotes_the_law_verbatim():
     assert "非法律意見" in out
     assert "自喪失占有之時起二年以內" in out          # verbatim §949
     assert "與你情況不符者請自行刪去" in out
+
+
+def test_the_letter_quotes_no_period_the_window_happened_to_carry():
+    """退租押金's letter told the landlord 「另請台端注意」 民法§686 — 合夥人退夥 — because
+    a 兩個月 in the window was the first period found. The period is the sender's
+    own clock and stays in the ladder; the letter keeps only its three 依據."""
+    window = [_226, _11_1, _226, _949]
+    ladder = build_generic_ladder({"problem": "我買到贓車"}, window, stance="complainant")
+    assert "另請台端注意" not in ladder.letter_template
+    assert "自喪失占有之時起二年以內" not in ladder.letter_template
+    assert ladder.rungs[0].key == "deadline"
+    assert "民法第949條" in ladder.rungs[0].what_it_is
 
 
 def test_no_letter_template_without_retrieval():
