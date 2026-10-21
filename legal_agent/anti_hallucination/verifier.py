@@ -179,6 +179,8 @@ _CITATION_RE = re.compile(
 # (2) 文號式: ...第X號 (函釋 / 行政實務見解). Bounded by punctuation (class excludes
 # 、,。) and by 條, so 「…法第72條及內政部…第123號」 cannot swallow the 條 citation.
 _DOCNUM_RE = re.compile(r"(?:(?!條)[一-鿿0-9０-９A-Za-z()（）]){2,40}?第" + _NUM + r"號")
+# A clause break between a 條 citation and a 文號: the 文號 then starts its own claim.
+_CLAUSE_BREAK_RE = re.compile(r"[,，;；。:：!！?？\n]")
 # 「第X條」 immediately after a statute name — used to recognise a cross-reference
 # that a retrieved source states in its own text.
 _CROSSREF_RE = re.compile(r"第(" + _NUM + r")條")
@@ -220,13 +222,30 @@ _SENTENCE_BOUNDARY = "。！？!?\n；;"
 _CLAUSE_BOUNDARY = "，,、"
 
 
+def _parse_amount(text: str) -> int | None:
+    """`_parse_number` for a money figure: a leading bare 千/百 (數千元, 數百元)
+    states no amount. Only here — 百分之五 needs the bare 百."""
+    if text.lstrip(",，")[:1] in ("千", "百", "仟", "佰"):
+        return None
+    return _parse_number(text)
+
+
 def _amounts(text: str) -> set[int]:
     values: set[int] = set()
     for group in _YUAN_RE.findall(text) + _CURRENCY_RE.findall(text):
-        value = _parse_number(group)
+        value = _parse_amount(group)
         if value is not None:
             values.add(value)
     return values
+
+
+def _has_vague_amount(text: str) -> bool:
+    """An 「…元」 that names no single amount (數萬元, 十餘萬元, 三四千元): the
+    amount axis has nothing to compare, so the claim is unverified, not clean."""
+    return any(
+        _parse_amount(g) is None and g.strip(",，")
+        for g in _YUAN_RE.findall(text)
+    )
 
 
 # ── bare (no-「元」) penalty amounts — the wrong_amount blind spot that drops
@@ -288,7 +307,7 @@ def _bare_penalty_amounts(text: str) -> set[int]:
         )
         if not anchored:
             continue
-        value = _parse_number(m.group(0))
+        value = _parse_amount(m.group(0))
         if value is not None:
             values.add(value)
     return values
@@ -837,9 +856,17 @@ def verify_answer(
     # neighbours (the two extractors below run in separate passes, so document
     # order is not the yield order).
     found = sorted(_iter_citations(answer_text, known), key=lambda cp: cp[1])
-    # Only 條 citations clip each other's claim scope: a 文號 carries no amount
-    # or period to grade, so 「第72條及某函第123號,處九萬元」 still belongs to 第72條.
-    article_positions = [(pos, pos + len(c.raw)) for c, pos in found if c.article_no]
+    # A 文號 joined to the 條 citation before it (及/、, no clause break) does not
+    # clip that citation's scope, so 「第72條及某函第123號,處九萬元」 still belongs
+    # to 第72條. A 文號 in a later clause states its own claim and does clip it.
+    article_positions = []
+    for c, pos in found:
+        if not c.article_no:
+            prev_end = max((p + len(a.raw) for a, p in found if a.article_no and p < pos),
+                           default=None)
+            if prev_end is not None and not _CLAUSE_BREAK_RE.search(answer_text, prev_end, pos):
+                continue
+        article_positions.append((pos, pos + len(c.raw)))
     for citation, pos in found:
         prev_end = max((e for s, e in article_positions if s < pos), default=None)
         next_start = min((s for s, _ in article_positions if s > pos), default=None)
@@ -921,6 +948,8 @@ def verify_answer(
                 floor=prev_end, ceiling=next_start,
             )
             content_match, cm_reason = _content_consistent(claim_scope, source.content)
+            if content_match and _has_vague_amount(claim_scope):
+                axis_unverified = True
 
         # 項/款 existence, only for citations named here: an inherited id may
         # belong to a parent law whose numbering this content cannot speak to.

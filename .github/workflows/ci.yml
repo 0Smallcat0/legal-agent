@@ -47,6 +47,8 @@ jobs:
           python -m legal_agent.evaluation.mutation --retrieval-first | tee retrieval_first_output.txt
           grep -q "retrieval_miss_quoted" retrieval_first_output.txt
       - name: Citation blindspots (structural axes)
+        # Exits non-zero on any control / positive-control false positive, an
+        # uncaught miss outside STILL_BLIND, or a STILL_BLIND case now caught.
         run: python -m legal_agent.evaluation.blindspots
       - name: Qualifier gate audit (Tier-3 false-reject sweep)
         # Standing gate (CONTRIBUTING.md): exits non-zero on any false reject
@@ -55,6 +57,11 @@ jobs:
       # Runs the INSTALLED package from a directory with no checkout in it,
       # so a corpus that only resolves from the repo root cannot come back.
       - name: Use the installed package outside the repo
+        # A fresh home: the default one was built above, and ensure_corpus()
+        # on a built home never reads the shipped JSON, so a wheel with no
+        # corpus in it passed this step.
+        env:
+          LEGAL_AGENT_HOME: ${{ runner.temp }}/fresh-home
         run: |
           mkdir -p "$RUNNER_TEMP/elsewhere"
           cd "$RUNNER_TEMP/elsewhere"

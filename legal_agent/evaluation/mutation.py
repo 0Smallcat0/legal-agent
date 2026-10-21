@@ -7,7 +7,7 @@ network. It grades the VERIFIER, not a model; per-kind figures are in
 evals/RESULTS.md §4. A kind not generated here has no recall number.
 
 Must-flag kinds: nonexistent_article, ghost_suffix, fake_statute,
-wrong_amount, bare_penalty_amount, docnum_adjacent_amount, direction_flip,
+wrong_amount, bare_penalty_amount, docnum_adjacent_amount, vague_amount, direction_flip,
 period_swap, period_direction_flip, fraction_tamper, out_of_force,
 ghost_paragraph, ghost_item(_multilist), anaphora_amount, anaphora_period,
 prefixed_statute, alias_typo, and subject_swap (only with a semantic_llm —
@@ -16,7 +16,7 @@ the structural axes cannot see it).
 Must-NOT-flag kinds: `control` (the headline false-positive denominator) and
 the axis-specific positive controls (real_paragraph_ref, real_item_ref(_multilist),
 real_fraction, real_period_direction, real_bare_amount, real_positional_amount,
-verbatim_crossref, prose_prefix, prefixed_statute_control). Each positive
+real_docnum_own_clause, verbatim_crossref, prose_prefix, prefixed_statute_control). Each positive
 control has its OWN denominator and is never averaged into `control`.
 
 retrieval_miss_quoted (only under --retrieval-first): a citation quoted
@@ -613,6 +613,27 @@ def run_mutation_test(
             expect_flag=True, conn=conn, expect_status_line_catch=True,
             retrieval_first=retrieval_first, retrieved_context=ctx,
         ))
+        # real_docnum_own_clause (positive control) — the REAL amount for the
+        # citation, then a 文號 in its own clause stating a different amount.
+        # That amount is the 文號's claim, not the citation's.
+        if source_amounts:
+            outcomes.append(_judge(
+                "real_docnum_own_clause", ref,
+                f"依{ref},違者處新臺幣{max(source_amounts)}元,"
+                f"內政部台內警字第1號函則另指出得處{bad_amt}元。",
+                expect_flag=False, conn=conn,
+                retrieval_first=retrieval_first, retrieved_context=ctx,
+            ))
+        # vague_amount — 「數萬元」/「數千元」 name no amount, so the amount axis cannot
+        # grade it. Graded on the status line: it must not claim full
+        # traceability (it did once the bare 萬 stopped reading as 0).
+        for vague in ("數萬元", "數千元") if source_amounts else ():
+            outcomes.append(_judge(
+                "vague_amount", ref,
+                f"依{ref},違者處新臺幣{vague}罰鍰。",
+                expect_flag=True, conn=conn, expect_status_line_catch=True,
+                retrieval_first=retrieval_first, retrieved_context=ctx,
+            ))
         # real_positional_amount (positive control) — the REAL amount written
         # digit by digit (10000 -> 一〇〇〇〇), as dates and amounts often are.
         if source_amounts and max(source_amounts) >= 10:
@@ -946,7 +967,7 @@ _ALWAYS_NONEMPTY_ON_FULL_CORPUS = (
     "anaphora_amount", "anaphora_period", "real_bare_amount",
     "docnum_adjacent_amount", "real_positional_amount",
     "ghost_item_multilist", "real_item_ref_multilist",
-    "docnum_before_citation",
+    "docnum_before_citation", "real_docnum_own_clause", "vague_amount",
     "period_direction_flip", "real_period_direction",
     "fraction_tamper", "real_fraction",
 )

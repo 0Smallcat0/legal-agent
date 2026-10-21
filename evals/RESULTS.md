@@ -25,7 +25,7 @@ identically.
 
 | what | number | harness |
 |---|---|---|
-| seeded defects caught | **100% in each of 22 kinds, 0/2,921 false positives** — per-kind denominators in §4 | `mutation` |
+| seeded defects caught | **100% in each of 24 kinds, 0/2,921 false positives** — per-kind denominators in §4 | `mutation` |
 | blindspot cases the checker catches | **21/25** — 4 named misses, all modal/proviso semantics | `blindspots`, `evals/blindspots_v1.json` |
 | semantic 4th axis — the only thing that catches a subject swap | catches **9/9**, and flags **1,259/2,921 (43%)** of CORRECT citations, so it stays off | `mutation --semantic` *(model)*, llama3.1, `semantic_unreached` 0 |
 | statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `golden_set evals/golden_v2.json` *(model)*, grader at temperature 0, k=8 |
@@ -33,7 +33,7 @@ identically.
 | wrong-premise detection | **32/32 (100%)** | same run |
 | out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second | `honesty_probe`, 35 cases, retrieval only |
 | retrieval recall, real user wording | **348/356 (98%)**, 5.9 unexpected articles per session | `real_recall`, 168 stored sessions, k=8, `dense_fallbacks` 0 |
-| the same, after a plain `pip install` (no dense index) | **320/356** | `real_recall`, `dense_fallbacks` 168/168 |
+| the same, after a plain `pip install` (no dense index) | **321/356** (published as 320; re-measured 321 on 2026-10-20, identical on 23906c0) | `real_recall`, `dense_fallbacks` 168/168 |
 | deadlines quoted from the retrieved articles | **69/168 sessions** | counted over the 168 stored sessions |
 | first action names the reader's own documents | **83/168 sessions** | counted, same sessions |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** | counted, same sessions |
@@ -127,7 +127,7 @@ catches everything", and what it actually measured was "the checker catches
 everything the generator knows how to break". Errors the generator could not
 express were not in the denominator, so they could not lower it.
 
-The generator now covers twenty-two kinds. Every one is still at 100%, and the
+The generator now covers twenty-four kinds. Every one is still at 100%, and the
 per-kind denominators are what the claim is now allowed to mean — the recall
 number for a kind that is not listed here does not exist.
 
@@ -152,6 +152,8 @@ number for a kind that is not listed here does not exist.
 | `docnum_adjacent_amount` | **2,921/2,921** | a wrong amount with a 文號 written right after the citation |
 | `docnum_before_citation` | **2,921/2,921** | a 文號 written right before the citation; graded on the status line, which must not claim full traceability |
 | `real_positional_amount` | **344/344** | the amount in digit-by-digit form, 一〇〇〇〇 (must NOT be flagged) |
+| `real_docnum_own_clause` | **345/345** | the real amount, then a 文號 in its own clause stating another (must NOT be flagged) |
+| `vague_amount` | **690/690** | 「數萬元」 or 「數千元」, which name no amount; graded on the status line, which must not claim full traceability |
 | `anaphora_amount` | **345/345** | an amount attributed to the wrong article |
 | `fraction_tamper` | **63/63** | 三分之二 altered |
 | `real_fraction` | **82/82** | the fraction as written (must NOT be flagged) |
@@ -178,11 +180,30 @@ review found 「三四千元」「一兩萬元」 reading as 34,000 and 120,000 
 positional-digit fix; two non-zero Chinese digits before a unit are now an
 approximate range and state no amount.
 
+`real_docnum_own_clause` records a second regression from the same fix, found
+in an independent review (2026-10-20). Letting no 文號 end a citation's claim
+scope also handed a 文號 in a LATER clause — 「依…第72條處一萬元以下罰鍰,內政部
+…第123號函則另指出得處九萬元」 — to §72, and its amount was graded against §72:
+**0/345** clean on that commit, **345/345** after. A 文號 now leaves the scope open
+only when nothing but 及/、 separates it from the citation; across a clause
+break (,;。:) it closes it, as on main.
+
+`vague_amount` records a third. Once a bare 萬 stopped reading as 0, 「依…第72條,
+處數萬元罰鍰」 parsed to no amount at all and the answer read 「全數可回溯」:
+**0/345** on that commit. main had flagged it, for the wrong reason (「[0]」). An
+「…元」 that names no single amount (數萬, 十餘萬, 三四千) now marks the
+citation unverified: **345/345**. 「數千元」 has read as 1,000 since before
+this branch (數 is outside the amount pattern, and a bare 千 counts as 一千), so
+on the 7 articles whose own amount is 1,000 it read as fully traceable; the
+kind now plants both, **683/690 → 690/690**. A bare 千/百 states no amount only
+in a money figure — 百分之五 still needs it, and dropping it in the shared
+number parser cost 26 of the 82 `real_fraction` cases.
+
 The `real_*` kinds are the half that makes the other half mean anything: they
 plant nothing and must come back unflagged, which is where a false-positive rate
 of 0/2,921 comes from rather than from a checker that simply flags less.
 
-**Also in every run, outside the twenty-two rows above:** `control` **2,921/2,921** (the correct-citation population
+**Also in every run, outside the twenty-four rows above:** `control` **2,921/2,921** (the correct-citation population
 the 0/2,921 is measured on), `wrong_amount` **2,921/2,921**,
 `bare_penalty_amount` **2,921/2,921**, `out_of_force` **2,921/2,921**,
 `prose_prefix` **32/32**, `alias_typo` **2/2**, `fake_statute` **1/1** and
