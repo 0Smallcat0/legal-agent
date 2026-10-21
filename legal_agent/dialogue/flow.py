@@ -124,6 +124,13 @@ def _update_stance(state: SessionState, message: str) -> None:
         state.stance = stance
 
 
+def _read_stance_reply(state: SessionState, message: str) -> None:
+    """The turn right after the stance question may answer it by position
+    (「前者」); any other turn may not."""
+    if state.stance is None:
+        state.stance = triage.classify_stance_reply(message)
+
+
 def _enter_noise_intake(state: SessionState, user_message: str) -> tuple[str, SessionState]:
     """Move into the noise checklist, seeding it with the user's own words."""
     state.problem_type = "noise"
@@ -173,6 +180,7 @@ def handle_turn(state: SessionState, user_message: str) -> tuple[str, SessionSta
         # The stance question was asked last turn; this turn's words answer it,
         # and the problem type was already settled before it was asked.
         if state.asked_stance and state.problem_type:
+            _read_stance_reply(state, user_message)
             if state.problem_type == "noise":
                 return _enter_noise_intake(state, user_message)
             return _enter_generic_intake(state, user_message, label=None, message=None)
@@ -257,6 +265,8 @@ def handle_turn_smart(state: SessionState, user_message: str,
         if state.stance is None and not state.asked_stance:
             state.asked_stance = True
             return preface + triage.stance_question(state.problem_type), state
+    elif state.asked_stance and state.intake_turns == 0:
+        _read_stance_reply(state, user_message)
 
     # Keep triage's finer type, so each domain gets its own checklist.
     ptype = state.problem_type or "generic"

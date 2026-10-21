@@ -60,6 +60,11 @@ class CaseResult:
     # layer's real coverage (and its domain gaps) is visible instead of assumed.
     judgment_count: int = 0
     judgment_award_count: int = 0           # of those, how many carry a 主文 figure
+    # The two things on the page the MODEL decides (coverage above is mostly
+    # retrieval's): how many citations it wrote, and whether it kept the three
+    # headings. None when the tier refused before the model ran.
+    citation_count: int = 0
+    sections_ok: bool | None = None
 
 
 @dataclass
@@ -116,6 +121,10 @@ class Scorecard:
         return (self.premise_correct / self.premise_checked) if self.premise_checked else 0.0
 
     @property
+    def answered(self) -> list[CaseResult]:
+        return [c for c in self.cases if c.sections_ok is not None]
+
+    @property
     def cases_with_judgments(self) -> int:
         return sum(1 for c in self.cases if c.judgment_count)
 
@@ -134,6 +143,10 @@ class Scorecard:
             f"{self.premise_correct}/{self.premise_checked}({self.premise_accuracy:.0%})",
             f"參考裁判涵蓋:{self.cases_with_judgments}/{self.total} 案有裁判可掛"
             f"(其中 {self.cases_with_award} 案讀得到判賠金額)——僅計數,不計分",
+            f"模型作答 {len(self.answered)} 案:三段格式齊全 "
+            f"{sum(1 for c in self.answered if c.sections_ok)}/{len(self.answered)}｜"
+            f"引用 {sum(c.citation_count for c in self.answered)} 筆,被標記 "
+            f"{sum(c.flagged_citation_count for c in self.answered)} 筆",
             "",
             "⚠ 本表只『自動計分法條涵蓋』(expected_statutes 是否被引用或檢索到)。",
             "  法律判斷是否正確,必須由『人工』比對下方 [代理人回答] 與 [預期行動];",
@@ -237,6 +250,8 @@ def _run_case(case: dict, llm, conn) -> CaseResult:
         premise_ok=None if expected_premise is None else result.premise_flag == expected_premise,
         judgment_count=len(refs),
         judgment_award_count=sum(1 for r in refs if getattr(r, "awards", ())),
+        citation_count=len(result.verifications or ()),
+        sections_ok=None if result.honesty_tier == "insufficient" else bool(result.sections_ok),
     )
 
 
@@ -268,6 +283,10 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.golden_set <golde
         from legal_agent.dialogue.ollama_llm import ollama_llm
 
         _llm = ollama_llm(temperature=0.0)
+    elif config.LLM_PROVIDER == "hf":
+        from legal_agent.dialogue.hf_llm import hf_llm
+
+        _llm = hf_llm(temperature=0.0)
     else:
         _llm = build_runtime_llm()   # exits cleanly if MODEL/key not set
     print(run_golden_set(_sys.argv[1], llm=_llm).render())

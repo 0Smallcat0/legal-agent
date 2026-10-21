@@ -75,6 +75,14 @@ def build_runtime_llm():
             )
         return ollama_llm()
 
+    if provider == "hf":
+        # In-process transformers weights; the Space's backend, runnable locally.
+        try:
+            from legal_agent.dialogue.hf_llm import hf_llm
+        except ImportError as exc:
+            _die(f"⚠ LEGAL_AGENT_PROVIDER=hf 需要 `pip install .[space]`:{exc}")
+        return hf_llm()
+
     if provider == "anthropic":
         if not config.is_model_configured():
             _die(
@@ -96,7 +104,7 @@ def build_runtime_llm():
             _die(f"⚠ 無法建立 Anthropic 客戶端:{exc}")
 
     _die(
-        f"⚠ 未知的 LLM_PROVIDER:{provider!r}。目前支援:'manual' / 'ollama' / 'anthropic'。"
+        f"⚠ 未知的 LLM_PROVIDER:{provider!r}。目前支援:'manual' / 'ollama' / 'hf' / 'anthropic'。"
         "請設 LEGAL_AGENT_PROVIDER,或改 legal_agent/config.py。"
     )
 

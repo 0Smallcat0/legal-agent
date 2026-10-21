@@ -91,6 +91,8 @@ def stance_question(problem_type: str | None) -> str:
 _BEING_COMPLAINED_ABOUT = re.compile(
     r"被[^,,。.;;\s]{0,6}?(?:投訴|檢舉|申訴|反映|抗議|舉發|報警)"
 )
+# 「要我直接付給他們」 / 「要我先還」: money demanded of me, a few words between.
+_DEMANDED_OF_ME = re.compile(r"要我[^,,。.;;\s]{0,4}?(?:還|付|賠|退)")
 _RESPONDENT = [
     # Outside the noise scenario the same seat is described differently: the
     # landlord accused of keeping a deposit, the employer under a complaint, the
@@ -103,6 +105,9 @@ _RESPONDENT = [
     "說我製造", "嫌我吵", "嫌我太吵", "被投訴", "被檢舉", "被反映", "被抗議",
     "鄰居說我", "樓下說我", "樓上說我", "隔壁說我", "來勸導我", "勸導我",
     "指控我", "怪我", "我被說", "說我這邊",
+    # Money being demanded FROM me, including the stance question's own second
+    # option (「對方在向你要求」), which the loose 對方 row used to read backwards.
+    "向我要", "跟我要", "要我退", "要我還", "要求我付", "要求我退", "要求我還",
 ]
 # "The noise is reaching ME." The historical default of this whole path, stated
 # explicitly so that 「neither」 becomes a real answer instead of a silent guess.
@@ -114,8 +119,18 @@ _COMPLAINANT = [
     # Without these rows almost every rent/labour/consumer session would fall to
     # None and be asked a question its own sentence already answered.
     "不還我", "不讓我", "不給我", "沒還我", "沒給我", "沒付我", "欠我",
-    "不處理", "不修", "不退", "拒絕", "我要退", "想拿回", "跟我要",
+    "不處理", "不修", "不退", "拒絕", "我要退", "想拿回", "扣我",
+    # How people answer the stance question when they are the asserting side.
+    "要回", "討回", "拿回", "追回", "我要主張", "我主張", "向他主張",
+    "我要告", "我想告", "我要提告", "我想提告", "我要求", "我想要求",
+    "我要申訴", "我想申訴", "我要檢舉", "我想檢舉",
+    "我要向", "我想向", "我要跟", "我想跟",
 ]
+
+# A bare 「前者」 / 「後者」 only means something right after the stance question,
+# whose first option is always the asserting side.
+_FIRST_OPTION = ("前者", "第一個", "第一種", "前面那個", "前一個")
+_SECOND_OPTION = ("後者", "第二個", "第二種", "後面那個", "後一個")
 
 
 def classify_stance(message: str) -> str | None:
@@ -126,10 +141,28 @@ def classify_stance(message: str) -> str | None:
     two because it is the seat this whole path was built in.
     """
     low = (message or "").lower()
-    if _BEING_COMPLAINED_ABOUT.search(low) or _hits(low, _RESPONDENT):
+    if (_BEING_COMPLAINED_ABOUT.search(low) or _DEMANDED_OF_ME.search(low)
+            or _hits(low, _RESPONDENT)):
         return "respondent"
     if _hits(low, _COMPLAINANT):
         return "complainant"
+    return None
+
+
+def classify_stance_reply(message: str) -> str | None:
+    """`classify_stance` for the turn that answers the stance question, which may
+    also name an option by position. Short replies only: in a long sentence
+    「前面那個」 points at something else."""
+    stance = classify_stance(message)
+    if stance is not None:
+        return stance
+    low = (message or "").strip().lower()
+    if len(low) > 12:
+        return None
+    if _hits(low, list(_FIRST_OPTION)):
+        return "complainant"
+    if _hits(low, list(_SECOND_OPTION)):
+        return "respondent"
     return None
 
 

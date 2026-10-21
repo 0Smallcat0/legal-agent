@@ -48,9 +48,20 @@ MODEL = MODEL_PLACEHOLDER
 #                 + a pulled model; see OLLAMA_MODEL). Enables intelligent intake
 #                 at zero cost. An 8GB GPU runs a 7-8B model well.
 #   "anthropic" — the real Claude API (needs MODEL set above + ANTHROPIC_API_KEY).
+#   "hf"        — transformers weights in-process (dialogue/hf_llm.py; needs
+#                 `pip install .[space]`). For the Hugging Face Space, which has
+#                 no Ollama; there the generation runs inside @spaces.GPU.
 # Read from the environment because an installed copy of this file lives in
 # site-packages, where no one should have to edit it.
-LLM_PROVIDER = os.environ.get("LEGAL_AGENT_PROVIDER", "ollama")
+# A ZeroGPU host sets SPACES_ZERO_GPU (read by the `spaces` package itself), so
+# the Space picks "hf" without anyone editing its settings; elsewhere the
+# default is unchanged.
+ON_ZEROGPU = bool(os.environ.get("SPACES_ZERO_GPU"))
+LLM_PROVIDER = os.environ.get("LEGAL_AGENT_PROVIDER", "hf" if ON_ZEROGPU else "ollama")
+
+# transformers backend (used when LLM_PROVIDER = "hf"). Apache-2.0 and not
+# gated, so the Space downloads it with no token; Llama 3.1 would need one.
+HF_MODEL = os.environ.get("LEGAL_AGENT_HF_MODEL", "Qwen/Qwen2.5-7B-Instruct")
 
 # Local Ollama backend (used when LLM_PROVIDER = "ollama").
 OLLAMA_HOST = os.environ.get("LEGAL_AGENT_OLLAMA_HOST", "http://localhost:11434")
@@ -79,6 +90,12 @@ OLLAMA_THINK = _tri_state("LEGAL_AGENT_OLLAMA_THINK")
 # retriever.dense_fallback_count — AGENTS.md trap 2); "off" = pure BM25 always.
 # BM25 scores drive the honesty tier either way; dense only reorders/recalls.
 DENSE_RETRIEVAL = "auto"
+
+# Where the bge-m3 embeddings come from: "ollama" (local daemon) or "st"
+# (sentence-transformers, in-process on CPU — the Space has no daemon). Each
+# keeps its own index file, so a corpus embedded one way is never queried the
+# other way.
+EMBED_BACKEND = os.environ.get("LEGAL_AGENT_EMBED", "st" if ON_ZEROGPU else "ollama")
 
 # Query expansion (retrieval/lexicon.py): "on" appends hand-curated statutory
 # vocabulary when everyday trigger words appear (「精神賠償」 -> 「非財產上之
