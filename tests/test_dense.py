@@ -92,3 +92,25 @@ def test_fusion_falls_back_to_bm25_when_index_missing(tmp_path, monkeypatch):
     results = retriever.retrieve_scored("維護安寧", conn=conn)
     assert [s.statute_id for s, _ in results] == ["甲法"]   # pure BM25 behaviour
     conn.close()
+
+
+# ── the Space's embedding backend (sentence-transformers faked) ──────────────
+def test_st_backend_embeds_in_process_and_never_calls_ollama(monkeypatch):
+    import numpy as np
+
+    from legal_agent import config as cfg
+    from legal_agent.retrieval import dense
+
+    class FakeST:
+        def encode(self, texts, batch_size, normalize_embeddings):
+            assert normalize_embeddings
+            return [[1.0, 0.0]] * len(texts)
+
+    def no_ollama(*a, **k):
+        raise AssertionError("st backend must not reach Ollama")
+
+    monkeypatch.setattr(cfg, "EMBED_BACKEND", "st")
+    monkeypatch.setattr(dense, "_st_model", lambda: FakeST())
+    monkeypatch.setattr(dense.urllib.request, "urlopen", no_ollama)
+    out = dense.embed_texts(["甲", "乙"])
+    assert out.dtype == np.float32 and out.shape == (2, 2)

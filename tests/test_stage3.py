@@ -227,6 +227,47 @@ def test_a_statute_section_emptied_by_the_move_is_rebuilt_from_the_corpus():
     assert "對於第三人應負授權人之責任" in statute_part
 
 
+def test_markdown_headings_get_the_same_gate():
+    """Qwen2.5 writes 「### 法律明文」 on every answer; the bold-only pattern let its
+    inference sit under the statute heading unmoved (RESULTS.md §10)."""
+    answer = (
+        "### 法律明文\n\n"
+        "1. 由自己之行為表示以代理權授與他人，或知他人表示為其代理人而不為反對之表示者，"
+        "對於第三人應負授權人之責任。\n"
+        "2. 根據民法第169條，當初你與業務簽署維護合約時，你沒有表示反對，"
+        "他們就把你視為代理人之一。\n\n"
+        "### 實務見解\n(無)\n\n"
+        "### 分析研判\n1. 你可以向公司主張。\n"
+    )
+    out = stage3._move_model_prose_out_of_statute_section(answer, [_S169])
+    assert "他們就把你視為代理人之一" not in out.split("實務見解")[0]
+    assert "他們就把你視為代理人之一" in out.split("分析研判")[1]
+
+
+class _Leveled(_Art):
+    def __init__(self, level):
+        super().__init__(_S169.statute_id, _S169.article_no, _S169.content)
+        self.hierarchy_level = level
+
+
+_DROPPED_PRACTICE = "### 法律明文\n- 民法第169條。\n\n### 分析研判\n你可以向公司主張。\n"
+
+
+def test_a_dropped_practice_heading_is_restored_only_when_none_was_retrieved():
+    """The prompt says write 「(無)」; Qwen2.5 drops the heading instead on 7 of 27
+    answers, which put the unsegmented warning over law and analysis that WERE
+    separated. With a 函釋 in the window the gap is real and stays a gap."""
+    out = stage3._restore_empty_practice_section(_DROPPED_PRACTICE, [_Leveled("法律")])
+    practice = stage3.split_sections(out)[1]
+    assert practice is not None and stage3.is_empty_section(practice, "實務見解")
+    assert out.index("實務見解") < out.index("分析研判")
+    assert stage3._restore_empty_practice_section(
+        _DROPPED_PRACTICE, [_Leveled("法律"), _Leveled("函釋")],
+    ) == _DROPPED_PRACTICE
+    no_analysis = "### 法律明文\n- 民法第169條。\n"
+    assert stage3._restore_empty_practice_section(no_analysis, [_Leveled("法律")]) == no_analysis
+
+
 def test_insufficient_boilerplate_is_dropped_when_the_answer_has_analysis():
     """Measured on the 婚攝 session: the model wrote four numbered points off
     thirteen retrieved articles and still signed off with 「現有資料不足」. A reader

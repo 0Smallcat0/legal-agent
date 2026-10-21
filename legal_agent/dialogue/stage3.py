@@ -218,7 +218,12 @@ def _drop_insufficient_boilerplate(answer: str) -> str:
 
 
 _CJK = re.compile(r"[一-鿿]+")
-_HEADING = re.compile(r"^\*\*(法律明文|實務見解|分析研判)\*\*\s*$", re.MULTILINE)
+# 「**法律明文**」 and 「### 法律明文」 alike: Qwen2.5 writes the second on every
+# answer (RESULTS.md §10), and a bold-only pattern skipped this gate for it.
+_HEADING = re.compile(
+    r"^(?:#{1,6}[ \t]*)?\*{0,2}(法律明文|實務見解|分析研判)\*{0,2}[ \t]*[:：]?[ \t]*$",
+    re.MULTILINE,
+)
 _MOVED_NOTE = "(以下由「法律明文」移入:這幾句不是條文原文,是模型的推論)"
 
 
@@ -271,6 +276,30 @@ def _move_model_prose_out_of_statute_section(answer: str, retrieved) -> str:
     for i in range(1, len(parts) - 1, 2):
         rebuilt += f"**{parts[i]}**\n" + sections[parts[i]].strip("\n") + "\n\n"
     return rebuilt.rstrip() + "\n"
+
+
+_PRACTICE_LEVELS = {"函釋", "行政實務見解"}
+
+
+def _restore_empty_practice_section(answer: str, retrieved) -> str:
+    """Write 「實務見解 (無)」 back when the model dropped that heading and nothing
+    of that rank was retrieved — what the prompt tells it to write, and what the
+    section would truthfully say. Qwen2.5 drops it on 7 of 27 answers (RESULTS.md
+    §10); without this, all seven get UNSEGMENTED_NOTICE although the law and
+    the analysis ARE separated. When a 函釋 was retrieved the gap is real and the
+    notice stays."""
+    if not answer or any(s.hierarchy_level in _PRACTICE_LEVELS for s in retrieved):
+        return answer
+    law, practice, analysis = split_sections(answer)
+    if practice is not None or law is None or analysis is None:
+        return answer
+    heads = {m.group(1): m for m in _HEADING.finditer(answer)}
+    if "法律明文" not in heads or "分析研判" not in heads:
+        return answer
+    at = heads["分析研判"].start()
+    if at < heads["法律明文"].start():
+        return answer
+    return answer[:at] + "**實務見解**\n(無)\n\n" + answer[at:]
 
 
 def run_stage3(
@@ -326,6 +355,7 @@ def run_stage3(
 
     answer = _drop_insufficient_boilerplate(llm(build_model_input(retrieved, collected_facts)))
     answer = _move_model_prose_out_of_statute_section(answer, retrieved)
+    answer = _restore_empty_practice_section(answer, retrieved)
 
     # The model produced nothing (e.g. a thinking model spent the whole
     # `num_predict` budget inside <think>). Every gate would pass it, so the reader

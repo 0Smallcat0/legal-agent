@@ -11,7 +11,10 @@ answer; the gates are why the answer can be trusted.
 Everything deterministic (retrieval, honesty tier, ladder, verbatim statutes)
 works with NO model at all, so the full consultation flow runs on the free
 Hugging Face tier with zero keys and no GPU. A local Ollama, when present, both
-conducts the interview and writes the 分析研判 narrative.
+conducts the interview and writes the 分析研判 narrative. On a ZeroGPU Space
+(config.LLM_PROVIDER == "hf") a transformers model writes the 分析研判 instead,
+while the interview stays the scripted checklist; when the visitor's GPU quota
+is spent, the page renders as it does with no model.
 
 Local:      python app.py
 HF Spaces:  live at huggingface.co/spaces/NoirOAO/legal-agent-demo. Deploying is
@@ -21,6 +24,7 @@ HF Spaces:  live at huggingface.co/spaces/NoirOAO/legal-agent-demo. Deploying is
 """
 from __future__ import annotations
 
+import threading
 from html import escape
 
 import gradio as gr
@@ -399,14 +403,38 @@ def _fresh_chat() -> list[dict]:
     return [{"role": "assistant", "content": GREETING}]
 
 
-def _stub_llm(_prompt: str) -> str:
+def _stub_llm(_prompt: str, why: str = "未連接語言模型,不產生推論。啟動本機 Ollama 後重新諮詢,可取得此段分析。") -> str:
     """No-model fallback: keep the three-section contract, add no citations,
     and say plainly what is and is not machine-generated."""
     return (
         "「法律明文」:未連接語言模型;適用條文見右欄「適用法源」,均為資料庫逐字內容。\n"
         "「實務見解」:以下為主管機關實務見解/處理原則,非法律明文,僅供參考:見右欄所列實務見解來源。\n"
-        "「分析研判」:未連接語言模型,不產生推論。啟動本機 Ollama 後重新諮詢,可取得此段分析。"
+        f"「分析研判」:{why}"
     )
+
+
+def _space_llm(prompt: str) -> str:
+    """The Space's model, with the no-model page as its failure mode.
+
+    ZeroGPU refuses a call when the visitor's daily quota is below the
+    requested duration (`gr.Error`, 「ZeroGPU quota exceeded」), and can fail
+    in its queue. Neither is the visitor's problem to debug, and the
+    deterministic half of the answer does not need the model."""
+    try:
+        return _SPACE_LLM(prompt)
+    except Exception as exc:
+        return _stub_llm(
+            prompt,
+            f"模型這次沒有執行({str(exc)[:120]}),不產生推論。"
+            "未登入的訪客每日 GPU 額度約 2 分鐘,登入 Hugging Face 為 5 分鐘;"
+            "下方條文與處理順序不受影響。",
+        )
+
+
+def _analysis_llm():
+    if ollama_available():
+        return ollama_llm()
+    return _space_llm if _SPACE_LLM is not None else _stub_llm
 
 
 def _clean_ladder(text: str) -> str:
@@ -514,7 +542,7 @@ def consult_step(message: str, history: list[dict], state: SessionState):
     # show the loader, then run the one-shot retrieval + gates + ladder.
     history.append({"role": "assistant", "content": _ready_summary(state)})
     yield history, state, LOADING_HTML, ""
-    llm = ollama_llm() if ollama_available() else _stub_llm
+    llm = _analysis_llm()
     conn = connect(config.DB_PATH)
     try:
         result = advance_to_stage3(state, llm=llm, conn=conn)
@@ -603,6 +631,37 @@ def load_results_md() -> str:
 
 # ── layout ───────────────────────────────────────────────────────────────────
 ensure_db()
+
+# The Space's two backends load here, at startup: ZeroGPU places weights only
+# outside a request, and with no Ollama to have built it, the dense index is
+# embedded once per container. Local runs take neither branch. The model goes
+# first: hf_llm imports `spaces`, which must precede the torch that
+# sentence-transformers pulls in.
+_SPACE_LLM = None
+if config.LLM_PROVIDER == "hf":
+    from legal_agent.dialogue.hf_llm import hf_llm
+
+    _SPACE_LLM = hf_llm()
+
+
+def _build_dense_index() -> None:
+    from legal_agent.retrieval import dense
+
+    conn = connect(config.DB_PATH)
+    try:
+        dense.ensure_index(conn)
+        print("dense index ready, retrieval is hybrid")
+    except Exception as exc:    # the page still works on BM25 alone
+        print(f"dense index not built, retrieval is BM25 only: {exc}")
+    finally:
+        conn.close()
+
+
+if config.EMBED_BACKEND == "st":
+    # In a thread: embedding the corpus on CPU took 578 s locally (RESULTS.md
+    # §10), and the page is usable meanwhile — retrieval is BM25 alone until
+    # the index file exists, exactly as after a plain `pip install`.
+    threading.Thread(target=_build_dense_index, daemon=True).start()
 
 with gr.Blocks(title="Legal Agent") as demo:
     gr.HTML(HERO)

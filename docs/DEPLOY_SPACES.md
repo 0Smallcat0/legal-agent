@@ -2,11 +2,23 @@
 
 **Live**: https://huggingface.co/spaces/NoirOAO/legal-agent-demo
 
-The Gradio demo (`app.py`) needs no GPU, no API key, and no Ollama. The corpus
-is built at startup from the JSON files in `legal_agent/corpus/`, the 引用查核 and 檢索 tabs
-are pure Python, and the 完整流程 tab falls back to a scripted checklist when no
-model is reachable. (The one-click Ollama button reports "not available" there;
-it works when running `python app.py` locally.)
+The Gradio demo (`app.py`) needs no API key and no Ollama. The corpus is built
+at startup from the JSON files in `legal_agent/corpus/`, the 引用查核 and 檢索
+tabs are pure Python, and the consultation's interview is the scripted
+checklist. **The 分析研判 is written by `Qwen/Qwen2.5-7B-Instruct` on ZeroGPU**
+(`legal_agent/dialogue/hf_llm.py`), and retrieval's dense half embeds with
+`BAAI/bge-m3` through sentence-transformers on CPU. Both switch on by
+themselves: ZeroGPU sets `SPACES_ZERO_GPU`, and `config.py` reads it — no Space
+variable or secret to set. Every gate (citation check, honesty tier, ladder)
+still runs in code after the model; RESULTS.md §10 has what the model and the
+embedding measured locally.
+
+A visitor's GPU quota is daily: about **2 minutes unauthenticated, 5 with a free
+account**, and a call is admitted against `hf_llm.GPU_SECONDS`, not against the
+time it ends up using. When the quota is spent the page renders exactly as it
+does with no model, with the reason in the 分析研判 box. Each call logs
+`hf_llm: N tokens in Ss` to the container log; the first few after a deploy are
+the Space's real speed, which is what `GPU_SECONDS` should be checked against.
 
 ## Two things that make this not a plain `git push`
 
@@ -25,9 +37,10 @@ PRO. ZeroGPU refuses to start a Space that declares no `@spaces.GPU` function:
 RUNTIME_ERROR | No @spaces.GPU function detected during startup
 ```
 
-Nothing in this project touches a GPU, so the deployment branch carries a
-guarded shim — a decorated function nothing calls — rather than putting a fake
-GPU dependency on `main`.
+That check is now met by real work: `hf_llm._generate` is the `@spaces.GPU`
+function, defined when `app.py` imports the backend at startup. The old
+`_zerogpu_probe` shim — a decorated function nothing called — is gone, and
+`git checkout main -- .` removes it from `hf-space` on the next sync.
 
 ## The deployment branch
 
@@ -39,10 +52,27 @@ It differs from `main` in exactly three ways:
    since GitHub renders that block as noise).
 2. `docs/demo_web.png` is deleted and the README `<img>` points at the GitHub
    raw URL, so the screenshot still renders on the Space page.
-3. `app.py` carries the ZeroGPU shim.
+3. `requirements.txt` has the model stack appended — on `main` it stays the
+   no-GPU demo set, because a local `pip install -r requirements.txt` should
+   not pull 2 GB of torch:
+
+   ```
+   torch==2.8.0
+   transformers==5.20.2
+   accelerate==1.15.0
+   sentence-transformers==6.1.0
+   ```
+
+   These are the versions RESULTS.md §10 was measured with (`pip install
+   .[space]` gives the same set locally); ZeroGPU supports torch 2.8.0 and up.
 
 The frontmatter pins the gradio the app is developed against — leaving
-`sdk_version` off lets the Hub pick a different major:
+`sdk_version` off lets the Hub pick a different major. `preload_from_hub`
+downloads both models at BUILD time, so startup does not spend its timeout on
+~19 GB of weights. Startup still reads the 7B weights into memory; the corpus
+embedding runs in a thread after that (578 s on CPU locally, the Space's CPU is
+unmeasured), and retrieval is BM25 alone until it finishes — the container log
+prints `dense index ready, retrieval is hybrid` when it has:
 
 ```yaml
 ---
@@ -52,10 +82,15 @@ colorFrom: indigo
 colorTo: gray
 sdk: gradio
 sdk_version: 6.20.0
+python_version: "3.12"
 app_file: app.py
 pinned: false
 license: mit
 short_description: Legal RAG with a citation verifier graded on 24 error kinds
+startup_duration_timeout: 1h
+preload_from_hub:
+  - Qwen/Qwen2.5-7B-Instruct
+  - BAAI/bge-m3
 ---
 ```
 
@@ -116,7 +151,7 @@ main had deleted for having no caller. Nothing flagged it, because an extra file
 is invisible to a procedure that only ever adds. After every sync:
 
 ```bash
-git diff --stat main hf-space   # exactly README.md, app.py, docs/demo_web.png
+git diff --stat main hf-space   # exactly README.md, requirements.txt, docs/demo_web.png
 ```
 
 Anything else in that list is either a difference nobody decided on, or a
@@ -128,12 +163,13 @@ Then:
 > own schedule — check it against `evals/RESULTS.md` during the sync rather than
 > copying the old block forward. It was stale on 2026-08-06 (10,437/10,437).
 >
-> **Do not guard the shim re-apply on the string `spaces.GPU`.** That phrase now
-> appears in `main`'s own `app.py` docstring describing this requirement, so a
-> "skip if already present" check written that way matches the docstring, skips
-> the shim, and the branch ships without it — the Space then dies on
-> `No @spaces.GPU function detected`. Guard on `_zerogpu_probe`, which exists
-> only in the shim itself. This happened on 2026-08-04.
+> **`No @spaces.GPU function detected` now means the model backend did not
+> load**, not a missing shim: `app.py` imports `hf_llm` only when
+> `config.LLM_PROVIDER == "hf"`, which follows `SPACES_ZERO_GPU`. If a Space
+> variable sets `LEGAL_AGENT_PROVIDER` to anything else, the decorated function
+> is never defined and the Space refuses to start. (The old failure — a
+> re-apply guarded on the string `spaces.GPU`, which matched a docstring and
+> skipped the shim, 2026-08-04 — cannot recur: there is no shim to re-apply.)
 
 ```bash
 git add -A && git commit -m "sync with main"

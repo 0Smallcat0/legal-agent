@@ -8,7 +8,9 @@ rejected on Traditional-Chinese legal text; ranks in evals/HISTORY.md).
   * OPTIONAL — no Ollama or no index -> callers fall back to pure BM25. That
     fallback is SILENT (AGENTS.md trap 2); retriever.dense_fallback_count()
     counts it.
-  * No new dependencies — urllib + numpy (via rank_bm25).
+  * No new dependencies — urllib + numpy (via rank_bm25). The Space, which has
+    no Ollama, embeds with sentence-transformers instead
+    (LEGAL_AGENT_EMBED=st, `pip install .[space]`).
   * Fusion is RRF: rank-based, no tuned weights, deterministic.
 
 The index (current slices only) is cached beside the DATABASE, under
@@ -22,6 +24,7 @@ from __future__ import annotations
 
 import json
 import urllib.request
+from functools import lru_cache
 from pathlib import Path
 
 import numpy as np
@@ -29,8 +32,22 @@ import numpy as np
 from legal_agent import config
 
 EMBED_MODEL = "bge-m3"
-_DEFAULT_STEM = Path(config.DB_PATH).parent / "dense_bgem3"
+# The same model's published weights, for config.EMBED_BACKEND = "st" (the
+# Space, which has no Ollama). Its own index file: the two are measured
+# separately in evals/RESULTS.md §10, so they are never mixed in one ranking.
+ST_EMBED_MODEL = "BAAI/bge-m3"
+_DEFAULT_STEM = Path(config.DB_PATH).parent / (
+    "dense_bgem3_st" if config.EMBED_BACKEND == "st" else "dense_bgem3"
+)
 _BATCH = 64
+
+
+@lru_cache(maxsize=1)
+def _st_model():
+    from sentence_transformers import SentenceTransformer
+
+    # CPU on purpose: on ZeroGPU a real GPU exists only inside @spaces.GPU.
+    return SentenceTransformer(ST_EMBED_MODEL, device="cpu")
 
 
 def embed_texts(
@@ -39,9 +56,13 @@ def embed_texts(
     host: str | None = None,
     timeout: float = 120.0,
 ) -> np.ndarray:
-    """Embed a list of texts via Ollama /api/embed. Returns L2-normalized
+    """Embed a list of texts via Ollama /api/embed, or sentence-transformers
+    when config.EMBED_BACKEND is "st". Returns L2-normalized
     float32 [len(texts), dim]. Raises on any transport/shape error — the
     CALLER decides whether that means fall back to BM25."""
+    if config.EMBED_BACKEND == "st":
+        out = _st_model().encode(texts, batch_size=_BATCH, normalize_embeddings=True)
+        return np.asarray(out, dtype=np.float32)
     base = (host or config.OLLAMA_HOST).rstrip("/")
     rows: list[list[float]] = []
     for start in range(0, len(texts), _BATCH):
@@ -147,4 +168,5 @@ if __name__ == "__main__":  # python -m legal_agent.retrieval.dense  (build/refr
         _keys, _matrix = ensure_index(_conn)
     finally:
         _conn.close()
-    print(f"dense index ready: {len(_keys)} slices @ {_DEFAULT_STEM}.npy ({EMBED_MODEL})")
+    _model = ST_EMBED_MODEL if config.EMBED_BACKEND == "st" else EMBED_MODEL
+    print(f"dense index ready: {len(_keys)} slices @ {_DEFAULT_STEM}.npy ({_model})")
