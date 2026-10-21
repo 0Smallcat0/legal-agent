@@ -45,6 +45,7 @@ identically.
 | the same, 12 questions **held out** | **27/32 (84%)**, 11/12, 0/12 答非所問 (before: 1/23, 1/12, 8/12) | `judgment_qa evals/judgment_qa_holdout_v1.json`, never tuned against |
 | reference judgments beside a golden-set answer | 11/30 cases, 10 carrying a 主文 award figure (30-case golden v2, 2026-07-25); the 32-case run after §8's respondent ban reads 7/32, 3 with an award | counted, not scored |
 | bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190); a second sample read 16/24 and 4/208, so the bare 67% reproduces and the gated delta is inside the harness's spread | `ablation` *(model)*, llama3.1 over golden_v2, `evals/ablation_v2.json` |
+| the Space's 分析研判 model, Qwen2.5-7B, against llama3.1 | citations flagged **7/241 vs 27/325**; three headings 26/27 vs 27/27 | `golden_set` *(model)*, golden_v2, Qwen as Ollama Q4 locally — §12 |
 | the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them (first run, before tuning: 7/27 and 9/16) | `realworld`, 16 臺中市 公寓大廈 調處案, labels from the case table's own 法令依據 column |
 | the same thing, on 17 cases **held out** | **12/23**, 5 of 17 answered with none of them | `realworld`, 臺北市 13 + 新北市 4, never tuned against |
 | answer points the OPPOSITE way to the recorded outcome | **3 of 16** externally labelled, **2 of 8** derived — `flagged_count` 0 on all five | `realworld --direction`, blind-coded, re-runs without a model |
@@ -772,6 +773,60 @@ find them; the vocabulary table carries them. And nothing here measures whether
 the answer is right for him: this is one unfinished case with no outcome, and it
 is not allowed to become a ruler.
 
+### §8.2 — the stance answer, a bare `</think>`, and a period mailed to the other side (2026-10-21)
+
+Found by driving `app.consult_step` the way a visitor does — 退租押金, with and
+without a model — and reading the page end to end.
+
+**The stance question's own second option was read backwards.** It offers
+「你要向對方主張」 / 「對方在向你要求」; the second hit the loose 對方 complainant
+row first, so a visitor who answered exactly as offered was given the opposite
+seat. Fixed by checking money demanded *of* me (向我要, 跟我要, 要我…還/付/賠/退
+with up to four characters between) before the complainant rows, moving 跟我要 to
+the respondent side, adding the ways people state the asserting side (要回, 討回,
+我要告, 我要向…), and letting the turn right after the question answer by
+position (前者 / 後者, replies of 12 characters or fewer). On a 33-reply probe —
+both options as offered, the ways people answer them, the landing page's four
+examples — **10/33 → 32/33, reversed 4 → 0.** The probe was written by the same
+hand as the rows, so it is a regression guard, not a measurement of users; the
+one left unread (公司說我們是責任制…) states no seat and is asked.
+
+**On the 168 stored sessions: respondent 12 → 26, complainant 71 → 71, unknown
+85 → 71.** 21 sessions changed seat and all 21 were read: 20 are right
+(`debt-sold-without-notice` and `card-debt-sold-i-already-paid-some` — the shape
+§8.1 named — `guarantor-or-co-borrower`, `neighbour-minded-my-shop` now
+respondent; `loan-unpaid`, `wage-deduction`, `dementia-guardian` now
+complainant), and `lent-my-car-towed` is genuinely two-sided. `old-card-debt`
+is still read complainant on its 他們 row and is left: a row changed for one
+stored session is §7's tuning on the eval set. `real_recall` does not move —
+stance is not a retrieval input. Unknown is still 42%.
+
+**A bare `</think>` put the prompt on the page.** With thinking switched off,
+qwen3:4b can still reason in the open and close it with `</think>`; that text
+quoted the prompt's own rules into 分析研判 and handed the verifier 46
+citations. The answer is now what follows the last `</think>`. Re-run on the
+same session, the page carries no reasoning. **Not fixed:** when qwen3:4b
+reasons without ever closing the tag, nothing marks where the answer starts.
+The shipping model is llama3.1 8B, which does not do this; qwen3:4b is a
+smaller local option, not the measured one.
+
+**The letter told the landlord about 合夥人退夥.** `_generic_letter` added
+「四、另請台端注意」 with the first period found anywhere in the window. For 退租押金
+that was 民法§686 (兩個月前通知他合夥人), mailed to the other side; with a model,
+a 勞基法§9-1 競業禁止 line did the same. It was the one line no
+「與你情況不符者請自行刪去」 covered. On the Space path (no model, BM25 only) a
+period entered the letter in **68 of 168 sessions and was one of the session's
+expected articles in 11**; hybrid, 67 and 14. The period is the sender's own
+clock and already leads the ladder, so the letter now quotes only its three
+依據 and no period.
+
+**The deadline rung has the same noise, stated rather than fixed.** The rung
+quotes up to three periods from the window. BM25 only: **102 references in 68
+sessions, 16 of them expected articles**; hybrid: 93 in 67, 16. Expected lists
+are not exhaustive, so 86/102 bounds the noise from above, but the 退租押金 page
+shows its shape: the recommended first step is 「先確認期限」 citing 民法§686. Two
+narrowings were measured and are in §9; neither shipped.
+
 ## §9 — Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
@@ -854,6 +909,29 @@ Each of these looked obviously right and lost on the numbers:
   `anaphora_tong_fa_20`, each answer against its anchor article — it fired on
   **0 of 4**. It was never wired into the verifier; it was deleted (2026-10-16)
   rather than left printing a pass on every run.
+- **keeping a plain period only when its sentence grants a remedy** (得…請求 /
+  解除 / 撤銷 / 回復 / 主張), to stop the deadline rung quoting 民法§686. Over
+  every article in force: 84 sentences already lose a right and stay, 5 plain
+  ones would be kept and 87 dropped. 686 is dropped, and so are deadlines a
+  reader can miss: 消保法§45-3's 十日之不變期間 for 異議, 社維法§59's 五日 抗告,
+  道交條例§65/§87's 三十日 撤銷訴訟, 勞保條例§20's 一年內得請領. A filter that
+  loses those to lose 686 trades a quoted irrelevance for a silent miss.
+- **dropping duration tokens (兩個月, 二年, 六個月) from BM25**, since a 兩個月 in
+  the user's words is what pulled 民法§685/§686 and 刑法§42 into 退租押金's
+  window. `real_recall`, `dense_fallbacks` 0:
+
+  | | hit | unexpected / session | rung refs (in expected) |
+  |---|---|---|---|
+  | BM25 only | 321 → **320** | 6.09 → 6.10 | 102 → 89 (16 → 16) |
+  | hybrid | 348 → **347** | 5.93 → 5.93 | 93 → 92 (16 → 16) |
+
+  BM25 only it loses 民法§125 for `old-card-debt` (十五年), §494, §478 and §450,
+  and gains §549, §19 and §335; hybrid it loses 勞基法§22. The thirteen rung
+  references it removes were all outside the expected lists, but the window is
+  no cleaner, and a duration in a person's own words is often what names the
+  governing article. On 退租押金 itself, BM25 only, §685/§686/刑法§42 do leave —
+  and so do 民法§440/§450 and 租賃條例§10, replaced by 勞基法§9-1, 個資法§5 and
+  勞保條例§14.
 
 ## §10 — does each kind of dispute have a judgment to point at? (2026-10-20, backfilled 2026-10-21)
 
@@ -1126,6 +1204,142 @@ to mismatch, and 共有's 同類 in §10 went from 4 to 3.
 
 What none of this measures: whether a judgment shown is the same SITUATION.
 A 返還寄託物 case about a warehouse and one about cash are both 「寄託」.
+
+## §12 — The Space's model: Qwen2.5-7B-Instruct, measured locally (2026-10-21)
+
+Until this section the public Space had no model: its 分析研判 box said so, and
+the question people bring most — does the other side's claim hold up (16 of 33
+PTT questions) — went unanswered there. It is now written by
+`Qwen/Qwen2.5-7B-Instruct` (Apache-2.0, no gated access) through
+`dialogue/hf_llm.py` on ZeroGPU, and retrieval's dense half embeds with
+`BAAI/bge-m3` through sentence-transformers. Every gate runs after the model,
+unchanged.
+
+**What could be measured without deploying.** The Space itself cannot be timed or
+scored before it runs, so the model was measured locally as `qwen2.5:7b` in
+Ollama (the same weights, Q4_K_M) against `llama3.1:8b`, both through the same
+pipeline: golden_v2 at temperature 0, `dense_fallbacks` 0. Each model was run
+twice and each reproduced its own 27 answers byte for byte, so one column per
+model is the whole result.
+
+| golden_v2, 27 answered of 32 | llama3.1:8b | qwen2.5:7b |
+|---|---|---|
+| citations written / flagged | 325 / **27 (8.3%)** | 241 / **7 (2.9%)** |
+| statute coverage pass / partial / miss | 19 / 7 / 0 | **22 / 4 / 0** |
+| honesty tier · wrong premise | 29/32 · 32/32 | 29/32 · 32/32 (code-decided) |
+| all three headings, gates as they were | 26/27 | **20/27** |
+| all three headings, after the two fixes below | 27/27 | 26/27 |
+| answers whose 法律明文 had model prose moved out | 3 | **0** as they were → 8 after |
+| output tokens, median / max | 641 / 2,048 (2 cut off at the cap) | 838 / 1,266 |
+| prompt tokens, max | 3,398 | 3,119 (Ollama's 4,096 context: nothing truncated) |
+
+The coverage gain is not a retrieval gain — the window is the same. The harness
+also credits any real article an answer names, and on `in-03`, `in-10` and
+`ts-01` Qwen named 噪音管制法§6/§9, which are not in the window as articles but
+are named inside the window's police routing note; llama did not pick them up.
+It is reported because it is what the harness prints, not as evidence that Qwen
+reads the law better.
+
+**What Qwen broke, and the two fixes.**
+
+- **It writes `### 法律明文`, never `**法律明文**`** — on all 27 answers. The gate
+  that moves the model's own reasoning out from under the statute heading matched
+  the bold form only, so for Qwen it never ran: 0 answers touched. Matching both
+  forms, it moves prose out of 8 answers (one read 「根據民法第793條，土地所有人可以
+  向店家主張禁止噪音侵入」 under 法律明文 — an inference, not the article). llama's
+  numbers do not move.
+- **It drops the 「實務見解」 heading when there is nothing to put under it** — 7 of
+  27, although the prompt says to keep it and write 「(無)」. Those seven got the
+  「沒有分段」 warning over answers whose law and analysis WERE separated. Code
+  now writes 「實務見解 (無)」 back, only when no 函釋 or 行政實務見解 was retrieved;
+  with one in the window the gap is real and the warning stays (that is the one
+  Qwen answer still at 26/27, `wp-01-intimidation`). llama gains one answer.
+
+Both were measured by feeding each run's logged raw outputs back through the
+gates (`replay` reproduced the original 20/27, 241/7 exactly before the change),
+so the model text is identical on both sides of the comparison.
+
+**What Qwen does worse, or not at all.**
+
+- 1 of 27 answers carries Simplified characters (「依据」). None of them is in a
+  citation — the verifier reads 「條」 only, and a 「第N条」 would be missed rather
+  than flagged; 0 occurred.
+- Whether an answer addresses 「站不站得住」 was counted by regex (25/27 against
+  llama's 22/27). That is a word count, not a judgement of whether the stance
+  answer is right; no harness here scores that.
+- The interview stays the scripted checklist on the Space. Only the 分析研判 is
+  model-written.
+
+**The embedding on the Space.** sentence-transformers' `BAAI/bge-m3` against
+Ollama's `bge-m3`, everything else equal:
+
+| | Ollama bge-m3 | sentence-transformers |
+|---|---|---|
+| `real_recall`, 168 sessions | 348/356, 5.9 unexpected | **348/356, 5.9 unexpected** |
+| `honesty_probe` | 18/20 · 2/15 | **18/20 · 2/15** |
+| windows that differ | — | 8 reordered, 8 with different members (9 articles swapped) |
+| building the 2,922-slice index | not re-timed (GPU, through Ollama) | **578 s on CPU** (28 logical cores, locally) |
+
+Same hits, same refusals. The index is built in a thread at startup, so for
+those minutes the Space retrieves with BM25 alone (321/356 here, §1).
+
+**What the first deploy broke.** Deployed as measured above, every model call
+on the Space failed — twice in a row, not intermittently — with
+`RuntimeError: No CUDA GPUs are available`, raised in `spaces`' own worker
+start before any of this project's code ran. The cause was the embedding, not
+the model: a sentence-transformers forward pass in the Space's main process,
+which has no GPU, settles CUDA's device count as 0 there, and every
+`@spaces.GPU` worker is forked from that process. Reproduced under WSL with the
+Space's exact package set, one step per process: building the embedding model,
+tokenizing, or a bare attention op leave the worker able to start; one model
+forward does not, with `spaces` loaded or not, with `sdpa` or `eager`
+attention. The embedding model now runs in a separately started process
+(`retrieval/st_worker.py`) and the main process runs no torch op. Its vectors
+are bit-identical to the in-process ones (90 texts, max difference 0.0), and the
+same WSL run then forks a worker that starts, moves the weights to the card and
+generates.
+
+**On the Space, after the fix (2026-10-21).** The neighbour-noise question
+got a model-written 分析研判 with 3 citations, all traceable, and the container
+log read `hf_llm: 593 tokens in 15.6s (prompt 2703)` — 38 tok/s on what the Hub
+API calls `zero-a10g`. One call, so one speed, not a distribution.
+`hf_llm.GPU_SECONDS` went from 90 to 60 on it: the 2,048-token cap takes ~54 s
+at that speed, the longest answer measured (1,574 tokens, below) ~41 s. A call
+is admitted only while the visitor's remaining daily quota covers it (about 2
+minutes a day unauthenticated, 5 with an account), so 60 s is two answers a day
+unauthenticated where 90 s was one; out of quota, the page renders as with no
+model and says why. That answer also shows what the gates do not catch: its
+fourth step proposes suing under 社會秩序維護法§72, a police fine, not a civil
+claim — every citation verified, the reasoning wrong (the limit §7 measures).
+
+**What is NOT measured.**
+
+- **Speed beyond that one call.** Load on the shared GPU may slow a call past
+  60 s; it is then aborted and the page says so.
+- **bf16 quality.** The Space runs bf16, which an 8 GB card cannot hold. The closest
+  local run is the Space's own code path — `LEGAL_AGENT_PROVIDER=hf`,
+  `LEGAL_AGENT_EMBED=st`, `hf_llm`, after both fixes — with the same 7B weights
+  in bitsandbytes nf4. Six of the 27 prompts (above 2,885 tokens) ran out of
+  memory in attention and were skipped; on the other 21, against Ollama's Q4 on
+  the same 21:
+
+  | 21 cases | Ollama Q4_K_M | transformers nf4 |
+  |---|---|---|
+  | all three headings | 20/21 | 21/21 |
+  | citations / flagged | 199 / 4 | 216 / **10** |
+  | coverage pass / partial | 17 / 3 | 16 / 4 |
+  | output tokens, max | 1,266 (all 27) | **1,574** |
+  | answers with Simplified characters | 1 | 1 |
+
+  No answer is identical between the two builds, and the transformers one is
+  flagged more (10 against 4); where bf16 lands is unmeasured. The transformers
+  path was also run end to end with Qwen2.5-0.5B on CPU (all 27 calls, 2,317 s,
+  before the two fixes): the gates flagged 67 of its 255 citations and 26 of 27
+  answers lost their headings — proof the gates run on that path, and that a 0.5B
+  model is not a candidate.
+- **The Space's index build time**, beyond a bracket: the log has no
+  timestamps, and `dense index ready` appeared between 3 and 14 minutes after
+  startup (after the first answer, which therefore ran on BM25 alone).
 
 ## More
 

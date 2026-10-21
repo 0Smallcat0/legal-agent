@@ -94,6 +94,27 @@ def test_an_answer_lost_inside_the_think_phase_is_retried(monkeypatch):
     assert calls[1]["options"]["num_predict"] == 4096   # doubled: 2 048 truncated
 
 
+def test_reasoning_left_in_the_retried_answer_is_cut_at_the_last_close_tag(monkeypatch):
+    """Measured on qwen3:4b: the think=False retry came back as open reasoning
+    that restated the prompt's rules, then a bare </think>, then the answer."""
+    def fake_urlopen(req, timeout=0):
+        body = json.loads(req.data.decode("utf-8"))
+        if "think" not in body:
+            return _FakeResp({"response": "", "thinking": "……"})
+        return _FakeResp({"response": "只放位階較高者……民法第432條……</think>\n### 法律明文\n答案"})
+
+    monkeypatch.setattr(ol.urllib.request, "urlopen", fake_urlopen)
+    assert ol.ollama_llm()("x") == "### 法律明文\n答案"
+
+
+def test_a_complete_think_block_is_cut_too(monkeypatch):
+    monkeypatch.setattr(
+        ol.urllib.request, "urlopen",
+        lambda *a, **k: _FakeResp({"response": "<think>想一下</think>答案"}),
+    )
+    assert ol.ollama_llm()("x") == "答案"
+
+
 def test_an_empty_answer_without_thinking_is_not_retried(monkeypatch):
     """An ordinary model returning nothing is a real failure, and stage3 already
     reports it loudly. Retrying it would only hide it behind a second wait."""

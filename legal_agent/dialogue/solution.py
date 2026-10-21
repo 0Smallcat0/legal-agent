@@ -257,11 +257,16 @@ def _also_retrieved_block(retrieved, cited) -> str | None:
 def _generic_letter(retrieved, collected_facts: dict) -> str | None:
     """A 存證信函 the reader can copy, with the law quoted VERBATIM from what was
     retrieved. The blanks are the FACTS and the amount; the POSTURE is written in
-    — 主旨 demands that 台端 do something 以維本人權益, and 說明五 announces that the
+    — 主旨 demands that 台端 do something 以維本人權益, and 說明四 announces that the
     sender will 依法主張權利 if the deadline passes.
 
     So it is a claimant's letter, not a neutral one: `build_generic_ladder`
-    withholds it from anyone who has not said they are the one asserting."""
+    withholds it from anyone who has not said they are the one asserting.
+
+    It quotes no period. The letter goes to the other side, and a period is the
+    sender's own clock, already the ladder's first rung. Picked from anywhere in
+    the window it was also the one line no 「請自行刪去」 covered: 退租押金 mailed
+    民法§686 (合夥人退夥) to the landlord, and with a model, 勞基法§9-1 (競業禁止)."""
     if not retrieved:
         return None
     cited = retrieved[:3]
@@ -271,11 +276,6 @@ def _generic_letter(retrieved, collected_facts: dict) -> str | None:
     )
     evidence = _evidence_next_step(collected_facts)
     have = "(可附上:" + evidence.split("先把你提到的")[1].split("掃描")[0] + ")" if evidence else ""
-    deadlines = _deadline_sentences(retrieved)
-    period = ""
-    if deadlines:
-        ref, sentence = deadlines[0]
-        period = f"\n四、另請台端注意,{ref}定有:「{sentence}」。\n"
     return (
         "【存證信函範本(僅供參考,非法律意見;方括號請自行填寫)】\n"
         "寄件人:【你的姓名】  地址:【你的地址】\n"
@@ -287,8 +287,7 @@ def _generic_letter(retrieved, collected_facts: dict) -> str | None:
         "二、【事實經過:發生什麼、你何時反映、對方如何回覆——照你自己的話寫】\n"
         "三、上開情形涉及下列規定(逐字引錄自現行條文;與你情況不符者請自行刪去):\n"
         f"{basis}\n"
-        f"{period}"
-        "五、請於上開期限內處理,逾期本人將依法主張權利,特此函達。\n"
+        "四、請於上開期限內處理,逾期本人將依法主張權利,特此函達。\n"
         "此致\n【收件人】\n"
         "                              寄件人:【簽名】   中華民國【年】年【月】月【日】日\n"
     )
