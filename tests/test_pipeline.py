@@ -5,21 +5,16 @@ Run:  python -m pytest tests/test_pipeline.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.anti_hallucination.honesty import INSUFFICIENT_TEXT  # noqa: E402
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
-from legal_agent.dialogue import flow, stage3  # noqa: E402
-from legal_agent.dialogue.flow import PipelineResult, SessionState, Stage, handle_turn  # noqa: E402
-from legal_agent.retrieval import retriever  # noqa: E402
+from legal_agent.anti_hallucination.honesty import INSUFFICIENT_TEXT
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.seed import seed_source_hierarchy
+from legal_agent.dialogue import flow, stage3
+from legal_agent.dialogue.flow import PipelineResult, SessionState, Stage, handle_turn
+from legal_agent.retrieval import retriever
 
 FAKE_ANSWER = (
     "法律明文:社會秩序維護法第72條。\n"

@@ -28,6 +28,15 @@ dependencies = [
 demo = ["gradio>=4.0.0"]
 anthropic = ["anthropic>=0.116.0", "python-dotenv>=1.0.0"]
 dev = ["pytest>=8.0.0", "ruff>=0.15.0"]
+# The Space's model and embedding backends (dialogue/hf_llm.py, LEGAL_AGENT_EMBED=st).
+# torch>=2.8 because ZeroGPU supports nothing older; the pins are the set
+# evals/RESULTS.md §12 was measured with.
+space = [
+    "torch>=2.8.0",
+    "transformers==5.20.2",
+    "accelerate==1.15.0",
+    "sentence-transformers==6.1.0",
+]
 
 [project.urls]
 Homepage = "https://github.com/0Smallcat0/legal-agent"
@@ -43,7 +52,12 @@ include = ["legal_agent*"]
 # The corpus ships INSIDE the package so a fresh install can build its own
 # database — `pip install legal-agent` then works with no git clone.
 [tool.setuptools.package-data]
-legal_agent = ["corpus/*.json", "prompts/*", "data/*.sql"]
+legal_agent = ["corpus/*.json", "data/*.sql"]
+
+[tool.pytest.ini_options]
+# A parametrize over a case file that came back empty is a failure, not a skip
+# (an emptied positive-control file used to pass as 「got empty parameter set」).
+empty_parameter_set_mark = "fail_at_collect"
 
 [tool.ruff]
 target-version = "py310"

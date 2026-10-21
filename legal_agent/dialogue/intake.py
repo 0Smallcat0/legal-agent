@@ -1,7 +1,9 @@
-"""Stage 2 — Structured intake (spec §3.2). Pre-designed 住宅噪音 checklist.
+"""Stage 2 — Structured intake (spec §3.2). Pre-designed checklists: 住宅噪音,
+five per-domain ones (rent / labor / consumer / traffic / family), and a generic
+fallback, chosen by `checklist_for(problem_type)`.
 
-NO retrieval, NO LLM — this is the checklist the model-free path walks, and the
-field set the model-driven intake (dialogue/smart_intake.py) extracts into. Each
+NO retrieval, NO LLM — these are the checklists the model-free path walks, and the
+field sets the model-driven intake (dialogue/smart_intake.py) extracts into. Each
 field records a legally-relevant fact plus its rationale (why it matters).
 Answers are filed by WHAT THEY SAY when a line unambiguously matches one open
 field (route_answer), positionally otherwise.
@@ -94,10 +96,8 @@ GENERIC_CHECKLIST: list[list[IntakeField]] = [
 
 
 # ── Per-domain checklists ────────────────────────────────────────────────────
-# Triage has classified rent / labor / consumer / traffic / family since corpus
-# v2, and every one of them was then handed the same four generic questions: the
-# classification was computed and thrown away, so a car-accident claim and an
-# unreturned deposit were asked the identical 「發生了什麼事?」.
+# One per domain triage classifies, so a car-accident claim and an unreturned
+# deposit are not asked the identical 「發生了什麼事?」.
 #
 # Each list below is built the way SPEC §3.2 says a checklist must be — from the
 # element-facts the governing articles actually require, decided in advance. The
@@ -312,12 +312,32 @@ CHECKLISTS: dict[str, list[list[IntakeField]]] = {
 }
 
 
+# Field key -> what to call it on the page, for every checklist above. One map
+# for the CLI and the web demo; tests/test_dialogue.py requires a label for
+# every key, so no raw key (「handover」) reaches the page.
+FIELD_LABELS: dict[str, str] = {
+    "problem": "問題與對象", "goal": "希望的結果", "timeline": "時間與經過",
+    "actions_taken": "已採取的行動", "evidence": "證據",
+    "noise_type": "噪音類型", "timing": "時段與頻率", "building_type": "建物型態",
+    "impact": "受到的影響",
+    "rent_issue": "租屋問題類型", "deposit_terms": "租金與押金", "landlord_claim": "房東的主張",
+    "handover": "點交與搬離",
+    "labor_issue": "勞資問題類型", "work_terms": "薪資與工時", "employment_span": "到職與年資",
+    "employer_reason": "雇主的說法",
+    "consumer_issue": "消費問題類型", "purchase_channel": "購買管道與金額",
+    "delivery_date": "收到商品的日期", "seller_response": "賣家的回應",
+    "injury_damage": "傷勢與車損", "accident_date": "事故日期", "fault": "肇責與鑑定",
+    "insurance": "保險",
+    "family_issue": "家事問題類型", "relationship": "雙方關係", "family_timeline": "關鍵時點",
+    "assets_children": "子女與財產",
+}
+
+
 def domain_of(problem_type: str | None) -> str:
     """The checklist key for a triage label.
 
-    Triage reports the finer types prefixed — 「other:rent」, not 「rent」 — and a
-    plain dict lookup on that silently missed, which is how five domains kept
-    getting the generic questionnaire after they had their own checklists.
+    Triage reports the finer types prefixed — 「other:rent」, not 「rent」 — so a
+    plain dict lookup would silently miss and fall to the generic checklist.
     """
     key = (problem_type or "generic").split(":")[-1]
     return key if key in CHECKLISTS else "generic"
@@ -352,10 +372,8 @@ def next_questions(session_state) -> list[IntakeField]:
 
 
 # Words that identify WHICH field an answer is about. Positional filing alone
-# mis-files constantly in the model-free web demo: a visitor who answered
-# 「公寓大廈有管委會」 had it stored as the previous question's answer and was then
-# asked 「有管委會的公寓大廈,還是透天/無管委會?」 — the thing they had just said.
-# Conservative by construction: a line is re-routed only when it matches exactly
+# mis-files free-form replies (「公寓大廈有管委會」 stored under the previous
+# question, then asked again). Conservative by construction: a line is re-routed only when it matches exactly
 # ONE still-unanswered field, otherwise the positional rule stands.
 FIELD_HINTS: dict[str, tuple[str, ...]] = {
     "building_type": ("公寓", "大廈", "透天", "管委會", "套房", "華廈", "宿舍", "社區"),
@@ -386,9 +404,9 @@ def route_answer(line: str, unanswered: set[str]) -> str | None:
 def _answers_the_question_asked(line: str, pending: list[str]) -> bool:
     """True when the line matches the hint words of a field we actually asked
     about this turn. Checking ALL fields' hints instead is too loose: 「釘孔是掛
-    照片留下的」 hit the evidence hints — a field the generic checklist never asks
-    — and thereby claimed the goal slot. Fields with no hint list keep the old
-    positional behaviour, since nothing better is known about them."""
+    照片留下的」 hits the evidence hints — a field the generic checklist never asks
+    — and would claim the goal slot. Fields with no hint list stay positional,
+    since nothing better is known about them."""
     return any(
         any(word in line for word in FIELD_HINTS[key])
         for key in pending if key in FIELD_HINTS
@@ -417,10 +435,9 @@ def record_answers(session_state, message: str) -> None:
             positional.append(line)
         else:
             # It answers nothing we asked. Filing it positionally is a guess, and
-            # a wrong guess is worse than a blank: the visitor SEES it. Measured
-            # on the model-free web demo — 「我想拿回押金」 shown as 已採取行動,
-            # 「租約到期才搬走」 as 目標, every field shifted one place. Keep the
-            # words verbatim where they belong: the free-text description.
+            # a wrong guess is worse than a blank: the visitor SEES it (every
+            # field shifted one place). Keep the words verbatim in the free-text
+            # description instead.
             facts["problem"] = f"{facts['problem']} / {line}" if facts.get("problem") else line
 
     # The leftover lines pair with the still-open asked fields IN ORDER — each

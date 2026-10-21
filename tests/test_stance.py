@@ -9,22 +9,17 @@ Run:  python -m pytest tests/test_stance.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.dialogue import triage  # noqa: E402
-from legal_agent.dialogue.flow import (  # noqa: E402
+from legal_agent.dialogue import triage
+from legal_agent.dialogue.flow import (
     MAX_INTAKE_TURNS,
     SessionState,
     Stage,
     assumptions_block,
     handle_turn,
+    handle_turn_smart,
     missing_fields,
 )
-from legal_agent.dialogue.solution import (  # noqa: E402
+from legal_agent.dialogue.solution import (
     build_generic_ladder,
     build_respondent_ladder,
     build_solution_ladder,
@@ -323,6 +318,72 @@ def test_generic_respondent_phrasings():
         assert triage.classify_stance(text) == "respondent", text
 
 
+def test_the_stance_questions_own_options_are_read_the_right_way_round():
+    """「對方在向我要求」 is the question's second option word for word, and the
+    loose 對方 row used to read it as the asserting side."""
+    assert triage.classify_stance("我要向對方主張") == "complainant"
+    assert triage.classify_stance("是對方在向我要求") == "respondent"
+
+
+def test_claimant_replies_to_the_stance_question():
+    for text in ("我要向房東要回押金", "我想要回押金", "我要討回押金",
+                 "我要求公司給加班費", "我要跟賣家求償", "我想告房東", "我要主張"):
+        assert triage.classify_stance(text) == "complainant", text
+
+
+def test_money_demanded_of_me_is_the_respondent():
+    for text in ("房東跟我要違約金", "他在向我要錢", "客人要我退錢",
+                 "要我直接付給他們", "房東要求我付修繕費"):
+        assert triage.classify_stance(text) == "respondent", text
+
+
+def test_a_withheld_deposit_is_the_tenants_claim():
+    assert triage.classify_stance("退租後房東說房子有損耗,要扣我兩個月押金") == "complainant"
+
+
+def test_an_option_named_by_position_counts_only_as_the_reply():
+    assert triage.classify_stance("前者") is None
+    assert triage.classify_stance_reply("前者") == "complainant"
+    assert triage.classify_stance_reply("後者吧") == "respondent"
+    assert triage.classify_stance_reply("前面那個問題我也不太確定該怎麼說才好") is None
+
+
+def test_answering_by_position_lands_on_the_scripted_path():
+    state = SessionState()
+    _, state = handle_turn(state, "房東跟我說押金的事")
+    _, state = handle_turn(state, "後者")
+    assert state.stance == "respondent" and state.stage is Stage.INTAKE
+
+
+def test_answering_by_position_lands_on_the_model_path(monkeypatch):
+    from legal_agent.dialogue import smart_intake
+
+    monkeypatch.setattr(
+        smart_intake, "run_smart_intake_turn",
+        lambda history, facts, llm, ptype, pending: smart_intake.IntakeTurn(
+            reply="月租多少?", facts=dict(facts), ready=False),
+    )
+    state = SessionState()
+    reply, state = handle_turn_smart(state, "房東跟我說押金的事", [], None)
+    assert reply == triage.STANCE_QUESTION_GENERIC
+    _, state = handle_turn_smart(state, "前者", [], None)
+    assert state.stance == "complainant"
+
+    state = SessionState()
+    _, state = handle_turn_smart(state, "房東跟我說押金的事", [], None)
+    _, state = handle_turn_smart(state, "不知道", [], None)
+    _, state = handle_turn_smart(state, "後者", [], None)   # no longer the reply
+    assert state.stance is None
+
+
+def test_a_later_turn_cannot_set_the_seat_by_position():
+    state = SessionState()
+    _, state = handle_turn(state, "網購買到瑕疵品,賣家不讓我退貨")   # seat read, not asked
+    assert state.asked_stance is False
+    _, state = handle_turn(state, "後者")
+    assert state.stance == "complainant"
+
+
 # Verbatim from the corpus.
 _197 = _Article(
     "民法", "第197條",
@@ -371,3 +432,13 @@ def test_the_complainants_ladder_is_untouched():
     ).render()
     assert "報警請警察到場" in text and "已嘗試" in text
     assert "民事訴訟" in text
+
+
+def test_the_stance_line_only_mentions_noise_on_a_noise_case():
+    assert "太吵" in triage.stance_line("respondent", "noise")
+    rent = triage.stance_line("respondent", "other:rent")
+    assert "被投訴的一方" in rent and "太吵" not in rent
+
+
+def test_the_stance_line_adds_no_noise_detail_unless_told_it_is_noise():
+    assert "太吵" not in triage.stance_line("respondent")

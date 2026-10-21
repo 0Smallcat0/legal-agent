@@ -7,18 +7,12 @@ Run:  python -m pytest tests/test_smart_intake.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent import run  # noqa: E402
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
-from legal_agent.dialogue import smart_intake as si  # noqa: E402
+from legal_agent import run
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.seed import seed_source_hierarchy
+from legal_agent.dialogue import smart_intake as si
 
 
 def test_parse_extracts_fenced_json():
@@ -50,9 +44,7 @@ def test_generic_prompt_lists_generic_fields_only():
     assert "problem" in prompt and "goal" in prompt
     assert "noise_type" not in prompt
     assert "民生法律諮詢" in prompt and "問診助理" in prompt
-    # the noise prompt is untouched by the generalisation
-    assert si.build_system_prompt("noise") == si.INTAKE_SYSTEM_PROMPT
-    assert "住宅噪音" in si.INTAKE_SYSTEM_PROMPT
+    assert "住宅噪音" in si.build_system_prompt("noise")
 
 
 def test_parse_uses_the_active_checklists_whitelist():

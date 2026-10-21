@@ -1,27 +1,22 @@
 """Retrieval — pull relevant statutes FROM the corpus (spec §2.2, Mechanism 1).
 
-"Retrieval-first, no bare answers": this is the ONLY source later layers (the
-citation verifier, the reasoning model) may cite. It reads verbatim rows from the
-`statutes` table, ranks them lexically, and returns the top matches with content +
-source_url intact for traceability. It never fabricates and never falls back to
-un-retrieved text.
+The ONLY source later layers (verifier, reasoning model) may cite: verbatim
+`statutes` rows with content + source_url intact. Never fabricates.
 
-Method (pure, local — no LLM, no network, no embeddings, no GPU):
-  1. POINT-IN-TIME filter (mandatory, BEFORE ranking): candidates = the slice in
-     force at `as_of_date` (canonical predicate in data/schema.sql). A superseded
+Method (local, no LLM, no GPU):
+  1. POINT-IN-TIME filter BEFORE ranking: candidates = the slice in force at
+     `as_of_date` (canonical predicate in data/schema.sql). A superseded
      version is never a candidate.
-  2. Tokenize each candidate's `content` with jieba (word tokens + CJK character
-     bigrams, robust to jieba's Traditional-Chinese mis-segmentation), build a
-     BM25 index over just those candidates, tokenize the query the same way.
-  3. Return the top-K verbatim Statute records that share at least one token with
-     the query — LEXICAL OVERLAP decides match/no-match, BM25 only ORDERS them;
-     [] if nothing overlaps.
+  2. Topic filters drop candidates the question plainly rules out.
+  3. Tokenize with jieba + CJK bigrams; BM25 over just those candidates.
+     LEXICAL OVERLAP with the user's own words decides match/no-match; BM25
+     (on the lexicon-expanded query) only ORDERS the matches. [] if none.
+  4. Optional dense fusion (bge-m3 via Ollama, RRF; see `_dense_fuse`) and
+     lexicon reserved seats reshape the top-k window. Promoted items carry
+     BM25 score 0.0, so the top score still comes from a real lexical match.
 
-`retrieve()` returns the Statutes; `retrieve_scored()` returns (Statute, BM25
-score) pairs (same order) — the score is the relevance signal Stage 3's
-Mechanism-3 honesty tier grades against.
-
-Fires exactly ONCE per conversation, on the complete fact set (spec §3.3).
+`retrieve_scored()` returns (Statute, BM25 score) pairs — the score is what
+the Mechanism-3 honesty tier grades. Fires once per conversation (spec §3.3).
 """
 from __future__ import annotations
 
@@ -40,11 +35,11 @@ from legal_agent.data.models import Statute
 
 jieba.setLogLevel(logging.WARNING)  # silence the one-time dict-build chatter
 
-# MEASURED against golden v2 on the 2 561-article corpus (query expansion on):
-# k=5 -> 92% pass+partial, k=8 -> 96%, k=12 -> no further gain. Everyday
-# problems legitimately span several statutes (社維 + 公寓大廈 + 民法侵權), so
-# a 5-slot window truncates correct answers. Honesty tier is unaffected (it
-# reads the TOP score, not the window size).
+# Golden v2, 2 561-article corpus: k=5 -> 92% pass+partial, k=8 -> 96%, k=12 no
+# further gain; everyday problems span several statutes. The honesty tier reads
+# the TOP score, not the window size.
+# Bound into retrieve()/retrieve_scored() signatures at definition time:
+# reassigning this at runtime is a no-op — edit the source (AGENTS.md trap 4).
 DEFAULT_K = 8
 
 _COLUMNS = "statute_id, article_no, content, effective_from, effective_to, hierarchy_level, source_url"
@@ -55,9 +50,8 @@ _CJK_RUN = re.compile(r"[一-鿿]+")
 def _cjk_bigrams(text: str) -> list[str]:
     """Adjacent CJK character bigrams within each run (bounded by punctuation).
 
-    Traditional-Chinese robustness: jieba's Simplified-oriented dict mis-segments
-    some Traditional strings (e.g. '飼養貓咪' -> '飼養貓','咪' while '貓咪' alone
-    stays '貓咪'); bigrams match regardless of how jieba split the words.
+    jieba mis-segments some Traditional strings ('飼養貓咪' -> '飼養貓','咪');
+    bigrams match regardless of how jieba split the words.
     """
     bigrams: list[str] = []
     for run in _CJK_RUN.findall(text):
@@ -68,10 +62,8 @@ def _cjk_bigrams(text: str) -> list[str]:
 def _tokenize(text: str) -> list[str]:
     """jieba word tokens (punctuation dropped) + CJK character bigrams.
 
-    Single-character CJK word tokens are dropped: function words (的/與/及/之…)
-    otherwise create spurious lexical overlap with almost every article — the
-    golden set's out-of-scope cases caught exactly this. Content signal from
-    single characters is still carried by the bigrams.
+    Single-character CJK word tokens are dropped: function words (的/與/之…)
+    otherwise overlap almost every article. Bigrams still carry their signal.
     """
     words = [
         tok for tok in jieba.lcut(text)
@@ -113,17 +105,12 @@ def _load_in_force(conn: sqlite3.Connection, as_of_date: str | None) -> list[Sta
     return [_row_to_statute(r) for r in rows]
 
 
-# 租賃住宅市場發展及管理條例 regulates the leasing-SERVICE INDUSTRY as well as
-# landlord and tenant, and its industry chapters are long — 營業保證金 rules,
-# 服務業 penalty schedules — so BM25 hands them seats on any 租賃 question.
-# Measured over the real sessions: 2-3 of 8 seats in EVERY landlord-tenant case
-# went to 服務業 articles a tenant has no use for.
+# 租賃住宅市場發展及管理條例's long leasing-INDUSTRY chapters (營業保證金,
+# 服務業 penalties) otherwise take 2-3 of 8 seats in every landlord-tenant case.
 _INDUSTRY_SUBJECTS = ("租賃住宅服務業", "包租業", "代管業", "營業保證金", "全國聯合會")
-# …unless the person is actually dealing with one of those businesses. The words
-# have to name the RENTAL trade: 仲介 and 業者 were in this list for one round and
-# a 房仲 house-purchase question pulled 條例§24 (營業保證金) straight back — a
-# 不動產經紀業 is not a 租賃住宅服務業. 二房東 is absent for the same reason: an
-# ordinary sublessor is not a licensed 包租業, and those cases are 民法§443/§444.
+# …unless the person deals with that trade. These must name the RENTAL trade:
+# 仲介/業者 would let a 房仲 purchase question pull 條例§24 back, and 二房東 is an
+# ordinary sublessor (民法§443/§444), not a licensed 包租業.
 _INDUSTRY_IN_QUESTION = ("包租", "代管", "租賃住宅服務業", "租屋網", "租賃業者")
 
 
@@ -137,21 +124,17 @@ def _drop_industry_regulation(query: str, candidates: list[Statute]) -> list[Sta
     ]
 
 
-# 漏水 and 修繕 fire the tenancy vocabulary whoever is asking, so an
-# OWNER-OCCUPIED flat flooded from upstairs was handed 民法§430/§437/§423 — a
-# LANDLORD's repair duty. Measured: 4 of 8 seats there and 3 of 8 in a
-# house-purchase session, neither of which mentions a landlord at all.
+# 漏水/修繕 fire tenancy vocabulary whoever asks, handing an OWNER-OCCUPIED flat
+# a landlord's repair duty (民法§430/§437/§423): 4 of 8 seats there, 3 of 8 in
+# a house-purchase session.
 _TENANCY_SUBJECTS = ("承租人", "出租人", "租賃物", "租賃契約", "租賃住宅", "租賃")
-# Said only when the asker owns the place…
+# Said only when the asker owns the place (or a bought THING, e.g. a leaking
+# air-conditioner under warranty)…
 _OWNER_OCCUPIED = ("自有住宅", "自己的房子", "我買的", "我的房子", "我是屋主",
                    "屋主是我", "已經過戶", "交屋",
-                   # A bought THING counts too: 「裝好的冷氣一直漏水,修了四次」 spent
-                   # all three reserved seats on tenancy articles because 修繕 and
-                   # 漏水 had filled the ranked window with them first.
                    "保固卡", "保固期", "含安裝", "買了一台")
-# …and only believed when nothing in the question puts a tenancy in the room.
-# A landlord asking about their OWN rented-out flat says 房東/租約/房客, and a
-# tenant says 押金/退租, so either way the articles stay.
+# …and only believed when nothing puts a tenancy in the room (a landlord says
+# 房東/租約/房客, a tenant 押金/退租).
 _TENANCY_IN_QUESTION = ("房東", "租約", "租屋", "承租", "押金", "退租", "二房東",
                         "包租", "房客", "租金")
 
@@ -162,14 +145,9 @@ def _drop_tenancy_when_owner_occupied(query: str, candidates: list[Statute]) -> 
         return candidates
     if any(word in query for word in _TENANCY_IN_QUESTION):
         return candidates
-    # First line only, for the reason found in _drop_inheritance_while_alive:
-    # matching the whole text deletes articles that merely MENTION a tenancy.
-    # Measured — this filter runs on 7 of the stored sessions, and in every one it
-    # was removing 公寓大廈條例§3 (definitions) and §27 (區分所有權人 voting), which
-    # are not tenancy rules and are exactly what an owner in a building may need.
-    # 「租賃」 was added to the subject words at the same time so the genuine
-    # tenancy articles still go: §421 opens 「稱租賃者」, §450 「租賃定有期限者」,
-    # §462 「耕作地之租賃」 — none of which contains 承租人/出租人 in its first line.
+    # First line only (see _drop_inheritance_while_alive): a whole-text match
+    # removed 公寓大廈條例§3/§27, which merely mention tenants. 「租賃」 is a
+    # subject word so §421/§450/§462, whose first lines lack 承租人/出租人, go.
     return [
         c for c in candidates
         if not any(
@@ -178,15 +156,13 @@ def _drop_tenancy_when_owner_occupied(query: str, candidates: list[Statute]) -> 
     ]
 
 
-# 「我爸失智,弟弟拿他的存摺把錢領走」 returned a window that was 8/8 繼承編. The
-# father is ALIVE; answering his family with the rules for dividing his estate is
-# the wrong-premise failure this project exists to avoid.
+# A question about a living parent with dementia must not get the estate-
+# division chapter (once a window of 8/8 繼承編): a wrong-premise answer.
 _INHERITANCE_SUBJECTS = ("被繼承人", "遺產", "應繼分", "繼承人", "繼承權", "遺囑")
 # Words that only make sense about someone still living…
 _STILL_ALIVE = ("失智", "認不得", "神智不清", "意識不清", "住院", "還在世",
                 "植物人", "臥床", "安養院", "療養院")
-# …and never believed over an explicit death. 「一人一半繼承了一間房子」 keeps the
-# chapter, which is how a co-ownership session still reaches 繼承 when it should.
+# …and never believed over an explicit death or inheritance.
 _DEATH_IN_QUESTION = ("過世", "往生", "去世", "身故", "死亡", "走了", "遺產",
                       "繼承", "喪事", "告別式", "遺囑")
 
@@ -197,14 +173,9 @@ def _drop_inheritance_while_alive(query: str, candidates: list[Statute]) -> list
         return candidates
     if any(word in query for word in _DEATH_IN_QUESTION):
         return candidates
-    # Match on the article's FIRST line only — the sentence that sets its subject.
-    # Measured: 民法§15-2 lists the acts a 受輔助宣告之人 needs consent for, and one
-    # of them is 「為遺產分割、遺贈、拋棄繼承權」, so a whole-text match threw it out
-    # of the CANDIDATE POOL for 「我爸輕度失智…想保護他的錢」 — the one session it
-    # was written for. The article was not merely outranked; no amount of lexicon
-    # work could reach it, because it never entered the pool. A real succession
-    # article names its subject in the opening line (§1138 「遺產繼承人，除配偶外」);
-    # an article that merely mentions inheritance in a list does not.
+    # FIRST line only — the sentence that sets the subject. A real succession
+    # article names it there (§1138); 民法§15-2 merely lists 拋棄繼承權 among
+    # acts needing consent, and a whole-text match removed it from the pool.
     return [
         c for c in candidates
         if not any(
@@ -250,19 +221,15 @@ def _retrieve_scored(
         return []
 
     # The USER'S OWN WORDS decide match / no-match; expansion only helps RANK.
-    # Letting expanded statutory terms into the inclusion set would manufacture
-    # matches out of shared boilerplate — measured: 「同一順序之繼承人」 (added
-    # for an inheritance question) collided with 民法§195's 「不得讓與或繼承」
-    # and turned an out-of-scope question into a confident answer.
+    # Expanded terms in the inclusion set match shared boilerplate and turn
+    # out-of-scope questions into confident answers.
     query_tokens = _tokenize(query)
     if not query_tokens:
         return []
     query_vocab = set(query_tokens)
 
     doc_tokens = [_tokenize(c.content) for c in candidates]
-    # Match / no-match is decided by LEXICAL OVERLAP, not the BM25 score sign (on a
-    # tiny corpus BM25 IDF can be 0/negative and wrongly drop a real match). BM25
-    # only ORDERS the qualifying matches.
+    # Overlap, not BM25 score sign: IDF can be 0/negative on a tiny corpus.
     matches = [i for i, toks in enumerate(doc_tokens) if query_vocab.intersection(toks)]
     if not matches:
         return []
@@ -276,56 +243,28 @@ def _retrieve_scored(
     return _promote_lexicon_phrases(query, candidates, window, k)
 
 
-# TRIED AND REJECTED — per-statute cap inside the top-k window. One statute
-# routinely floods the window (公寓大廈條例 took 7 of 8 seats on an upstairs-noise
-# question), so capping each statute's seats looked obvious. Measured, it loses
-# on BOTH harnesses because real answers legitimately cluster inside one code
-# (瑕疵擔保 = 民法§354+§359; 加班費 = 勞基§22+§24+§30):
-#   cap  golden pass/partial/miss   six lived sessions hit@8
-#   off        18/7/1                     9/14 (64%)
-#   2          15/10/1                    5/14 (36%)
-#   3          16/9/1                     5/14 (36%)
-#   4          17/8/1                     7/14 (50%)
-# The flooding is real; a blunt per-statute cap is the wrong instrument for it.
-# Vocabulary (retrieval/lexicon.py) fixed the same cases without the cost.
+# No per-statute cap on the window: measured and rejected (RESULTS.md §9).
 
 
 def _expand(text: str) -> str:
     """Bridge the everyday/statutory vocabulary gap (config.QUERY_EXPANSION).
     Additive only — the user's wording stays verbatim at the front — so a
     query that already matched cannot lose its matches."""
-    if getattr(config, "QUERY_EXPANSION", "off") != "on":
+    if config.QUERY_EXPANSION != "on":
         return text
     from legal_agent.retrieval.lexicon import expand
     return expand(text)
 
 
-# Lexicon phrases as a THIRD retrieval channel, not just a ranking nudge.
-# Measured on six lived sessions: expansion could not save the vocabulary-gap
-# cases it was written for, because inclusion is decided by the user's own words
-# (deliberately — see above) and those queries share NO token with the target
-# article. 「樓上小孩跑跳、拖椅子」 never reaches 社維§72; 「收到三天就當機」 never
-# reaches 民法§354. The dense channel ranks them 8-25, too deep for the 3
-# reserved seats to reach.
-# The lexicon's statutory side is VERBATIM article text, so a phrase hit is an
-# exact pointer, not a fuzzy guess: 「製造噪音或深夜喧嘩」 occurs in exactly one
-# article. Promote at most N such articles to the window tail, carrying an
-# honest BM25 score of 0.0 — the honesty tier reads the TOP score, which still
-# comes from a genuine user-word match, so 「資料不足」 keeps its meaning.
-# N swept on both harnesses (stub-LLM golden v2 pass/partial/miss of 26
-# scorable · six lived sessions hit@8):
-#   N=0  18/7/1 · 9/14 (64%)      N=1  19/6/1 · 9/14 (64%)
-#   N=2  18/7/1 · 10/14 (71%)     N=3  17/8/1 · 12/14 (86%)
-#   N=4  13/11/2 · 12/14 (86%)
-# N=3 is the knee: real-wording recall +22 points for one golden case sliding
-# pass -> partial (pass+partial stays 25/26). N=4 buys nothing and starts
-# evicting answers outright.
+# Lexicon phrases as a THIRD channel. Inclusion uses the user's own words, so a
+# vocabulary-gap query sharing NO token with its target (「樓上小孩跑跳」 vs
+# 社維§72) is never a match, and dense ranks such targets too deep. The
+# lexicon's statutory side is VERBATIM article text, so a phrase hit is an exact
+# pointer. Up to N such articles join the window tail with BM25 score 0.0 —
+# the honesty tier's TOP score still comes from a real user-word match.
+# N=3 is the measured knee (sweep in evals/HISTORY.md).
 LEXICON_RESERVED_SEATS = 3
-# TRIED AND REJECTED — capping corroboration once a row already had N articles
-# in the window ("the ninth inheritance article is worth nothing, the first
-# 監護宣告 article is worth everything"). Measured against the uncapped 68/70:
-#   N=1 -> 65/70,  N=2 -> 66/70,  N=3 -> 68/70,  golden 19/7/0 throughout.
-# Finishing a topic is worth more than the one case it was meant to rescue.
+# Corroboration is NOT capped per row: measured and rejected (RESULTS.md §9).
 
 
 def _promote_lexicon_phrases(
@@ -337,7 +276,7 @@ def _promote_lexicon_phrases(
     """Give the top-k window up to LEXICON_RESERVED_SEATS articles that contain a
     triggered lexicon phrase verbatim. No-op when expansion is off, no phrase
     fires, or every hit is already in the window."""
-    if LEXICON_RESERVED_SEATS <= 0 or getattr(config, "QUERY_EXPANSION", "off") != "on":
+    if LEXICON_RESERVED_SEATS <= 0 or config.QUERY_EXPANSION != "on":
         return ranked[:k]
     from legal_agent.retrieval.lexicon import expansions
 
@@ -350,22 +289,12 @@ def _promote_lexicon_phrases(
 
     window = {key_of(s) for s, _ in ranked[:k]}
 
-    # Spend the seats on the phrases that actually POINT somewhere. A phrase is
-    # only a pointer when it identifies one article: 「公然侮辱人者」 matches 刑§309
-    # and nothing else, while 「負損害賠償責任」 matches 18 articles and
-    # 「土地所有人」 33 — promoting the first candidate that happens to contain one
-    # of those is noise wearing precision's clothes. Measured: 刑§309 for an
-    # insult session and 民§354 for a house purchase both had a unique phrase and
-    # still lost their seat to a broad one that fired earlier in the table.
-    # (Not the tie-break rejected in RESULTS.md — that ordered by how many
-    # TRIGGERS matched; this orders by how many ARTICLES the phrase resolves to.)
-    # When several phrases are equally selective the tie-break used to be table
-    # position, which has nothing to do with what was asked: 「付了十萬斡旋金,屋主
-    # 不賣了」 spent all three seats on 定型化契約 and 買賣瑕疵 phrases and never
-    # reached 民法§248, even though 民法§249 — the other half of the same answer —
-    # was already sitting in the window. So prefer a phrase whose OWN ROW already
-    # has an article in the window: the ranking has corroborated that topic, and
-    # finishing it beats opening a new one on a tie.
+    # Order phrases by selectivity: a phrase is a pointer only when it resolves
+    # to few articles (「公然侮辱人者」 -> 刑§309 alone; 「負損害賠償責任」 hits 18,
+    # 「土地所有人」 33). This counts ARTICLES per phrase, not the trigger-count
+    # tie-break rejected in RESULTS.md. Among equally selective phrases, prefer
+    # one whose OWN ROW already has an article in the window (the ranking has
+    # corroborated that topic; e.g. 民法§248 beside §249), then table position.
     from legal_agent.retrieval.lexicon import LEXICON
 
     row_of = {}
@@ -379,12 +308,7 @@ def _promote_lexicon_phrases(
         and any(phrase in (s.content or "") for s, _ in ranked[:k])
     }
 
-    # TRIED AND REJECTED — ranking corroborated rows by the STRENGTH of their
-    # evidence (how high the corroborating article sits) instead of treating
-    # corroboration as a yes/no. 民法§191 at rank 1 does look like better proof of
-    # the topic than a tenancy article at rank 8, and it costs 民法§818 without
-    # recovering 民法§184: 59/61 against 60/61, golden unchanged at 19/7/0.
-
+    # Corroboration is yes/no; weighting it by rank was rejected (RESULTS.md §9).
     matches: list[tuple[int, int, int, str, list[Statute]]] = []
     for position, phrase in enumerate(phrases):
         hits = [c for c in candidates if phrase in c.content]
@@ -393,11 +317,8 @@ def _promote_lexicon_phrases(
             matches.append((len(hits), rank, position, phrase, hits))
     matches.sort(key=lambda m: (m[0], m[1], m[2]))   # selective, corroborated, table
 
-    # …and reserve the FIRST seat for a topic the window does not already carry.
-    # A corroborated row is, by definition, already represented; an uncorroborated
-    # one is a whole answer the window is missing. Measured after 民法§254 and
-    # §264 each fired first and lost their seat to 定金 and 承攬 rows the ranking
-    # had confirmed.
+    # …but the FIRST seat goes to a topic the window does not already carry: an
+    # uncorroborated row is a whole answer the window is missing.
     first_new = next((i for i, m in enumerate(matches) if m[1] != 0), None)
     if first_new is not None and first_new > 0:
         matches.insert(0, matches.pop(first_new))
@@ -418,25 +339,17 @@ def _promote_lexicon_phrases(
     if not promote:
         return ranked[:k]
 
-    # Making room must not evict an article the SAME phrases point at. Measured
-    # on a stalking session: 家暴法§14 (what a 保護令 can order) sat at rank 6,
-    # was therefore 「already in the window」 and not promoted — and then the three
-    # promotions cut the window to five and dropped it. Trim the unprotected tail
-    # first; only cut a phrase-matched article if there is nothing else to give.
+    # Making room must not evict an article the SAME phrases point at (it was
+    # not promoted because it was already in the window). Trim the unprotected
+    # tail first; cut a phrase-matched article only if nothing else is left.
     window_items = ranked[:k]
     protected = [
         i for i, (statute, _score) in enumerate(window_items)
         if any(phrase in (statute.content or "") for phrase in phrases)
     ]
-    # A reserved seat exists to bring in what the window LACKS. When the window is
-    # already phrase-matched all the way down there is nothing to improve by
-    # swapping, and the old trim took the tail anyway: an injury-dismissal session
-    # already held 勞基§13 at rank 8 and §59 at rank 7, and three promotions —
-    # one of them 公寓大廈§16 — pushed both out. Promote at most as many as there
-    # are unprotected places.
-    # …but never below one, when that first promotion opens a topic the window
-    # does not carry: a fully matched window is exactly where a missing answer is
-    # most valuable, and capping to zero there would undo the reserved first seat.
+    # Promote at most as many as there are unprotected places — a fully
+    # phrase-matched window has nothing to gain from swapping — but at least one
+    # when the first promotion opens a topic the window does not carry.
     unprotected = max(len(window_items) - len(protected), 0)
     floor = 1 if promoted_rows and promoted_rows[0] not in corroborated else 0
     promote = promote[: max(unprotected, floor)]
@@ -456,21 +369,16 @@ def _promote_lexicon_phrases(
     return (keep + promote)[:k]
 
 
-# Dense reserved seats: RRF's dual-presence bonus systematically buries a
-# dense-only item — measured on golden v2, 民法§184 at dense rank 2 (and
-# 噪管§6 at 4, §793 at 5, §1141 at 3) still missed the top-8 because dozens of
-# lexically-matched articles each collect BOTH reciprocal ranks. The dense
-# channel's top few therefore get guaranteed seats at the TAIL of the top-k
-# window. BM25 scores stay untouched (promoted dense-only items carry 0.0, so
-# the honesty floor — the TOP score — cannot move).
-# N swept on the stub-LLM golden harness (pass/partial/miss of 26 scorable):
-#   N=0 16/9/1 · N=2 17/8/1 · N=3 18/7/1 · N=4 17/7/2 · N=5 17/8/1
-# N=3 wins; at N>=4 the displaced fused tail costs mg-02 its expected §16.
+# RRF's dual-presence bonus buries dense-only items (lexically matched articles
+# collect BOTH reciprocal ranks), so the dense top-N get guaranteed seats at the
+# window TAIL with BM25 score 0.0. N=3 is the measured best (sweep in
+# evals/HISTORY.md).
 DENSE_RESERVED_SEATS = 3
 
 
-# Count of queries whose dense half was silently dropped. Read by the eval
-# harnesses so a run says WHICH retriever produced its number.
+# Queries whose dense half failed and silently fell back to BM25 (AGENTS.md
+# trap 2). Harnesses print it as `dense_fallbacks`; a run must show 0 before
+# its number is compared with a published one.
 _DENSE_FALLBACKS = 0
 
 
@@ -498,20 +406,16 @@ def _dense_fuse(
     a dense-only candidate (the vocabulary-gap case) carries its honest lexical
     score of 0.0. Returns None — pure BM25, behaviour unchanged — when the
     feature is off, the index is unbuilt, or Ollama is unreachable."""
-    if getattr(config, "DENSE_RETRIEVAL", "off") == "off":
+    if config.DENSE_RETRIEVAL == "off":
         return None
     try:
         from legal_agent.retrieval import dense
         index_keys, matrix = dense.load_index()
         dense_keys = dense.dense_rank(query, index_keys, matrix)
     except Exception:
-        # Degrading to pure BM25 is right for the PRODUCT and wrong for a
-        # MEASUREMENT. Ollama unloads bge-m3 under memory pressure, so this
-        # fires PER QUERY, mid-run: the same recall harness produced 348, then
-        # 334, then 320 on one machine within an hour — and 320 is exactly the
-        # BM25-only figure. Each number was published without saying which
-        # system produced it. Behaviour is unchanged; the counter only makes
-        # the silence audible, and evaluation/real_recall.py reports it.
+        # Right for the product, wrong for a measurement: Ollama can unload
+        # bge-m3 mid-run, so this fires per query with no error. The counter
+        # makes the silence visible (see dense_fallback_count).
         global _DENSE_FALLBACKS
         _DENSE_FALLBACKS += 1
         return None
@@ -567,14 +471,13 @@ def retrieve(
         as_of_date: ISO 'YYYY-MM-DD'. Selects the version in force at that date;
             None means the currently-in-force slice. Raises ValueError if given
             but not a valid ISO date.
-        k: max results (default 5).
+        k: max results (default DEFAULT_K).
         conn: optional open connection (tests point this at a fixture DB);
             defaults to the real corpus at config.DB_PATH.
 
     Returns:
-        Statute records that lexically overlap the query (share >=1 token),
-        ordered by BM25 score, or [] if the point-in-time candidate set is empty
-        or nothing overlaps.
+        The ranked window (lexical matches plus any dense/lexicon reserved-seat
+        promotions), or [] if no in-force candidate overlaps the query.
     """
     return [statute for statute, _score in _retrieve_scored(query, as_of_date, k, conn)]
 
@@ -589,9 +492,7 @@ def retrieve_scored(
     """Same as retrieve() but returns (Statute, BM25 score) pairs, ranked. The
     score is the relevance signal for Stage 3's Mechanism-3 honesty tier.
 
-    dense_query: optional FOCUSED text for the dense half of the hybrid (the
-    semantic core — problem/goal), while `query` (the full fact set) still
-    drives BM25's exact-term matching. Measured: the overtime target 勞基§24
-    ranks 34 on the full fact string but 5 on problem+goal alone — process
-    facts (「持續一年」「問過人資被拒」) are semantic noise. None = use `query`."""
+    dense_query: optional FOCUSED text (problem/goal) for the dense half, while
+    `query` (the full fact set) drives BM25. Process facts are semantic noise:
+    勞基§24 ranks 34 on the full facts, 5 on problem+goal. None = use `query`."""
     return _retrieve_scored(query, as_of_date, k, conn, dense_query=dense_query)

@@ -7,20 +7,18 @@ number depends on, including the one that was wrong first time round.
 """
 from __future__ import annotations
 
-import sys
 from pathlib import Path
 
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.evaluation.judgment_relevance import (  # noqa: E402
+from legal_agent.evaluation.judgment_relevance import (
     _CROSS_CUTTING,
     case_type_family,
     is_uninformative,
     statute_family,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 @pytest.mark.parametrize("ref,family", [
@@ -58,6 +56,41 @@ def test_the_earliest_keyword_in_the_case_type_wins():
     assert case_type_family("返還代墊扶養費用") == "扶養"
 
 
+@pytest.mark.parametrize("case_type,family", [
+    ("返還借用物", "使用借貸"),
+    ("返還寄託物", "寄託"),
+    ("請求履行保證債務", "保證"),
+    ("違反社會秩序維護法", "秩序"),
+    ("給付保證金等", None),            # a deposit, not a guarantee
+])
+def test_families_sessions_ask_about_have_a_case_type_keyword(case_type, family):
+    assert case_type_family(case_type) == family
+
+
+def test_new_keywords_read_every_backfilled_case_type_as_its_family():
+    """They were added before any judgment carried them (none of the first 386
+    shipped 案由 did); the backfill (RESULTS §10/§11) then brought exactly such
+    judgments in. Each shipped 案由 containing one must read as that keyword's
+    family — 「返還寄託物」 as 寄託, never as whatever an earlier keyword says."""
+    import json
+
+    from legal_agent.evaluation import judgment_relevance as jr
+
+    added = {"返還借用物": "使用借貸", "使用借貸": "使用借貸", "寄託": "寄託",
+             "保證債務": "保證", "連帶保證": "保證", "社會秩序維護法": "秩序"}
+    shipped = json.loads((ROOT / "legal_agent" / "corpus" / "judgments_v1.json")
+                         .read_text(encoding="utf-8"))
+    hits = 0
+    for record in shipped:
+        case_type = record["case_type"] or ""
+        for keyword, family in added.items():
+            if keyword in case_type:
+                hits += 1
+                assert case_type_family(case_type) == family, case_type
+    assert hits > 0
+    assert {k for k, _f in jr._CASE_TYPE_FAMILIES} >= set(added)
+
+
 @pytest.mark.parametrize("case_type,uninformative", [
     ("損害賠償", True),
     ("損害賠償等", True),
@@ -71,16 +104,12 @@ def test_generic_case_types_are_not_scored_either_way(case_type, uninformative):
     assert is_uninformative(case_type) is uninformative
 
 
-def test_the_harness_runs_end_to_end(tmp_path):
+def test_the_harness_runs_end_to_end(tmp_path, shipped_conn):
     """Integration on a SLICE, not all 168: retrieval is the slow part and the
     published figure is the harness's job, not the suite's. Twelve sessions
     exercise every branch and keep the run inside the suite's budget."""
     import json
 
-    from legal_agent.config import DB_PATH
-
-    if not Path(DB_PATH).exists():
-        pytest.skip("no corpus in this checkout")
     from legal_agent.evaluation.judgment_relevance import run_judgment_relevance
 
     sessions = json.loads(

@@ -5,9 +5,9 @@ actually ended, with `flagged_count` 0 on every one: the four axes certify that
 a cited article is real, never that it points your way. The obvious proposal is
 an LLM-as-a-Judge pass over 分析研判. This file measures whether one would have
 caught those five before anyone proposes wiring it in. It changes no runtime
-path and grades nothing in production — README's 「No model grades legal
-reasoning here」 still holds; this only produces the number someone would need
-before deciding otherwise.
+path and grades nothing in production — no model grades legal reasoning in
+the pipeline; this only produces the number someone would need before deciding
+otherwise. `--lexical` scores a no-model control against the same labels.
 
 What each judge sees: the person's opening description and the generated answer,
 both taken from `evals/realworld_answers_run1.json`, which deliberately carries
@@ -28,6 +28,7 @@ then reporting its recall on that set would be the 25/27-vs-52% mistake again
 
 Run:  python -m legal_agent.evaluation.judge_direction            # all judges, 2 passes
       python -m legal_agent.evaluation.judge_direction --report   # re-print the saved run
+      python -m legal_agent.evaluation.judge_direction --lexical  # no-model control
 """
 from __future__ import annotations
 
@@ -241,6 +242,91 @@ def _ollama(judge: Judge, prompt: str, system: str | None, host: str,
             "eval_count": data.get("eval_count"), "done_reason": data.get("done_reason")}
 
 
+# ── the no-model control: direction words, 主文 against 理由 ─────────────────
+# A judgment states its result in 主文 and argues it in 理由; a reversal between
+# the two is visible without understanding either. The answers here have the
+# same two places, because stage 3's prompt asks the same three questions every
+# time (他可以向誰主張什麼 / 對方的說法站不站得住 / 接下來要準備什麼):
+#
+#   * 主文 — the verdict on the other side's argument: a clause that names 對方
+#     (or the asker's own 說法/要求) and says 站得住 / 站不住 or 成立 / 不成立.
+#   * 理由 — the claim line: a clause in which the asker 可以 / 得 / 有權 do
+#     something (→ the asker) or 無法 / 不能 / 無權 (→ the other party).
+#
+# Two flag rules, both fixed from the prompt's structure before scoring and not
+# tuned on the 24 answers:
+#   contradiction — the cues point both ways;
+#   no_verdict    — no 主文 at all: the answer never says whose argument holds.
+# Like the judges, it reads only the generated answer, never the outcome.
+
+_CLAUSE_SPLIT = re.compile(r"[。；;\n]")
+_ECHO = re.compile(r"站不站得住(腳)?")
+_REJECTS = re.compile(r"站不住|不成立|無理|不合法|沒有道理")
+_HOLDS = re.compile(r"站得住|成立|有理")
+_ASKER_SIDE = re.compile(r"(他|你)的(說法|主張|要求)")
+_CLAIM_NEG = re.compile(r"(無法|不能|不可以)(向|主張|請求|要求)|無權|沒有權利")
+_CLAIM_POS = re.compile(r"(可以|有權)|得(向|主張|請求|要求|終止)")
+_CLAIM_SUBJECT = re.compile(r"^\s*(\(?\d\)?[.、]?)?\s*(他|你)")
+
+
+def direction_cues(text: str) -> dict:
+    """{'verdict': [...], 'claim': [...]} — each a list of 'asker'/'other_party'.
+    Pure string matching, no model."""
+    verdict: list[str] = []
+    claim: list[str] = []
+    for raw in _CLAUSE_SPLIT.split(text or ""):
+        clause = _ECHO.sub("", raw)
+        if "對方" in clause:
+            if _REJECTS.search(clause):
+                verdict.append("asker")
+            elif _HOLDS.search(clause):
+                verdict.append("other_party")
+            continue
+        if _ASKER_SIDE.search(clause):
+            if _REJECTS.search(clause):
+                verdict.append("other_party")
+            elif _HOLDS.search(clause):
+                verdict.append("asker")
+            continue
+        if not claim and _CLAIM_SUBJECT.match(clause):
+            if _CLAIM_NEG.search(clause):
+                claim.append("other_party")
+            elif _CLAIM_POS.search(clause):
+                claim.append("asker")
+    return {"verdict": verdict, "claim": claim}
+
+
+def lexical_verdicts(answers_path=DEFAULT_ANSWERS) -> dict:
+    """The no-model check, in the same shape `run` produces for a judge, so the
+    same `render` scores it against the same labels."""
+    answers = json.loads(Path(answers_path).read_text(encoding="utf-8"))
+    rows = {}
+    for case_id, entry in answers.items():
+        cues = direction_cues(entry.get("analysis") or entry.get("answer") or "")
+        sides = set(cues["verdict"]) | set(cues["claim"])
+        contradiction = sides == {"asker", "other_party"}
+        no_verdict = not cues["verdict"]
+        rows[case_id] = {"cues": cues, "contradiction": contradiction,
+                         "no_verdict": no_verdict}
+    return rows
+
+
+def lexical_as_judges(rows: dict) -> dict:
+    """Two rules → two pseudo-judges with one deterministic pass each."""
+    def as_pass(key):
+        return {i: {"flagged": (r["contradiction"] or r["no_verdict"]) if key == "either"
+                    else r[key], "score": None} for i, r in rows.items()}
+    return {"judges": {
+        "lexical:contradiction": {"model": "no model", "style": "lexical", "num_ctx": 0,
+                                  "note": "主文/理由 cues point both ways",
+                                  "passes": [as_pass("contradiction")]},
+        "lexical:contradiction|no_verdict": {"model": "no model", "style": "lexical",
+                                             "num_ctx": 0,
+                                             "note": "… or no verdict on the other side at all",
+                                             "passes": [as_pass("either")]},
+    }}
+
+
 def labels(cases_path=DEFAULT_CASES, coding_path=DEFAULT_CODING) -> dict[str, dict]:
     """id -> {label_source, truth}. truth is 'wrong' (opposed), 'right' (agrees)
     or None (neither) — straight from the blind coding, never from a judge."""
@@ -343,11 +429,16 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.judge_direction
     enable_utf8_stdout()
     ap = argparse.ArgumentParser()
     ap.add_argument("--report", action="store_true", help="re-print the saved run, call no model")
+    ap.add_argument("--lexical", action="store_true",
+                    help="score the no-model direction-word check, call no model")
     ap.add_argument("--judges", default=",".join(j.name for j in JUDGES))
     ap.add_argument("--repeat", type=int, default=2)
     ap.add_argument("--out", default=DEFAULT_OUT)
     args = ap.parse_args()
     truth = labels()
+    if args.lexical:
+        print(render(lexical_as_judges(lexical_verdicts()), truth))
+        raise SystemExit(0)
     if args.report:
         saved = json.loads(Path(args.out).read_text(encoding="utf-8"))
     else:

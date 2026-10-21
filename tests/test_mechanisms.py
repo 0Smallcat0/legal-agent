@@ -5,20 +5,14 @@ Run:  python -m pytest tests/test_mechanisms.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.anti_hallucination.answer_structure import (  # noqa: E402
+from legal_agent.anti_hallucination.answer_structure import (
     PRACTICE_HEADING,
     is_empty_section,
     split_sections,
 )
-from legal_agent.anti_hallucination.honesty import grade_honesty  # noqa: E402
-from legal_agent.anti_hallucination.sycophancy import check_premise  # noqa: E402
-from legal_agent.data.models import Statute  # noqa: E402
+from legal_agent.anti_hallucination.honesty import grade_honesty
+from legal_agent.anti_hallucination.sycophancy import check_premise
+from legal_agent.data.models import Statute
 
 _STUB = Statute("民法", "第793條", "土地所有人...", "2009-07-23", None, "法律", "http://x")
 

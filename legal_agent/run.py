@@ -50,7 +50,7 @@ def build_runtime_llm():
     """Return the runtime llm callable for config.LLM_PROVIDER, or exit CLEANLY
     with a helpful message (no traceback)."""
     config.load_env()
-    provider = getattr(config, "LLM_PROVIDER", "anthropic")
+    provider = config.LLM_PROVIDER
 
     if provider == "manual":
         # Zero-cost human-in-the-loop: no model id and no API key required.
@@ -62,8 +62,8 @@ def build_runtime_llm():
         # Free local model. Needs the Ollama service running with a pulled model.
         from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
 
-        host = getattr(config, "OLLAMA_HOST", "http://localhost:11434")
-        model = getattr(config, "OLLAMA_MODEL", "qwen2.5:7b")
+        host = config.OLLAMA_HOST
+        model = config.OLLAMA_MODEL
         if not ollama_available(host):
             _die(
                 f"⚠ 連不到本機 Ollama({host})。請先:\n"
@@ -74,6 +74,14 @@ def build_runtime_llm():
                 "程式印出組好的提示詞,你貼到任何聊天視窗再把答案貼回來。)"
             )
         return ollama_llm()
+
+    if provider == "hf":
+        # In-process transformers weights; the Space's backend, runnable locally.
+        try:
+            from legal_agent.dialogue.hf_llm import hf_llm
+        except ImportError as exc:
+            _die(f"⚠ LEGAL_AGENT_PROVIDER=hf 需要 `pip install .[space]`:{exc}")
+        return hf_llm()
 
     if provider == "anthropic":
         if not config.is_model_configured():
@@ -96,7 +104,7 @@ def build_runtime_llm():
             _die(f"⚠ 無法建立 Anthropic 客戶端:{exc}")
 
     _die(
-        f"⚠ 未知的 LLM_PROVIDER:{provider!r}。目前支援:'manual' / 'ollama' / 'anthropic'。"
+        f"⚠ 未知的 LLM_PROVIDER:{provider!r}。目前支援:'manual' / 'ollama' / 'hf' / 'anthropic'。"
         "請設 LEGAL_AGENT_PROVIDER,或改 legal_agent/config.py。"
     )
 
@@ -115,11 +123,7 @@ def _format_result(result) -> str:
     if result.honesty_tier == "insufficient":
         out.append(f"【資料涵蓋】不足:{result.answer}")
     else:
-        # honesty_label lives on Stage3Result, not on PipelineResult — reading it
-        # off `result` raised AttributeError, and nobody noticed because the
-        # marginal band was empty under the stale threshold pair (floor 6 /
-        # marginal 1.5). Recalibrating the band made the branch reachable and the
-        # crash immediate: an unreachable code path is an untested one.
+        # honesty_label lives on Stage3Result, not on PipelineResult.
         label = getattr(getattr(result, "stage3", result), "honesty_label", None)
         if result.honesty_tier == "marginal" and label:
             out.append(f"【提醒】{label}")
@@ -131,16 +135,11 @@ def _format_result(result) -> str:
             if not result.practice_disclaimer_ok:
                 out.append("\n⚠ 注意:實務見解段未標明「非法律明文」,請人工確認。")
         else:
-            # The notice now travels WITH the answer (stage3.UNSEGMENTED_NOTICE),
-            # so every caller shows it — the CLI no longer needs its own copy.
-            pass
             out.append(result.answer)
 
-        # What retrieval actually found, code-rendered. The model writes the
-        # 法律明文 section and routinely uses only part of what it was given —
-        # one lived session was handed 勞基§22/§24/§30 and wrote about §30 only.
-        # Listing the window costs three lines and lets the reader see the law
-        # that was found, not just the law the model chose to discuss.
+        # What retrieval actually found, code-rendered: the model routinely
+        # discusses only part of what it was given, and the reader should see
+        # the law that was found, not just the law the model chose to discuss.
         retrieved = getattr(getattr(result, "stage3", result), "retrieved", ())
         if retrieved:
             refs_line = "、".join(f"{s.statute_id}{s.article_no}" for s in retrieved)
@@ -152,11 +151,9 @@ def _format_result(result) -> str:
             from legal_agent.retrieval.judgments import render_block
             out.append("\n" + render_block(list(refs)))
 
-    # Mechanism 2 — verification, ALWAYS printed. This used to render only when
-    # something was flagged, so a clean run showed no verification section at
-    # all — and silence reads as endorsement. Four of eight already-decided
-    # rental disputes were reasoned the wrong way round with `flagged_count` 0.
-    # Same words as the web (verifier.verification_status_line) so the two
+    # Mechanism 2 — verification, ALWAYS printed: silence reads as endorsement,
+    # and `flagged_count` 0 does not mean the reasoning applies (evals/RESULTS.md
+    # §7). Same words as the web (verifier.verification_status_line) so the two
     # cannot drift apart.
     from legal_agent.anti_hallucination.verifier import verification_status_line
 
@@ -173,7 +170,7 @@ def _format_result(result) -> str:
     if result.premise_flag:
         out.append(
             "\n📝 註:你的描述似乎已先下了法律判斷(例如「構成某罪」「一定告得成」)。"
-            "本工具以法律實際規定為準——若與你的預期不同,請以上方【法條依據】為主,"
+            "本工具以法律實際規定為準——若與你的預期不同,請以上方【法律明文】所列條文為主,"
             "必要時諮詢律師。"
         )
 
@@ -182,69 +179,21 @@ def _format_result(result) -> str:
     return "\n".join(out)
 
 
-def run_conversation(llm, conn, as_of_date=None, input_fn=input, output_fn=print) -> None:
-    """Rule-based intake loop (used in manual mode). `llm`, `conn`, `input_fn`,
-    `output_fn` are injected so this is fully testable with a fake llm + scripted
-    input."""
+def _converse(welcome: str, turn, llm, conn, as_of_date, input_fn, output_fn) -> None:
+    """The IO loop both intakes share: read a line, hand it to `turn(state, msg)`,
+    and run Stage 3 -> 4 exactly once when the state says the intake is done."""
     state = flow.SessionState()
-    output_fn(_WELCOME)
+    output_fn(welcome)
     while True:
         try:
             msg = input_fn("\n你 > ")
         except (EOFError, KeyboardInterrupt):
+            msg = None
+        if msg is None or msg.strip().lower() in ("quit", "exit", "/quit", "/exit"):
             output_fn("\n(結束對話)")
             return
-        if msg is None:
-            output_fn("\n(結束對話)")
-            return
-        if msg.strip().lower() in ("quit", "exit", "/quit", "/exit"):
-            output_fn("(結束對話)")
-            return
 
-        reply, state = flow.handle_turn(state, msg)
-        output_fn(reply)
-
-        if state.stage is flow.Stage.READY_FOR_STAGE3:
-            output_fn("\n(資訊已足夠——開始檢索法條並診斷;這一步只檢索一次)")
-            result = flow.advance_to_stage3(state, llm=llm, as_of_date=as_of_date, conn=conn)
-            output_fn(_format_result(result))
-            return   # clinic-style: one diagnosis per session
-
-
-def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
-                           output_fn=print, intake_llm=None) -> None:
-    """LLM-driven intake loop: the model DRIVES the conversation (natural replies,
-    its own follow-ups, free-form fact extraction), then on ready runs the SAME
-    Stage 3 -> 4 pipeline. No retrieval happens during intake (spec §3.3);
-    retrieval fires exactly once inside advance_to_stage3. `intake_llm` (falls back
-    to `llm`) can be a JSON-constrained backend so a small local model extracts
-    facts reliably. Injectable IO for tests.
-
-    Triage, seeding, the done-signal and the turn cap all live in
-    `flow.handle_turn_smart` — this loop is IO. They used to be duplicated here,
-    which is how the CLI and the web demo drifted apart in the first place.
-    """
-    intake_llm = intake_llm or llm
-    output_fn(_WELCOME_SMART)
-    state = flow.SessionState()
-    history: list[dict] = []
-    while True:
-        try:
-            msg = input_fn("\n你 > ")
-        except (EOFError, KeyboardInterrupt):
-            output_fn("\n(結束對話)")
-            return
-        if msg is None:
-            output_fn("\n(結束對話)")
-            return
-        if msg.strip().lower() in ("quit", "exit", "/quit", "/exit"):
-            output_fn("(結束對話)")
-            return
-
-        history.append({"role": "user", "content": msg})
-        reply, state = flow.handle_turn_smart(state, msg, history, intake_llm)
-        history.append({"role": "assistant", "content": reply})
-
+        reply, state = turn(state, msg)
         output_fn(reply)
         if state.stage is not flow.Stage.READY_FOR_STAGE3:
             continue
@@ -253,6 +202,29 @@ def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
         result = flow.advance_to_stage3(state, llm=llm, as_of_date=as_of_date, conn=conn)
         output_fn(_format_result(result))
         return   # clinic-style: one diagnosis per session
+
+
+def run_conversation(llm, conn, as_of_date=None, input_fn=input, output_fn=print) -> None:
+    """Rule-based intake loop (used in manual mode). IO is injected for tests."""
+    _converse(_WELCOME, flow.handle_turn, llm, conn, as_of_date, input_fn, output_fn)
+
+
+def run_smart_conversation(llm, conn, as_of_date=None, input_fn=input,
+                           output_fn=print, intake_llm=None) -> None:
+    """LLM-driven intake loop: the model drives the conversation and extracts
+    facts (triage, seeding, the done-signal and the turn cap live in
+    `flow.handle_turn_smart`); no retrieval happens until advance_to_stage3.
+    `intake_llm` (falls back to `llm`) can be a JSON-constrained backend."""
+    intake_llm = intake_llm or llm
+    history: list[dict] = []
+
+    def turn(state, msg):
+        history.append({"role": "user", "content": msg})
+        reply, state = flow.handle_turn_smart(state, msg, history, intake_llm)
+        history.append({"role": "assistant", "content": reply})
+        return reply, state
+
+    _converse(_WELCOME_SMART, turn, llm, conn, as_of_date, input_fn, output_fn)
 
 
 def main(argv=None) -> int:
@@ -283,8 +255,8 @@ def main(argv=None) -> int:
 
     ensure_corpus(config.DB_PATH)   # fresh clone: build schema + corpus, once
     conn = connect(config.DB_PATH)
-    provider = getattr(config, "LLM_PROVIDER", "anthropic")
-    smart = provider != "manual" and getattr(config, "SMART_INTAKE", True)
+    provider = config.LLM_PROVIDER
+    smart = provider != "manual" and config.SMART_INTAKE
     intake_llm = None
     if smart and provider == "ollama":
         # Constrain the local model to valid JSON so fact extraction is reliable.

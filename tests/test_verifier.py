@@ -7,21 +7,20 @@ Run:  python -m pytest tests/test_verifier.py -q
 """
 from __future__ import annotations
 
-import sys
-from pathlib import Path
-
 import pytest
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
-
-from legal_agent.anti_hallucination.verifier import (  # noqa: E402
+from legal_agent.anti_hallucination.verifier import (
     VERIFIED_SCOPE_NOTE,
     verification_status_line,
     verify_answer,
 )
-from legal_agent.data.database import connect, init_db  # noqa: E402
-from legal_agent.data.seed import seed_source_hierarchy  # noqa: E402
+from legal_agent.data.database import connect, init_db
+from legal_agent.data.seed import seed_source_hierarchy
+from legal_agent.evaluation.blindspots import (
+    STILL_BLIND,
+    load_blindspot_cases,
+    load_positive_control_cases,
+)
 
 
 @pytest.fixture
@@ -398,19 +397,12 @@ def test_cross_reference_quoted_from_a_retrieved_source_is_not_called_recall(rea
     assert results["第8條"].flagged is False and "交叉引用" in results["第8條"].reason
     assert results["第9條"].flagged is False        # written 第九條 in the source
     assert results["第99條"].flagged is True        # not in the quoted text -> recall
-    # B4 fix: a citation resolved ONLY via the retrieved source's own quoted
-    # text was never independently checked against the corpus, so it must read
-    # as "not verified" (unverified=True) rather than as "verified clean" —
-    # today nothing sets this field, so getattr (not a plain attribute access)
-    # turns the gap into a readable assertion message instead of a bare
-    # AttributeError until verifier.py adds it.
-    assert getattr(results["第8條"], "unverified", None) is True, (
-        "VerificationResult.unverified not yet implemented (verifier.py A2/B4 pending)")
-    assert getattr(results["第9條"], "unverified", None) is True, (
-        "VerificationResult.unverified not yet implemented (verifier.py A2/B4 pending)")
-    # 第99條 is a genuine miss (exists=False, flagged=True) — not merely
-    # unverified — and that distinction must survive the A2 rewrite too.
-    assert getattr(results["第99條"], "unverified", False) is False
+    # A citation resolved ONLY via the retrieved source's own quoted text was
+    # never checked against the corpus, so it reads as unverified, not clean.
+    assert results["第8條"].unverified is True
+    assert results["第9條"].unverified is True
+    # 第99條 is a genuine miss (exists=False, flagged=True), not merely unverified.
+    assert results["第99條"].unverified is False
     line = verification_status_line(list(results.values()))
     assert "全數可回溯至資料庫" not in line, line
     assert line == (
@@ -645,11 +637,9 @@ def test_anaphoric_same_law_reference_after_a_named_citation_resolves(real_conn)
 
 # ── A7 bare penalty amount scanner (masked scan) ─────────────────────────────
 def _bare_penalty_amounts_fn():
-    from legal_agent.anti_hallucination import verifier as _v
+    from legal_agent.anti_hallucination.verifier import _bare_penalty_amounts
 
-    if not hasattr(_v, "_bare_penalty_amounts"):
-        pytest.skip("_bare_penalty_amounts not implemented yet (verifier.py A7 pending)")
-    return _v._bare_penalty_amounts
+    return _bare_penalty_amounts
 
 
 def test_bare_penalty_amounts_does_not_swallow_article_numbers_or_fractions():
@@ -683,14 +673,8 @@ def test_bare_penalty_amounts_still_catches_a_real_bare_penalty():
 # rows) — these are regressions against the actual corpus, same skip-if-absent
 # guard every other live-DB test in this suite already uses.
 @pytest.fixture
-def live_conn():
-    from legal_agent.config import DB_PATH
-
-    if not Path(DB_PATH).exists():
-        pytest.skip("no corpus in this checkout")
-    conn = connect(DB_PATH)
-    yield conn
-    conn.close()
+def live_conn(shipped_conn):
+    return shipped_conn
 
 
 def test_correct_seven_day_restatement_of_consumer_protection_act_19_not_flagged(live_conn):
@@ -701,10 +685,6 @@ def test_correct_seven_day_restatement_of_consumer_protection_act_19_not_flagged
 
 
 def test_period_direction_axis_flags_a_flipped_seven_day_window(live_conn):
-    from legal_agent.anti_hallucination import verifier as _v
-
-    if not hasattr(_v, "_period_directions"):
-        pytest.skip("_period_directions not implemented yet (verifier.py A8 pending)")
     # Measured on today's verifier (2026-08-17): flagged=False — _periods()
     # only ever compares the NUMBER (7), never the direction word, so 七日內
     # flipped to 七日以上 passes silently. Period-axis twin of the amount
@@ -722,10 +702,6 @@ def test_correct_inheritance_fraction_restatement_of_civil_code_1144_not_flagged
 
 
 def test_fraction_axis_flags_a_share_the_article_never_states(live_conn):
-    from legal_agent.anti_hallucination import verifier as _v
-
-    if not hasattr(_v, "_fractions"):
-        pytest.skip("_fractions not implemented yet (verifier.py A8 pending)")
     # 四分之三 appears NOWHERE in 民法第1144條 (only 二分之一 and 三分之二 do) —
     # chosen specifically so this is not the 三分之一<->三分之二-style equivalent
     # mutant the fraction-tamper generator has to guard against (that article
@@ -736,125 +712,144 @@ def test_fraction_axis_flags_a_share_the_article_never_states(live_conn):
     assert r.flagged is True, r.reason
 
 
-# ── evals/blindspots_v1.json — the 25-case blind-spot suite (Stage 0
-# workstream: legal_agent/evaluation/blindspots.py) runs inside the normal
-# test suite too, not only via `python -m legal_agent.evaluation.blindspots`.
-# Uses that module's OWN loader/dataclass directly (BlindspotCase.id/
-# category/answer/expect_flag) now that it exists in this checkout, rather
-# than guessing a schema. A missing module or file skips cleanly instead of
-# erroring collection or passing silently.
-def _load_blindspots_cases() -> list:
-    try:
-        from legal_agent.evaluation.blindspots import load_blindspot_cases
-    except ModuleNotFoundError:
-        return []
-    try:
-        return load_blindspot_cases()
-    except (OSError, ValueError, KeyError):
-        return []
+# ── evals/blindspots_v1.json + the positive-control file ───────────────────
+# The same cases `python -m legal_agent.evaluation.blindspots` scores, with the
+# same calling convention (full-corpus conn, empty retrieved_context).
 
-
-_BLINDSPOTS_CASES = _load_blindspots_cases()
-
-# The four cases the structural axes still cannot see, measured 2026-08-17.
-# Twelve of the sixteen original misses are now caught; these are not. All four
-# are the same shape: the citation is real, the article exists, the quote is
-# close enough, and what changed is a modal or a proviso -- "得" to "應",
-# "得禁止" to "不得禁止", a proviso inverted, an anaphoric reference to a
-# different article. Nothing in a structural check (amount, direction word,
-# period, article existence) can see any of them; catching them needs a
-# semantic axis, and the one this repo has misfires on 43% of correct citations.
-#
-# strict=True on purpose: if a later change does catch one of these, this test
-# goes red and says so rather than silently passing. That is how the published
-# 21/25 stays honest in both directions.
-_STILL_BLIND = {
-    "modal_de_to_ying",
-    "modal_full_negation",
-    "proviso_reversal",
-    "anaphora_tong_fa_20",
-}
+# strict=True on purpose: if a later change catches one of STILL_BLIND, this
+# test goes red and says so. That is how the published 21/25 stays honest in
+# both directions.
 
 
 def _blindspot_param(case):
-    if case is None:
-        return case
-    if case.id in _STILL_BLIND:
+    if case.id in STILL_BLIND:
         return pytest.param(
             case,
-            marks=pytest.mark.xfail(
-                strict=True,
-                reason=(
-                    f"{case.id}: structurally invisible (modal/proviso semantics). "
-                    "Counted as a miss in the published 21/25."
-                ),
-            ),
+            id=f"{case.id}-{case.category}",
+            marks=pytest.mark.xfail(strict=True, reason=f"{case.id}: counted as a miss in 21/25"),
         )
-    return case
+    return pytest.param(case, id=f"{case.id}-{case.category}")
 
 
-_BLINDSPOTS_PARAMS = [_blindspot_param(c) for c in _BLINDSPOTS_CASES] or [None]
-_BLINDSPOTS_IDS = (
-    [f"{c.id}-{c.category}" for c in _BLINDSPOTS_CASES] if _BLINDSPOTS_CASES
-    else ["blindspots-not-available-yet"]
-)
-
-
-@pytest.mark.parametrize("case", _BLINDSPOTS_PARAMS, ids=_BLINDSPOTS_IDS)
+@pytest.mark.parametrize("case", [_blindspot_param(c) for c in load_blindspot_cases()])
 def test_blindspots_case_agrees_with_the_frozen_json(case, live_conn):
-    if case is None:
-        pytest.skip(
-            "legal_agent.evaluation.blindspots / evals/blindspots_v1.json "
-            "not available in this checkout"
-        )
-    # Same calling convention blindspots.py._run_one uses: full-corpus conn,
-    # empty retrieved_context. The 16 "miss" cases are EXPECTED to fail here
-    # on an unrepaired verifier.py — that is the frozen 16/25 階段0 baseline;
-    # the 9 "control" cases must already pass today.
     results = verify_answer(case.answer, [], conn=live_conn)
-    flagged = any(r.flagged for r in results) if results else False
+    flagged = any(r.flagged for r in results)
     assert flagged == case.expect_flag, (
         f"{case.id} [{case.category}]: expected flag={case.expect_flag}, got "
         f"{flagged} — reasons={[r.reason for r in results]}"
     )
 
 
-# ── evals/blindspots_positive_control_v1.json — the 4-case "must not be
-# flagged" control set, same treatment. 3 of the 4 (must_not_regress) are
-# clean today; the 4th (must_stop_being_flagged — 家庭暴力防治法§61 verbatim)
-# is today's known false positive and is EXPECTED to fail here until fixed.
-def _load_positive_control_cases() -> list:
-    try:
-        from legal_agent.evaluation.blindspots import load_positive_control_cases
-    except ModuleNotFoundError:
-        return []
-    try:
-        return load_positive_control_cases()
-    except (OSError, ValueError, KeyError):
-        return []
-
-
-_POSITIVE_CONTROL_CASES = _load_positive_control_cases()
-_POSITIVE_CONTROL_PARAMS = _POSITIVE_CONTROL_CASES or [None]
-_POSITIVE_CONTROL_IDS = (
-    [f"{c.id}-{c.label}" for c in _POSITIVE_CONTROL_CASES] if _POSITIVE_CONTROL_CASES
-    else ["positive-control-not-available-yet"]
+@pytest.mark.parametrize(
+    "case", [pytest.param(c, id=f"{c.id}-{c.label}") for c in load_positive_control_cases()]
 )
-
-
-@pytest.mark.parametrize("case", _POSITIVE_CONTROL_PARAMS, ids=_POSITIVE_CONTROL_IDS)
 def test_positive_control_case_agrees_with_the_frozen_json(case, live_conn):
-    if case is None:
-        pytest.skip(
-            "legal_agent.evaluation.blindspots / "
-            "evals/blindspots_positive_control_v1.json not available in this checkout"
-        )
     results = verify_answer(case.answer, [], conn=live_conn)
-    flagged = any(r.flagged for r in results) if results else False
+    flagged = any(r.flagged for r in results)
     assert flagged is False, (
         f"{case.id} [{case.label}]: expected flag=False, got {flagged} — "
         f"reasons={[r.reason for r in results]}"
     )
+
+
+def test_the_blindspots_harness_exits_non_zero_on_a_score_regression(live_conn):
+    """The CI step runs `python -m legal_agent.evaluation.blindspots`; it used to
+    exit 0 at any score. Each failure the pytest cases above catch must also
+    turn its exit code red."""
+    import dataclasses
+
+    from legal_agent.evaluation.blindspots import (
+        gate_problems,
+        score_blindspots,
+        score_positive_control,
+    )
+
+    report, pc = score_blindspots(live_conn), score_positive_control(live_conn)
+    assert gate_problems(report, pc) == []
+
+    def flip(outcomes, case_id):
+        return [dataclasses.replace(o, flagged=not o.flagged) if o.case.id == case_id else o
+                for o in outcomes]
+
+    caught = next(o.case.id for o in report.miss_outcomes if o.case.id not in STILL_BLIND)
+    blind = next(iter(STILL_BLIND))
+    control = report.control_outcomes[0].case.id
+    for case_id in (caught, blind, control):
+        broken = dataclasses.replace(report, outcomes=flip(report.outcomes, case_id))
+        assert gate_problems(broken, pc), case_id
+    pc_flagged = dataclasses.replace(pc, outcomes=flip(pc.outcomes, pc.outcomes[0].case.id))
+    assert gate_problems(report, pc_flagged)
+    assert gate_problems(report, dataclasses.replace(pc, outcomes=pc.outcomes[1:]))
+
+
+# ── numerals and 文號 adjacency (found by audit, 2026-10-16) ──────────────────
+@pytest.mark.parametrize("text, value", [
+    ("一〇〇〇〇", 10000),     # positional digits used to read as 0
+    ("二〇二三", 2023),
+    ("一〇五", 105),
+    ("一千零五", 1005),       # a 零 after a unit is still a placeholder
+    ("三萬零五百", 30500),
+    ("萬", None),             # 「數萬元」 states no amount (used to read as 0)
+    ("三四千", None),         # an approximate range, not 34,000
+    ("一兩萬", None),
+    ("二〇萬", 200000),
+    ("十", 10),
+    ("壹拾萬伍仟伍佰伍拾陸", 105556),
+])
+def test_parse_number_reads_positional_digits_and_refuses_a_bare_big_unit(text, value):
+    from legal_agent.anti_hallucination.verifier import _parse_number
+
+    assert _parse_number(text) == value
+
+
+def test_a_positional_amount_that_matches_the_article_is_not_flagged(live_conn):
+    r = verify_answer("依社會秩序維護法第72條,最高處新臺幣一〇〇〇〇元罰鍰。", [], conn=live_conn)[0]
+    assert r.flagged is False, r.reason
+
+
+def test_a_docnum_after_the_citation_does_not_switch_off_the_amount_check(live_conn):
+    answer = "依社會秩序維護法第72條及內政部台內警字第123號函,處九萬元以下罰鍰。"
+    by_raw = {r.citation.raw: r for r in verify_answer(answer, [], conn=live_conn)}
+    assert by_raw["依社會秩序維護法第72條"].flagged is True
+    assert "90000" in by_raw["依社會秩序維護法第72條"].reason
+    assert "及內政部台內警字第123號" in by_raw      # the 文號 is still extracted on its own
+
+
+def test_a_docnum_in_a_later_clause_still_ends_the_citations_claim(live_conn):
+    """Only a 文號 joined to the citation (及/、) shares its claim. One in its own
+    clause states its own amount: grading that against §72 flagged a correct
+    「一萬元以下」 on 345 of 345 amount-bearing articles."""
+    answer = "依社會秩序維護法第72條處新臺幣一萬元以下罰鍰,內政部台內警字第123號函則另指出得處九萬元。"
+    r = next(r for r in verify_answer(answer, [], conn=live_conn) if r.citation.article_no)
+    assert r.flagged is False, r.reason
+
+
+@pytest.mark.parametrize("amount", ["數萬元", "十餘萬元", "三四千元", "數千元"])
+def test_an_amount_that_states_no_number_is_not_reported_as_traceable(amount, live_conn):
+    """§72 caps at 一萬元. A vague amount parses to no number, so the amount axis
+    cannot grade it, and the answer must not read as fully traceable."""
+    results = verify_answer(f"依社會秩序維護法第72條,處{amount}罰鍰。", [], conn=live_conn)
+    assert results[0].unverified is True
+    assert "全數可回溯" not in verification_status_line(results)
+
+
+def test_a_multi_list_article_flags_only_an_item_above_every_list(live_conn):
+    """民法§129 has two lists (一~三, then 一~五). Which one 「第4款」 means is
+    undecidable, so it stays unverified; 「第6款」 is in neither and is a ghost."""
+    above = verify_answer("依民法第129條第6款,時效中斷。", [], conn=live_conn)[0]
+    assert above.flagged is True and "第5款" in above.reason
+    within = verify_answer("依民法第129條第4款,時效中斷。", [], conn=live_conn)[0]
+    assert within.flagged is False and within.unverified is True
+
+
+def test_a_docnum_before_the_citation_is_still_extracted(live_conn):
+    """The 文號 used to vanish when a 條 citation followed it, and the status
+    line then claimed every citation traceable."""
+    results = verify_answer("依內政部台內字第1234號函及民法第184條,負損害賠償責任。", [],
+                            conn=live_conn)
+    assert "依內政部台內字第1234號" in [r.citation.raw for r in results]
+    assert "全數可回溯" not in verification_status_line(results)
 
 
 if __name__ == "__main__":

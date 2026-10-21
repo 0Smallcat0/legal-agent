@@ -7,13 +7,11 @@ Run:  python -m pytest tests/test_respondent_card.py -q
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
+import legal_agent
 
-import legal_agent  # noqa: E402
+ROOT = Path(__file__).resolve().parents[1]
 
 CARD = ROOT / "docs" / "respondent_card.md"
 

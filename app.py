@@ -11,7 +11,10 @@ answer; the gates are why the answer can be trusted.
 Everything deterministic (retrieval, honesty tier, ladder, verbatim statutes)
 works with NO model at all, so the full consultation flow runs on the free
 Hugging Face tier with zero keys and no GPU. A local Ollama, when present, both
-conducts the interview and writes the 分析研判 narrative.
+conducts the interview and writes the 分析研判 narrative. On a ZeroGPU Space
+(config.LLM_PROVIDER == "hf") a transformers model writes the 分析研判 instead,
+while the interview stays the scripted checklist; when the visitor's GPU quota
+is spent, the page renders as it does with no model.
 
 Local:      python app.py
 HF Spaces:  live at huggingface.co/spaces/NoirOAO/legal-agent-demo. Deploying is
@@ -21,12 +24,13 @@ HF Spaces:  live at huggingface.co/spaces/NoirOAO/legal-agent-demo. Deploying is
 """
 from __future__ import annotations
 
+import threading
 from html import escape
 
 import gradio as gr
 
 from legal_agent import config
-from legal_agent.anti_hallucination.honesty import grade_honesty
+from legal_agent.anti_hallucination.honesty import grade_honesty, lexicon_hit
 from legal_agent.anti_hallucination.verifier import verify_answer
 from legal_agent.data.bootstrap import ensure_corpus
 from legal_agent.data.database import connect
@@ -38,8 +42,8 @@ from legal_agent.dialogue.flow import (
     handle_turn,
     handle_turn_smart,
 )
+from legal_agent.dialogue.intake import FIELD_LABELS
 from legal_agent.dialogue.ollama_llm import ollama_available, ollama_llm
-from legal_agent.retrieval.lexicon import expansions
 from legal_agent.retrieval.retriever import retrieve_scored
 
 # ── content ──────────────────────────────────────────────────────────────────
@@ -50,9 +54,8 @@ GREETING = (
 
 # A deliberately-broken sample answer mirroring the live 8B model's README-demo
 # output: one wrong amount and one TYPO'd statute name (公寀≠公寓) must be
-# flagged, while 噪音管制法第8條 must PASS — it was out of corpus in the
-# 11-article era but corpus v2 carries the full statute, so it is now a correct
-# citation (re-verified 2026-07-21; the tab copy must not promise three flags).
+# flagged, while 噪音管制法第8條 is in the corpus and must PASS (so the tab copy
+# must not promise three flags).
 SAMPLE_BAD_ANSWER = (
     "依社會秩序維護法第72條,深夜喧嘩可處新臺幣六萬元以下罰鍰。"
     "另依噪音管制法第8條及公寀大廈管理條例第16條,亦有相關管制。"
@@ -64,9 +67,8 @@ SAMPLE_GOOD_ANSWER = (
 # A second broken sample, from the everyday-law side of the corpus. ALL THREE
 # defects are ones the verifier actually catches — a demo must not advertise
 # a catch it cannot make: an invented fine (§7 caps the deposit and prescribes
-# no 罰鍰), the 七日 hesitation period claimed as 十四日 (catchable since the
-# period content pass, 2026-07-21 — the very defect this sample had to DROP on
-# 07-19), and a nonexistent article number.
+# no 罰鍰), the 七日 hesitation period claimed as 十四日, and a nonexistent
+# article number.
 SAMPLE_BAD_ANSWER_2 = (
     "依租賃住宅市場發展及管理條例第7條,房東不退押金可處新臺幣五萬元罰鍰;"
     "依消費者保護法第19條,網購商品得於十四日內退回解約;"
@@ -83,23 +85,6 @@ RETRIEVAL_EXAMPLES = [
     ["網購買到瑕疵品,賣家不讓退貨"],
     ["父親過世,兄弟姊妹要分遺產"],
 ]
-
-# Intake field keys → 中文 labels. Covers BOTH checklists: the 住宅噪音
-# scenario and the generic flow every other problem falls through to.
-_FIELD_ZH = {
-    # 通用流程
-    "problem": "問題與對象",
-    "goal": "希望的結果",
-    "timeline": "時間與經過",
-    # 住宅噪音情境
-    "noise_type": "噪音類型",
-    "timing": "時段與頻率",
-    "building_type": "建物型態",
-    "impact": "影響",
-    "evidence": "證據",
-    # 兩者共用
-    "actions_taken": "已採取行動",
-}
 
 _TIER_TEXT = {
     "normal": "充分——檢索到高相關法源",
@@ -232,13 +217,13 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">641 項測試通過 · 植入錯誤抓取率 17 類全數 100%(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">植入錯誤抓取率 24 類全數 100%(零誤報) · 435 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
 FOOTER = """
 <p class="disclaimer">工程實驗,非法律意見,不能取代律師。法源為全國法規資料庫官方
-公開資料逐字匯入(16 部民生法規 2,922 條+警察分工實務指引);「住宅噪音」有專屬問診流程,
+公開資料逐字匯入(16 部民生法規 2,921 條現行條文+1 個歷史版本+警察分工實務指引);「住宅噪音」有專屬問診流程,
 其他問題走通用流程。資料庫未涵蓋的領域,系統會直接說不知道。</p>
 """
 
@@ -318,11 +303,9 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
     top = max(sc for _, sc in scored) or 1.0
     cards = []
     for s, sc in scored:
-        # A 0.0 score is not 「4% relevant」 — it is the honest lexical score of a
-        # candidate the DENSE or LEXICON channel put here precisely because the
-        # user's words share nothing with the article. Measured on the web demo:
-        # 民法§432 (the article that decides a 押金/釘孔 case) was displayed last,
-        # labelled 「相關度 4%」. Say which channel found it instead of inventing a
+        # A 0.0 score is the honest lexical score of a candidate the DENSE or
+        # LEXICON channel put here precisely because the user's words share nothing
+        # with the article. Say which channel found it instead of inventing a
         # percentage for it.
         if sc <= 0.0:
             width = 100
@@ -331,9 +314,8 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
             width = max(4, round(sc / top * 100))
             relevance = f"字面相關度 {width}%"
         excerpt = escape(s.content[:56].replace("\n", " "))
-        # The proviso is marked, not explained: 民法§793 reached the owner's page
-        # verbatim and its 但書 — the sentence his whole side turns on — read as
-        # more law-coloured text. Verbatim slice, no interpretation; see
+        # The proviso (但書) is marked, not explained, so it does not read as more
+        # law-coloured text. Verbatim slice, no interpretation; see
         # legal_agent/data/statute_text.py for the precision/recall it accepts.
         body = mark_provisos(s.content, '<mark class="proviso">', "</mark>", escape)
         fulltext = (
@@ -421,14 +403,40 @@ def _fresh_chat() -> list[dict]:
     return [{"role": "assistant", "content": GREETING}]
 
 
-def _stub_llm(_prompt: str) -> str:
+def _stub_llm(_prompt: str, why: str = "未連接語言模型,不產生推論。啟動本機 Ollama 後重新諮詢,可取得此段分析。") -> str:
     """No-model fallback: keep the three-section contract, add no citations,
     and say plainly what is and is not machine-generated."""
     return (
         "「法律明文」:未連接語言模型;適用條文見右欄「適用法源」,均為資料庫逐字內容。\n"
         "「實務見解」:以下為主管機關實務見解/處理原則,非法律明文,僅供參考:見右欄所列實務見解來源。\n"
-        "「分析研判」:未連接語言模型,不產生推論。啟動本機 Ollama 後重新諮詢,可取得此段分析。"
+        f"「分析研判」:{why}"
     )
+
+
+def _space_llm(prompt: str) -> str:
+    """The Space's model, with the no-model page as its failure mode.
+
+    ZeroGPU refuses a call when the visitor's daily quota is below the
+    requested duration (`gr.Error`, 「ZeroGPU quota exceeded」), and can fail
+    in its queue. Neither is the visitor's problem to debug, and the
+    deterministic half of the answer does not need the model."""
+    try:
+        return _SPACE_LLM(prompt)
+    except Exception as exc:
+        # gr.Error's str() is the repr of its message, quotes included.
+        reason = str(getattr(exc, "message", None) or exc)
+        return _stub_llm(
+            prompt,
+            f"模型這次沒有執行({reason[:300]}),不產生推論。"
+            "未登入的訪客每日 GPU 額度約 2 分鐘,登入 Hugging Face 為 5 分鐘;"
+            "下方條文與處理順序不受影響。",
+        )
+
+
+def _analysis_llm():
+    if ollama_available():
+        return ollama_llm()
+    return _space_llm if _SPACE_LLM is not None else _stub_llm
 
 
 def _clean_ladder(text: str) -> str:
@@ -498,7 +506,7 @@ def _consult_result_html(result) -> str:
 def _ready_summary(state: SessionState) -> str:
     lines = ["事實已收集完成,開始檢索與診斷。", ""]
     lines += [
-        f"・{_FIELD_ZH.get(k, k)}:{v}" for k, v in state.collected_facts.items()
+        f"・{FIELD_LABELS.get(k, k)}:{v}" for k, v in state.collected_facts.items()
     ]
     return "\n".join(lines)
 
@@ -513,14 +521,12 @@ def consult_step(message: str, history: list[dict], state: SessionState):
     new_case = ""
     if state.stage is Stage.READY_FOR_STAGE3:   # previous case closed — start anew
         history, state = _fresh_chat(), SessionState()
-        # Say so. Silently restarting made the next message look like it was
-        # ignored: the visitor typed a follow-up and got a fresh intake question.
+        # Say so, or the follow-up looks ignored when a fresh intake question appears.
         new_case = "(這是新的一件諮詢——上一件的結果仍在右側,按「重新開始」可清空)\n"
 
-    # With a local model present, the INTAKE is model-driven too — the same
-    # conversation the CLI has had since 07-19. Without one, the scripted
-    # checklist still runs, which is what keeps this demo working on HF Spaces
-    # free CPU with no keys.
+    # With a local model present the INTAKE is model-driven, as in the CLI.
+    # Without one the scripted checklist runs, which keeps this demo working on
+    # HF Spaces free CPU with no keys.
     history = [*history, {"role": "user", "content": message}]
     if ollama_available():
         reply, state = handle_turn_smart(
@@ -538,7 +544,7 @@ def consult_step(message: str, history: list[dict], state: SessionState):
     # show the loader, then run the one-shot retrieval + gates + ladder.
     history.append({"role": "assistant", "content": _ready_summary(state)})
     yield history, state, LOADING_HTML, ""
-    llm = ollama_llm() if ollama_available() else _stub_llm
+    llm = _analysis_llm()
     conn = connect(config.DB_PATH)
     try:
         result = advance_to_stage3(state, llm=llm, conn=conn)
@@ -578,18 +584,12 @@ def explore_retrieval(query: str, as_of: str) -> str:
         return f'<div class="note">{escape(str(exc))}</div>'
     finally:
         conn.close()
-    # Graded exactly as Stage 3 grades it, and it took three tries to be true.
-    # `query=` carries the coverage veto — a question naming a body of law the
-    # corpus does not hold is refused whatever BM25 scored. `lexicon_hit` is the
-    # other half: a curated 口語→法條 phrase landing on a retrieved article is
-    # coverage evidence that a length-sensitive BM25 score cannot express, and
-    # without it this tab refused short questions the CLI answers.
+    # Graded exactly as Stage 3 grades it: the coverage veto (`query=`) and the
+    # lexicon floor both apply, or this tab refuses questions the CLI answers.
     retrieved = [s for s, _ in scored]
-    phrases = expansions(query or "")
-    lexicon_hit = any(p in (s.content or "") for s in retrieved for p in phrases)
     tier = grade_honesty(
         retrieved, [sc for _, sc in scored],
-        lexicon_hit=lexicon_hit, query=query or "",
+        lexicon_hit=lexicon_hit(retrieved, query or ""), query=query or "",
     )
     return _tier_bar(tier) + _retr_cards(scored)
 
@@ -614,9 +614,9 @@ def compare_timeslice(query: str) -> str:
 # ── 評測結果 ─────────────────────────────────────────────────────────────────
 STATS = """
 <div class="statgrid">
-  <div class="stat"><div class="num">17 類 100%</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
+  <div class="stat"><div class="num">24 類 100%</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">法條涵蓋率(含部分命中;嚴格 73%)</div></div>
-  <div class="stat"><div class="num">386</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
+  <div class="stat"><div class="num">435</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(32/32)</div></div>
   <div class="stat"><div class="num">18/20 · 2/15</div><div class="lbl">範圍外拒答 / 語料內誤拒(兩個方向都量)</div></div>
   <div class="stat"><div class="num">67% → 5%</div><div class="lbl">使用者只能盲信的引用比例(裸模型 vs 五閘門)</div></div>
@@ -633,6 +633,37 @@ def load_results_md() -> str:
 
 # ── layout ───────────────────────────────────────────────────────────────────
 ensure_db()
+
+# The Space's two backends load here, at startup: ZeroGPU places weights only
+# outside a request, and with no Ollama to have built it, the dense index is
+# embedded once per container. Local runs take neither branch. The model goes
+# first: hf_llm imports `spaces`, which must precede the torch that
+# sentence-transformers pulls in.
+_SPACE_LLM = None
+if config.LLM_PROVIDER == "hf":
+    from legal_agent.dialogue.hf_llm import hf_llm
+
+    _SPACE_LLM = hf_llm()
+
+
+def _build_dense_index() -> None:
+    from legal_agent.retrieval import dense
+
+    conn = connect(config.DB_PATH)
+    try:
+        dense.ensure_index(conn)
+        print("dense index ready, retrieval is hybrid")
+    except Exception as exc:    # the page still works on BM25 alone
+        print(f"dense index not built, retrieval is BM25 only: {exc}")
+    finally:
+        conn.close()
+
+
+if config.EMBED_BACKEND == "st":
+    # In a thread: embedding the corpus on CPU took 578 s locally (RESULTS.md
+    # §12), and the page is usable meanwhile — retrieval is BM25 alone until
+    # the index file exists, exactly as after a plain `pip install`.
+    threading.Thread(target=_build_dense_index, daemon=True).start()
 
 with gr.Blocks(title="Legal Agent") as demo:
     gr.HTML(HERO)
@@ -699,7 +730,7 @@ with gr.Blocks(title="Legal Agent") as demo:
 
     with gr.Tab("法規檢索"):
         gr.Markdown(
-            "資料庫收錄 16 部民生法規、2,922 條條文(民法、刑法、消保法、勞基法、"
+            "資料庫收錄 16 部民生法規、2,921 條現行條文(民法、刑法、消保法、勞基法、"
             "勞保條例、就服法、性平工作法、個資法、道交條例、強制車險法、公寓大廈、"
             "租賃住宅、家暴法、噪音管制、社維法及其處理辦法)。\n\n"
             "同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。"

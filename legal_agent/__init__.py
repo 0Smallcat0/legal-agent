@@ -81,7 +81,7 @@ def corpus_fingerprint(db_path: str | Path | None = None):
     Worth one line at the top of anything that reports a number. The database
     is NOT in the repo (it lives under ``LEGAL_AGENT_HOME``), so a script that
     hardcodes a path can open a stale or half-built copy and report a confident
-    wrong figure with nothing on screen to say so. That has happened twice.
+    wrong figure with nothing on screen to say so.
     """
     from legal_agent.data.bootstrap import corpus_fingerprint as _fingerprint
 
@@ -150,10 +150,8 @@ def retrieve_scored(
 
     The point-in-time filter runs before ranking, so a repealed version cannot
     be retrieved and then explained away. `as_of=None` means "in force now".
-    `k=None` means the tuned window, `retriever.DEFAULT_K` — this was a
-    hardcoded 8, which quietly became a SECOND default the day the tuned one
-    moved to 12, handing callers of the public API a narrower window than every
-    published number was measured with.
+    `k=None` means the tuned window, `retriever.DEFAULT_K` — the one the
+    published numbers were measured with.
     """
     from legal_agent.retrieval.retriever import DEFAULT_K
     from legal_agent.retrieval.retriever import retrieve_scored as _retrieve
@@ -161,7 +159,7 @@ def retrieve_scored(
     own = None if conn is not None else open_corpus(db_path)
     active = conn if conn is not None else own
     try:
-        return _retrieve(query, as_of_date=as_of, k=k or DEFAULT_K, conn=active)
+        return _retrieve(query, as_of_date=as_of, k=DEFAULT_K if k is None else k, conn=active)
     finally:
         if own is not None:
             own.close()

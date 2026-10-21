@@ -97,6 +97,27 @@ def test_a_partial_corpus_aborts_the_run_and_says_how_much_is_missing(tmp_path):
     assert str(shipped_floor().statutes) in message   # and how far short
 
 
+def test_one_harvested_judgment_does_not_keep_the_shipped_ones_out(tmp_path):
+    """A partial nightly harvest used to make `_ensure_judgments` return early,
+    so the 386 shipped judgments never loaded and every harness aborted."""
+    path = tmp_path / "harvested.db"
+    init_db(path)
+    conn = connect(path)
+    try:
+        conn.execute(
+            "INSERT INTO judgments (jid, court, year, case_type, cited_articles, full_text) "
+            "VALUES ('HARVESTED,1', 'X', 115, '測試', '[]', '')"
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    ensure_corpus(str(path))
+    fingerprint = corpus_fingerprint(path)
+    fingerprint.require_floor()                      # must not raise
+    assert fingerprint.judgments == shipped_floor().judgments + 1
+
+
 def test_a_database_that_does_not_exist_says_so_instead_of_reporting_zeros(tmp_path):
     fingerprint = corpus_fingerprint(tmp_path / "never-built.db")
 

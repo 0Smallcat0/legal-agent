@@ -7,8 +7,9 @@ it reads the conversation so far, replies naturally, asks its own follow-ups, an
 extracts the structured facts the Stage-3 pipeline needs.
 
 It NEVER retrieves or cites law — that stays in Stage 3 — so the single-retrieval
-invariant (spec §3.3) is preserved. It collects exactly the same fields as the
-rule-based checklist (intake.NOISE_CHECKLIST) so advance_to_stage3 is unchanged.
+invariant (spec §3.3) is preserved. It collects exactly the fields of the
+rule-based checklist for the problem type (`intake.checklist_for(problem_type)`),
+so advance_to_stage3 sees the same facts from either intake.
 
 Pairs with a free/cheap provider (ollama) or the paid API — NOT manual mode, where
 a per-turn paste would be unbearable (manual keeps the rule-based intake).
@@ -19,17 +20,7 @@ import json
 import re
 from dataclasses import dataclass
 
-from legal_agent.dialogue.intake import (
-    CHECKLISTS,
-    checklist_for,
-    domain_of,
-)
-
-# problem_type -> checklist, shared with the rule-based intake so either path
-# hands Stage 3 an identical fact shape. It used to name only noise and generic,
-# which quietly capped the model-driven intake at the same two domains the
-# rule-based one was capped at.
-_CHECKLISTS = CHECKLISTS
+from legal_agent.dialogue.intake import checklist_for, domain_of
 
 
 def field_keys(problem_type: str = "noise") -> list[str]:
@@ -46,9 +37,8 @@ def _field_spec(problem_type: str) -> str:
     )
 
 
-# Shared prompt sections. The noise wording is IDENTICAL to the original
-# noise-only prompt; generic only swaps the role line, the field spec, and the
-# finish rule (four fields instead of six).
+# Shared prompt sections; each domain swaps only the role line, the field spec,
+# and the field count in the finish rule.
 _PROMPT_RULES = (
     "【現在不要做的事】不要給法律意見、不要引用或猜任何法條、不要下結論——那是稍後"
     "檢索法條後才做的步驟。\n"
@@ -101,10 +91,6 @@ def build_system_prompt(problem_type: str = "noise") -> str:
             ptype, ", ".join(f'"{k}": "…"' for k in keys)
         ),
     )
-
-
-# Backward-compatible name: the noise prompt, byte-identical to the original.
-INTAKE_SYSTEM_PROMPT = build_system_prompt("noise")
 
 
 @dataclass
@@ -197,10 +183,9 @@ def _asks_something(reply: str) -> bool:
     return any(mark in (reply or "") for mark in ("?", "？"))
 
 
-# Questions that hand the legal judgement BACK to the user. Measured on the web
-# demo's first model-driven turn: 「你覺得房東扣你的押金是公平的嗎?」 — it has a
-# question mark and is not a repeat, so the earlier guard let it through, and the
-# visitor is asked the exact thing they came to find out.
+# Questions that hand the legal judgement BACK to the user (「你覺得房東扣你的押金是
+# 公平的嗎?」) — the exact thing they came to find out. They pass the question-mark
+# and repeat guards, so they are caught by phrase.
 _OPINION_SEEKING = ("你覺得", "你認為", "合理嗎", "公平嗎", "對不對", "違法嗎",
                     "合法嗎", "有沒有錯", "該不該")
 
@@ -219,11 +204,8 @@ def _char_overlap(a: str, b: str) -> float:
 def _re_asks_a_filled_field(reply: str, facts: dict, problem_type: str) -> bool:
     """True when the reply asks about a field that is ALREADY answered.
 
-    Measured on the web demo: the visitor wrote 「公寓大廈有管委會」, the field was
-    filled, and the model's next question was 「…公寓大廈有管委會嗎?」. The reply
-    asks something (so the question-mark guard passes) and is not a repeat of an
-    earlier assistant line (so that guard passes too) — but it is a question the
-    user has answered, which is the same insult by another route.
+    E.g. the user wrote 「公寓大廈有管委會」 and the model asked 「…公寓大廈有管委會嗎?」:
+    a question, not a repeat, so the other guards pass it.
     """
     from legal_agent.dialogue.intake import FIELD_HINTS
 
@@ -240,10 +222,8 @@ def _stalled(reply: str, history: list[dict]) -> bool:
     """True when this reply makes no progress: it asks nothing, or it is a
     near-copy of something the assistant already said.
 
-    Measured on six lived sessions with the local 8B model: it restated the
-    user's own facts back and asked 「你覺得這樣合法嗎?」 — the question the tool
-    exists to answer — then repeated that same sentence for four turns straight.
-    The model drives the intake, but code guarantees it moves.
+    The local 8B model can loop on the same sentence for turns; the model drives
+    the intake, but code guarantees it moves.
     """
     if not _asks_something(reply) or _asks_for_a_verdict(reply):
         return True
@@ -284,8 +264,7 @@ def run_smart_intake_turn(history: list[dict], facts: dict, llm,
         turn.facts[pending_key] = answer
     # Deterministic assist UNDER the model: if the user's words unambiguously
     # answer a still-open field, file them there even when the extractor missed
-    # it. Measured on the web demo — the visitor wrote 「公寓大廈有管委會」 and the
-    # next model question was 「有管委會的公寓大廈,還是透天/無管委會?」.
+    # it.
     if answer:
         from legal_agent.dialogue.intake import route_answer
 

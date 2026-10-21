@@ -44,17 +44,14 @@ def related_judgments(
     """Judgments whose extracted citations overlap the retrieved statutes,
     ranked by overlap count, then by jid (its 5th segment is the 裁判日期, so
     a descending jid within the same court sorts newer first). Returns [] when
-    nothing overlaps or the judgments table is empty — the pipeline degrades
-    to exactly its old behaviour."""
+    nothing overlaps or the judgments table is empty."""
     if not retrieved:
         return []
     wanted = {(s.statute_id, s.article_no) for s in retrieved}
-    # `focus` = the articles the ANSWER actually relies on. Joining on the whole
-    # retrieved window surfaced a 本票 case under a noise question, because 民法
-    # §144 (時效) happened to sit in the window and one judgment cited it. A
-    # reference judgment should accompany the law being cited, not everything the
-    # retriever considered. Falls back to the full window when the answer cites
-    # nothing verifiable, so the layer never goes silent by accident.
+    # `focus` = the articles the ANSWER relies on: a judgment should accompany
+    # the law being cited, not every article in the window (a stray 民法§144
+    # once surfaced a 本票 case under a noise question). Falls back to the full
+    # window when the answer cites nothing verifiable.
     if focus:
         narrowed = wanted & set(focus)
         if narrowed:
@@ -91,25 +88,34 @@ def related_judgments(
         if ref not in entry["matched"]:
             entry["matched"].append(ref)
 
+    # A judgment is the SAME KIND of case as an article it shares when its 案由
+    # names that article's dispute (§179 under 「返還不當得利」, not under
+    # 「給付修繕費」). Among equal overlap, those go first; they also keep their
+    # seats against the sums-first sort below (judgment_qa, RESULTS §11).
+    from legal_agent.retrieval.families import case_type_family, statute_family
+
+    for meta in by_jid.values():
+        kind = case_type_family(meta["case_type"])
+        meta["same_kind"] = kind is not None and any(
+            statute_family(ref) == kind for ref in meta["matched"])
+
     items = sorted(by_jid.items(), key=lambda kv: kv[0], reverse=True)   # newer jid first
-    items.sort(key=lambda kv: len(kv[1]["matched"]), reverse=True)       # overlap wins
+    items.sort(key=lambda kv: (len(kv[1]["matched"]), kv[1]["same_kind"]),
+               reverse=True)                                            # overlap, then kind
 
     # 主文 and the header are parsed only for the few judgments actually shown —
     # verbatim slices, no LLM; an unreadable one simply yields nothing.
     from legal_agent.data.judgment_text import awards as _awards
     from legal_agent.data.judgment_text import citation as _citation
 
-    # The reader's question is 「我能拿回多少」, so a judgment that states a sum goes
-    # first. Measured on the 婚攝 session: of the three shown, the only one carrying
-    # 判賠 260,000 元 was listed third, under two with no figure at all. Parsing is
-    # widened to a few more candidates than are shown — still verbatim slices of the
-    # 主文, still no LLM — and the sort is stable, so overlap ordering survives
-    # inside each group.
+    # The reader asks 「我能拿回多少」, so within each kind, judgments stating a sum
+    # go first. Parse a few more candidates than are shown; the stable sort keeps
+    # overlap order inside each group.
     widened = [
         (jid, meta, _awards(meta.get("full_text")), _citation(meta.get("full_text")))
         for jid, meta in items[: limit * 3]
     ]
-    widened.sort(key=lambda row: not row[2])
+    widened.sort(key=lambda row: (not row[1]["same_kind"], not row[2]))
     shown = _reserve_a_seat_without_a_sum(widened, limit)
 
     from legal_agent.data.judgment_text import main_text as _main_text
@@ -134,28 +140,12 @@ def _reserve_a_seat_without_a_sum(widened: list, limit: int) -> list:
     """Give the LAST seat to a judgment whose 主文 states no sum, if the run
     would otherwise show none.
 
-    `widened.sort(key=lambda row: not row[2])` floats every judgment carrying a
-    figure above every judgment carrying none — `not ()` is True, `not (260000,)`
-    is False, and False sorts first. Candidates are widened only to `limit * 3`,
-    so as soon as three of those nine parse a sum, all three seats a reader sees
-    carry one. Meanwhile `judgment_text.award_amounts` returns an empty list for
-    a 主文 that reads 原告之訴駁回. Multiply the two and the code was actively
-    sorting the losses out of sight.
-
-    Cheap on purpose: the reserved seat is not classified as a loss, and no
-    dismissal marker is computed. A win/loss classifier needs a ruler that has
-    itself been graded, and the obvious substring ruler already measures about
-    12% false positives — all of them labelling wins as losses. The price of
-    staying cheap is that this cannot tell the reader 「N people lost under these
-    same articles」; it can only stop the block from implying nobody did.
-
-    LAST rather than first, because `judgment_relevance` grades 「the judgment
-    the reader would see first」 and `CaseJudgment.shown` is the first
-    judgment's 案由. Seat 3 leaves both published figures untouched; seat 1
-    would break 「first judgment states a sum」 by definition.
-
-    When no candidate lacks a sum, the seat is filled by the ordinary rule.
-    Never left blank — a missing row says nothing a reader can check.
+    The sums-first sort would otherwise hide every dismissal (原告之訴駁回 has
+    no award), implying nobody lost under these articles. The seat is not
+    classified as a loss: the obvious win/loss ruler measures ~12% false
+    positives. LAST rather than first, because `judgment_relevance` grades the
+    first judgment shown. With no sum-less candidate the ordinary rule fills
+    it; never left blank.
     """
     shown = widened[:limit]
     if any(not row[2] for row in shown):
@@ -164,10 +154,8 @@ def _reserve_a_seat_without_a_sum(widened: list, limit: int) -> list:
     return shown if silent is None else [*shown[:-1], silent]
 
 
-# What a no-sum judgment is allowed to say. 「未載明給付金額」 is a fact about the
-# 主文 that the next line lets the reader check for themselves. 「敗訴」 would be
-# a claim about the case, and this module has no graded ruler for that — see
-# `_reserve_a_seat_without_a_sum`.
+# A checkable fact about the 主文 (shown verbatim next), not 「敗訴」 — there is
+# no graded ruler for that claim.
 NO_AWARD_NOTE = "此判決主文未載明給付金額,主文逐字:"
 
 
@@ -182,15 +170,13 @@ def render_block(refs: list[JudgmentRef]) -> str:
         title = r.case_type or "(案由不明)"
         money = format_awards(r.awards)
         money = f"{money}｜" if money else ""
-        # The 案號 is what a person can look up on 司法院裁判書系統; the jid is a
-        # database key. Fall back to it only when the header is unparseable
-        # (調解筆錄 and 宣示判決筆錄 do not carry one).
+        # The 案號 is what a person can look up; the jid is only a fallback for
+        # headerless texts (調解筆錄, 宣示判決筆錄).
         label = r.cite or r.jid
         lines.append(f"・{label}({title})— {money}同引 {'、'.join(r.matched)}")
         if not r.awards and r.main_text:
-            # Wrapped continuation lines are rejoined, which is whitespace only
-            # — the same treatment `judgment_text._sentences` applies. Not
-            # truncated: an elided 主文 is no longer verbatim.
+            # Rejoin wrapped lines (whitespace only); never truncate — an
+            # elided 主文 is no longer verbatim.
             verbatim = "".join(part.strip() for part in r.main_text.splitlines())
             lines.append(f"  {NO_AWARD_NOTE}{verbatim}")
     return "\n".join(lines)
