@@ -166,6 +166,14 @@ def test_ablation_counts_unverifiable_citations_and_strips_think(real_conn):
     assert "fake-a" in text and "bare" in text and "gated" in text
 
 
+def test_ablation_can_run_one_arm(real_conn):
+    factory = lambda model: (lambda _p: FAKE_ANSWER)
+    report = run_ablation(FIXTURE, models=["fake-a"], llm_factory=factory, conn=real_conn,
+                          conditions=("bare",))
+    assert [r.condition for r in report.runs] == ["bare", "bare"]
+    assert report.aggregate("fake-a", "gated").total == 0
+
+
 def test_strip_think_plain_passthrough():
     assert strip_think("<think>abc</think>答案") == "答案"
     assert strip_think("答案") == "答案"

@@ -198,6 +198,7 @@ def run_ablation(
     limit: int | None = None,
     on_progress: Callable[[str], None] | None = None,
     checkpoint_path: str | Path | None = None,
+    conditions: tuple[str, ...] = ("bare", "gated"),
 ) -> AblationReport:
     """Run every golden case through both conditions for each model.
 
@@ -209,6 +210,8 @@ def run_ablation(
     timeout) is retried once, then recorded as an "[ERROR] …" run and skipped
     in aggregates — one dead generation must not lose the batch. When
     `checkpoint_path` is set the report JSON is rewritten after every model.
+    `conditions` runs one arm alone, when the other was measured elsewhere
+    on the same cases and settings.
     """
     if llm_factory is None:
         from legal_agent.dialogue.ollama_llm import ollama_llm
@@ -225,7 +228,8 @@ def run_ablation(
         for model in models:
             llm = llm_factory(model)
             for i, case in enumerate(cases, 1):
-                for runner, condition in ((_run_bare, "bare"), (_run_gated, "gated")):
+                arms = ((_run_bare, "bare"), (_run_gated, "gated"))
+                for runner, condition in (a for a in arms if a[1] in conditions):
                     run = None
                     for attempt in (1, 2):
                         try:
@@ -268,13 +272,21 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.ablation <golden.
     parser.add_argument("--models", nargs="+", default=[config.OLLAMA_MODEL])
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", default=None, help="write per-run JSON here")
+    # 0.2 is what the published v2 run used; 0 makes a run repeatable
+    # (AGENTS.md trap 3), which is what a delta between models needs.
+    parser.add_argument("--temperature", type=float, default=0.2)
+    parser.add_argument("--conditions", nargs="+", choices=("bare", "gated"),
+                        default=["bare", "gated"])
     args = parser.parse_args()
     print_corpus_fingerprint()
 
+    from legal_agent.dialogue.ollama_llm import ollama_llm
+
     rep = run_ablation(
         args.golden, models=args.models, limit=args.limit,
+        llm_factory=lambda m: ollama_llm(model=m, timeout=1800.0, temperature=args.temperature),
         on_progress=lambda msg: print(msg, flush=True),
-        checkpoint_path=args.out,
+        checkpoint_path=args.out, conditions=tuple(args.conditions),
     )
     print(rep.render())
     if args.out:
