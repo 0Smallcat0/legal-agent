@@ -270,7 +270,7 @@ score identically on the golden set — pass 19 / partial 7 / miss 0, tier 29/32
 premise 32/32 — because those are decided by retrieval and by code; the model
 changes the prose and nothing that is scored.
 
-**Scope today.** One jurisdiction (Taiwan). 2,921 articles across 16 everyday
+**Scope today.** One jurisdiction (Taiwan). 3,758 articles across 18 everyday
 statutes, all in force, plus a police routing note and the corpus's first capped
 historical slice (one repealed version of 違反社會秩序維護法案件處理辦法§11), imported from the official 全國法規資料庫 bulk XML with the original
 hand-verified 11 articles kept as a character-for-character golden sample. One

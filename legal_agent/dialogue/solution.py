@@ -5,7 +5,9 @@ A RANKED escalation ladder, cheapest / lowest-effort FIRST and litigation LAST
 住宅噪音 ladder (管委會 rung only for 公寓大廈; tried steps marked done, the next
 actionable rung highlighted); `build_generic_ladder` covers every other domain;
 `build_respondent_ladder` serves the side being complained about. Costs/times are
-QUALITATIVE (免費 / 低 / 中 / 高) — no NT$ figures are invented.
+QUALITATIVE (免費 / 低 / 中 / 高) — no NT$ figures are invented. The one exception
+is the generic litigation rung: when the user typed the amount, the 裁判費 is
+computed from 民事訴訟法's own brackets (`court_fee`), never estimated.
 
 `retrieved` is Stage 3's retrieval window, reused, never re-queried: it supplies
 the verbatim deadline rung, the generic letter's 依據 lines, the authority rung,
@@ -16,6 +18,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, replace
 
+from legal_agent.anti_hallucination.verifier import _parse_number
 from legal_agent.retrieval.families import _CIVIL_RANGES, _CROSS_CUTTING, statute_family
 
 # §9 / 環保局 exclusion note — ALWAYS present in the output (spec: this must appear).
@@ -113,7 +116,7 @@ _BASE_RUNGS: list[Rung] = [
         key="mediation",
         title="里長 / 鄉鎮市區調解委員會 調解",
         what_it_is="申請調解;調解成立經法院核定具執行力。",
-        legal_basis=(),
+        legal_basis=("鄉鎮市調解條例第23條", "鄉鎮市調解條例第27條"),
         cost="免費", time="數週", effort="中",
         next_step="向里長或區公所調解委員會申請調解;成立後與確定判決有同一效力。",
     ),
@@ -408,7 +411,8 @@ def _answer_first(retrieved, cited) -> list:
 # ahead of paid ones, litigation stays last.
 _GENERIC_MEDIATE = Rung(
     "mediate", "調解",
-    "鄉鎮市(區)調解委員會或主管機關調解,免費且具執行力", (),
+    "鄉鎮市(區)調解委員會或主管機關調解,免費且具執行力",
+    ("鄉鎮市調解條例第23條", "鄉鎮市調解條例第27條"),
     "免費", "數週", "中", "向所在地調解委員會聲請調解", False, False,
 )
 
@@ -469,7 +473,7 @@ _DOMAIN_RUNGS: dict[str, list[Rung]] = {
         Rung(
             "traffic_mediate", "鄉鎮市調解委員會調解",
             "車禍調解的常見途徑,免費;調解成立經法院核定與判決同效力",
-            (),
+            ("鄉鎮市調解條例第23條", "鄉鎮市調解條例第27條"),
             "免費", "數週", "中",
             "向事故地或對方住所地調解委員會聲請,帶初判表與估價單", False, False,
         ),
@@ -538,6 +542,268 @@ def _deadline_for_stance(rung: Rung | None, stance: str | None) -> Rung | None:
     )
 
 
+# ── Suing: which track and what fee, from the amount the user typed ──────────
+# Every quoted line is a verbatim substring of the article it names in the
+# shipped corpus (tests/test_litigation_rung.py checks each one). The thresholds
+# and brackets are the statute's; the arithmetic is the only thing computed, and
+# nothing is computed from an amount the user did not type.
+_SMALL_CLAIMS = ("民事訴訟法第436-8條",
+                 "關於請求給付金錢或其他代替物或有價證券之訴訟，其標的金額或價額在"
+                 "新臺幣十萬元以下者，適用本章所定之小額程序。")
+_SUMMARY = ("民事訴訟法第427條",
+            "關於財產權之訴訟，其標的之金額或價額在新臺幣五十萬元以下者，適用本章所定之簡易程序。")
+_SUMMARY_ANY_AMOUNT = ("民事訴訟法第427條", "下列各款訴訟，不問其標的金額或價額一律適用簡易程序：")
+_SUMMARY_TRAFFIC = ("民事訴訟法第427條", "十一、本於道路交通事故有所請求而涉訟者。")
+_FEE_ARTICLE = "民事訴訟法第77-13條"
+# (above this amount, up to the next row's, NT$ per 萬, the clause that says so)
+_FEE_BRACKETS = (
+    (0, 1_000, "在新臺幣十萬元以下部分，徵收裁判費一千元"),
+    (100_000, 100, "逾十萬元至一百萬元部分，每萬元徵收一百元"),
+    (1_000_000, 90, "逾一百萬元至一千萬元部分，每萬元徵收九十元"),
+    (10_000_000, 80, "逾一千萬元至一億元部分，每萬元徵收八十元"),
+    (100_000_000, 70, "逾一億元至十億元部分，每萬元徵收七十元"),
+    (1_000_000_000, 60, "逾十億元部分，每萬元徵收六十元"),
+)
+_FEE_ODD = "其畸零之數不滿萬元者，以萬元計算"
+# What the court actually collects is higher: 臺灣高等法院's 113-12-30 standard adds
+# 5/10 to the first 十萬 and 3/10 above it. That standard is not in the corpus, so
+# the page states the statutory ceiling on any surcharge instead of its figure.
+_SURCHARGE = ("民事訴訟法第77-27條", "但其加徵之額數，不得超過原額數十分之五。")
+_PAYMENT_ORDER = ("民事訴訟法第508條",
+                  "債權人之請求，以給付金錢或其他代替物或有價證券之一定數量為標的者，"
+                  "得聲請法院依督促程序發支付命令。")
+_PAYMENT_ORDER_FEE = ("民事訴訟法第77-19條", "下列聲請或提出異議，徵收裁判費新臺幣五百元：")
+_PAYMENT_ORDER_FEE_ITEM = ("民事訴訟法第77-19條", "五、聲請發支付命令。")
+_PAYMENT_ORDER_OBJECTED = ("民事訴訟法第519條",
+                           "債務人對於支付命令於法定期間合法提出異議者，支付命令於異議範圍內"
+                           "失其效力，以債權人支付命令之聲請，視為起訴或聲請調解。")
+_FREE_MEDIATION = ("鄉鎮市調解條例第23條",
+                   "調解，除勘驗費應由當事人核實開支外，不得徵收任何費用，或以任何名義收受報酬。")
+
+LITIGATION_QUOTES = (
+    _SMALL_CLAIMS, _SUMMARY, _SUMMARY_ANY_AMOUNT, _SUMMARY_TRAFFIC,
+    *((_FEE_ARTICLE, clause) for _low, _rate, clause in _FEE_BRACKETS),
+    (_FEE_ARTICLE, _FEE_ODD), _SURCHARGE, _PAYMENT_ORDER, _PAYMENT_ORDER_FEE,
+    _PAYMENT_ORDER_FEE_ITEM, _PAYMENT_ORDER_OBJECTED, _FREE_MEDIATION,
+)
+
+
+def court_fee(amount: int) -> int:
+    """民事訴訟法§77-13's 裁判費 for a 財產權 claim of `amount`, before any §77-27
+    surcharge. 「畸零之數不滿萬元者，以萬元計算」: the amount is rounded UP to 萬."""
+    wan = -(-amount // 10_000) * 10_000
+    fee = _FEE_BRACKETS[0][1]
+    for (low, rate, _), nxt in zip(_FEE_BRACKETS[1:], (*_FEE_BRACKETS[2:], None), strict=True):
+        if wan > low:
+            top = wan if nxt is None else min(wan, nxt[0])
+            fee += (top - low) // 10_000 * rate
+    return fee
+
+
+@dataclass(frozen=True)
+class ClaimAmount:
+    low: int        # equal to `high` for an exact figure;
+    high: int       # 「八萬多」 is 80,001 to 89,999
+    said: str       # the user's own words, quoted back to them
+
+
+# A figure followed by 萬/千/元/塊 (「八萬」「三千」「3000元」「1.5萬」「八萬多」
+# 「四十幾萬」「兩千多萬」) or led by 新臺幣/NT$. A bare number is never money:
+# 「三個月」「5年」 carry no unit.
+_MONEY = re.compile(
+    r"(?P<cur>新臺幣|新台幣|NT\$)?\s*"
+    r"(?P<num>[0-9０-９][0-9０-９,，]*(?:\.[0-9]+)?\s*(?:萬(?:[0-9０-９]+千?)?|千)?"
+    r"|[零〇一二兩三四五六七八九十百千萬壹貳參肆伍陸柒捌玖拾佰仟]+)"
+    r"(?P<more>多|幾)?(?P<wan>萬)?\s*(?P<yuan>元|塊)?"
+)
+# A figure the user gave per month / per item is a rate, not what is owed.
+_RATE_BEFORE = ("每", "月薪", "月付", "月費", "月租", "月繳", "月領", "個月", "年薪",
+                "時薪", "日薪", "一天", "一年", "薪水", "薪資", "一次", "一期")
+# The other side's figure — a cap, an offer or a charge (「最高賠三千」「只肯退我五千」
+# 「還要收手續費三千」) — is what the user disputes, not what they claim. 「沒收」 is not.
+_THEIRS_BEFORE = re.compile(
+    r"(?:(?:只|最高|最多|頂多)(?:能|肯|願意?)?(?:賠|退|付|給)我?"
+    r"|(?<![沒回])收(?:取)?(?:手續費|服務費|費用)?)$"
+)
+# 「大概八萬」「快七萬」「不到十萬」 state no amount to compute from.
+_HEDGE_BEFORE = ("大概", "大約", "約", "快", "將近", "差不多", "不到", "接近", "超過",
+                 "至少", "最多", "最高", "上看", "幾")
+# 「欠我三十萬」「我想把八萬塊要回來」: the figure the user says is the claim.
+_CLAIM_BEFORE = re.compile(r"(?:欠我|還我|要回|拿回|討回|追回|求償|金額)(?:這|那|全部|全額|總共)?\s*$")
+_CLAIM_AFTER = re.compile(r"^\s*(?:能不能|可不可以|有沒有辦法)?(?:要回|拿回|討回|追回|要得回|拿得回)")
+_NOT_MONEY_AFTER = "人次件個張台輛坪公分年月日天週歲名戶位份條項款號樓層"
+_CLAUSE = re.compile(r"[,，。;；!！?？\n、]")
+_PLACE = {"十": 10, "百": 100, "千": 1000, "萬": 10_000, "拾": 10, "佰": 100, "仟": 1000}
+_FULLWIDTH_DIGITS = {ord("０") + i: ord("0") + i for i in range(10)}
+# 「幾萬」「數千」「上萬」 name an order of magnitude, not an amount.
+_VAGUE_LEAD = "幾數多上好"
+
+
+def _figure(num: str) -> tuple[int, int] | None:
+    """(value, the place of its last unit) for one money figure, or None.
+
+    「三萬八」 is 38,000 in speech, not 30,008, and 「一千八」 is 1,800: a lone digit
+    after 萬/千/百 is that unit's next place down. An Arabic 「30」 has the place of
+    its last nonzero digit, so 「30多萬」 runs to 39萬 like 「三十多萬」."""
+    num = num.replace(" ", "").translate(_FULLWIDTH_DIGITS).replace(",", "").replace("，", "")
+    arabic = re.fullmatch(r"([0-9]+(?:\.[0-9]+)?)(?:(萬)([0-9]+)?(千)?|(千))?", num)
+    if arabic:
+        lead, wan, tail, tail_k, k = arabic.groups()
+        unit = 10_000 if wan else 1000 if k else 1
+        value = float(lead) * unit
+        if tail:                                  # 3萬5千 / 3萬5 (spoken) / 3萬5000
+            value += int(tail) * (1000 if tail_k or len(tail) == 1 else 1)
+            unit = 1000 if tail_k or len(tail) == 1 else 1
+        elif unit == 1 and "." not in lead:       # 30(多萬) / 3000(多元)
+            unit = 10 ** (len(lead) - len(lead.rstrip("0")))
+        return (int(value), unit) if value == int(value) else None
+    spoken = re.fullmatch(r"(.*[萬千百])([一二兩三四五六七八九])", num)
+    if spoken:
+        head = _parse_number(spoken.group(1))
+        unit = _PLACE[spoken.group(1)[-1]]
+        if head is None:
+            return None
+        return head + _parse_number(spoken.group(2)) * unit // 10, unit // 10
+    value = _parse_number(num)
+    if value is None:
+        return None
+    units = [_PLACE[ch] for ch in num if ch in _PLACE]
+    return value, (units[-1] if units else 1)
+
+
+def claim_amount(collected_facts: dict) -> tuple[ClaimAmount | None, tuple[str, ...]]:
+    """The one amount the user stated, or (None, every money phrase they used).
+
+    Never picks among several: a 月薪, a 總價 and a 訂金 in one story leave nobody
+    able to say which is the claim, so the rung asks. A figure the user says they
+    want back (「欠我三十萬」「把八萬塊要回來」) is the claim even when others appear."""
+    said = " ".join(str(v) for v in (collected_facts or {}).values() if v)
+    marked: dict[tuple[int, int], str] = {}
+    plain: dict[tuple[int, int], str] = {}
+    rates: set[int] = set()
+    vague: list[str] = []
+    for m in _MONEY.finditer(said):
+        num, more, wan = m.group("num"), m.group("more"), m.group("wan")
+        yuan = m.group("yuan") or m.group("cur")
+        if not (wan or yuan or any(ch in num for ch in "萬千仟")):
+            continue                              # no unit: not money
+        if yuan == "塊" and not (wan or any(ch in num for ch in "萬千仟百佰")
+                                 or sum(ch.isdigit() for ch in num) >= 3):
+            continue                              # 一塊農地 / 少一塊都不行: a piece, not a dollar
+        if said[m.end():m.end() + 1] and said[m.end()] in _NOT_MONEY_AFTER and not yuan:
+            continue                              # 三千人 / 兩萬次
+        start = m.start("num")
+        phrase = m.group(0).strip()
+        if num[:1] in "萬千百仟佰":               # 千萬不要 / 萬一 — unless 幾萬 / 上萬
+            if said[start - 1:start] and said[start - 1] in _VAGUE_LEAD:
+                vague.append(said[start - 1:m.end()].strip())
+            continue
+        figure = _figure(num)
+        before = _CLAUSE.split(said[max(0, start - 8):start])[-1]
+        if figure is None:
+            vague.append(phrase)
+            continue
+        value, place = figure
+        if wan:
+            value, place = value * 10_000, place * 10_000
+        low, high = (value + 1, value + place - 1) if more else (value, value)
+        if any(w in before for w in _RATE_BEFORE) or _THEIRS_BEFORE.search(before):
+            rates.update((low, high))
+            continue
+        hedge = next((h for w in _HEDGE_BEFORE for h in (w + "是", w) if before.endswith(h)), "")
+        if hedge:                                 # quoted back with the hedge: 「大概兩百萬」
+            vague.append(said[start - len(hedge):m.end()].strip())
+            continue
+        claimed = _CLAIM_BEFORE.search(before) or _CLAIM_AFTER.search(said[m.end():m.end() + 8])
+        (marked if claimed else plain).setdefault((low, high), phrase)
+    # A figure once given as a rate (or as the other side's) is one wherever else it appears.
+    marked = {k: v for k, v in marked.items() if not set(k) & rates}
+    plain = {k: v for k, v in plain.items() if not set(k) & rates}
+    if len(marked) == 1:
+        (low, high), phrase = next(iter(marked.items()))
+        return ClaimAmount(low, high, phrase), ()
+    if not marked and len(plain) == 1 and not vague:
+        (low, high), phrase = next(iter(plain.items()))
+        return ClaimAmount(low, high, phrase), ()
+    return None, tuple(dict.fromkeys([*marked.values(), *plain.values(), *vague]))
+
+
+def _track(amount: int, domain: str | None) -> tuple[str, tuple[tuple[str, str], ...]]:
+    """(程序, the verbatim lines it rests on) for a money claim of `amount`."""
+    if amount <= 100_000:
+        return "小額程序", (_SMALL_CLAIMS,)
+    if amount <= 500_000:
+        return "簡易程序", (_SUMMARY,)
+    if domain == "traffic":
+        return "簡易程序", (_SUMMARY_ANY_AMOUNT, _SUMMARY_TRAFFIC)
+    return "通常程序", (_SUMMARY, _SUMMARY_ANY_AMOUNT)
+
+
+def _fee_clauses(amount: int) -> str:
+    """The §77-13 clauses `court_fee(amount)` used, each quoted on its own."""
+    wan = -(-amount // 10_000) * 10_000
+    clauses = [clause for low, _rate, clause in _FEE_BRACKETS if wan > low or low == 0]
+    if wan > _FEE_BRACKETS[1][0] and amount % 10_000:
+        clauses.append(_FEE_ODD)                  # rounding only moves a fee above 十萬
+    return "「" + "」「".join(clauses) + "」"
+
+
+def _quote(ref_and_text: tuple[str, str]) -> str:
+    ref, text = ref_and_text
+    return f"{ref}「{text}」"
+
+
+def _litigation_rung(collected_facts: dict, domain: str | None) -> Rung:
+    """The last rung, priced from the amount the user typed — or asking for it."""
+    claim, phrases = claim_amount(collected_facts)
+    free = f"對照:調解不用錢——{_quote(_FREE_MEDIATION)}"
+    if claim is not None:
+        track, basis = _track(claim.low, domain)
+        if _track(claim.high, domain)[0] != track:
+            claim, phrases = None, (claim.said,)
+    if claim is None:
+        ask = (f"你提到了好幾個金額(「{'」「'.join(phrases[:4])}」),不知道哪一個是你要請求的"
+               if len(phrases) > 1 else f"你提到的「{phrases[0]}」不是確切的請求金額"
+               if phrases else "你還沒說要向對方請求多少錢")
+        return Rung(
+            "litigation", "民事訴訟(最後手段)",
+            "走哪種程序、裁判費多少,都由請求金額決定:十萬元以下小額程序"
+            f"({_SMALL_CLAIMS[0]})、五十萬元以下簡易程序({_SUMMARY[0]})、其餘通常程序;"
+            f"裁判費依{_FEE_ARTICLE}按金額級距計算。{free}",
+            (_SMALL_CLAIMS[0], _SUMMARY[0], _FEE_ARTICLE, _FREE_MEDIATION[0]),
+            "中~高", "數月以上", "高",
+            f"{ask}——告訴我總金額(例如「8萬元」),才能算出適用的程序與裁判費;"
+            "沒有金額就不算,免得猜錯",
+            False, False,
+        )
+    low_fee, high_fee = court_fee(claim.low), court_fee(claim.high)
+    ceiling = high_fee + high_fee // 2
+    shown = (f"{claim.low:,} 元" if claim.low == claim.high
+             else f"{claim.low:,}~{claim.high:,} 元")
+    fee = f"{low_fee:,} 元" if low_fee == high_fee else f"{low_fee:,}~{high_fee:,} 元"
+    what = (
+        f"以你提到的「{claim.said}」({shown})計算,若這就是你要請求的金額:"
+        f"適用{track}——{';'.join(_quote(b) for b in basis)}。"
+        f"裁判費依{_FEE_ARTICLE}{_fee_clauses(claim.high)}算出 {fee};"
+        f"高等法院可以再加徵,{_quote(_SURCHARGE)},所以實繳在 {low_fee:,}~{ceiling:,} 元之間,"
+        "以法院通知為準。"
+        f"請求的是金錢,也可以先聲請支付命令:{_quote(_PAYMENT_ORDER)},"
+        f"{_PAYMENT_ORDER_FEE[0]}「{_PAYMENT_ORDER_FEE[1]}」「{_PAYMENT_ORDER_FEE_ITEM[1]}」;"
+        f"但對方一提異議,{_quote(_PAYMENT_ORDER_OBJECTED)}。{free}"
+    )
+    refs = (*dict.fromkeys(b[0] for b in basis), _FEE_ARTICLE, _SURCHARGE[0],
+            _PAYMENT_ORDER[0], _PAYMENT_ORDER_FEE[0], _PAYMENT_ORDER_OBJECTED[0],
+            _FREE_MEDIATION[0])
+    return Rung(
+        "litigation", f"民事訴訟(最後手段):{track}",
+        what, refs,
+        f"裁判費 {low_fee:,}~{ceiling:,} 元(律師費另計)", "數月以上", "高",
+        "把裁判費跟你能拿回的金額、要花的時間比一比再決定;要打就備齊證據寫起訴狀,"
+        "沒把握先用上面的免費法律諮詢",
+        False, False,
+    )
+
+
 def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
                          domain: str | None = None,
                          stance: str | None = None) -> SolutionLadder:
@@ -571,11 +837,7 @@ def build_generic_ladder(collected_facts: dict, retrieved=None, cited=None,
         # When retrieval came back EMPTY the honesty gate has just said the corpus
         # does not cover this, so the useful next step is a free consultation.
         replace(_LEGAL_AID_RUNG, recommended=not retrieved),
-        Rung(
-            "litigation", "民事訴訟(最後手段)",
-            "小額/簡易/通常程序,依金額與案情選擇", (),
-            "中~高", "數月以上", "高", "評估金額與勝算,必要時諮詢律師", False, False,
-        ),
+        _litigation_rung(collected_facts, domain),
     ]
     if deadline is not None:
         rungs.insert(0, deadline)

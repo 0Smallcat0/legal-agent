@@ -223,7 +223,7 @@ HERO = """
 
 FOOTER = """
 <p class="disclaimer">工程實驗,非法律意見,不能取代律師。法源為全國法規資料庫官方
-公開資料逐字匯入(16 部民生法規 2,921 條現行條文+1 個歷史版本+警察分工實務指引);「住宅噪音」有專屬問診流程,
+公開資料逐字匯入(18 部民生法規 3,758 條現行條文+1 個歷史版本+警察分工實務指引);「住宅噪音」有專屬問診流程,
 其他問題走通用流程。資料庫未涵蓋的領域,系統會直接說不知道。</p>
 """
 
@@ -618,7 +618,7 @@ STATS = """
   <div class="stat"><div class="num">100%</div><div class="lbl">法條涵蓋率(含部分命中;嚴格 73%)</div></div>
   <div class="stat"><div class="num">435</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(32/32)</div></div>
-  <div class="stat"><div class="num">18/20 · 2/15</div><div class="lbl">範圍外拒答 / 語料內誤拒(兩個方向都量)</div></div>
+  <div class="stat"><div class="num">16/20 · 2/15</div><div class="lbl">範圍外拒答 / 語料內誤拒(兩個方向都量;少的 2 題問民事訴訟法,已補進語料)</div></div>
   <div class="stat"><div class="num">67% → 5%</div><div class="lbl">使用者只能盲信的引用比例(裸模型 vs 五閘門)</div></div>
 </div>
 """
@@ -730,9 +730,9 @@ with gr.Blocks(title="Legal Agent") as demo:
 
     with gr.Tab("法規檢索"):
         gr.Markdown(
-            "資料庫收錄 16 部民生法規、2,921 條現行條文(民法、刑法、消保法、勞基法、"
+            "資料庫收錄 18 部民生法規、3,758 條現行條文(民法、刑法、消保法、勞基法、"
             "勞保條例、就服法、性平工作法、個資法、道交條例、強制車險法、公寓大廈、"
-            "租賃住宅、家暴法、噪音管制、社維法及其處理辦法)。\n\n"
+            "租賃住宅、家暴法、噪音管制、社維法及其處理辦法、民事訴訟法、鄉鎮市調解條例)。\n\n"
             "同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。"
         )
         q_in = gr.Textbox(value=DEFAULT_QUERY, label="事實描述")

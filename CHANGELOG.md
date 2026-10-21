@@ -4,6 +4,47 @@ Numbers here are copied from [`evals/RESULTS.md`](evals/RESULTS.md), which stays
 the single source; each entry names its section. How the project got to 0.1.0 is
 told in [`evals/HISTORY.md`](evals/HISTORY.md).
 
+## Unreleased
+
+The action ladder now says what suing would cost. It works the court track and
+the 裁判費 out from the amount the user typed, quoting 民事訴訟法 word for word.
+With no amount, it asks instead of guessing (RESULTS §13).
+
+### Added
+
+- **民事訴訟法 and 鄉鎮市調解條例** (`moj_procedure_v1_proposal.json`, 837
+  articles from the official `ChLaw.xml`). The corpus goes from 2,921 to
+  **3,758** articles in force, and from 16 to 18 statutes. `moj_xml` reads the
+  download's new English-tag schema as well as the old one.
+- **The litigation rung, priced** (`solution._litigation_rung`).
+  - **Track:** 小額 up to 十萬 (§436-8), 簡易 up to 五十萬 (§427), otherwise
+    通常. A 道路交通事故 claim is 簡易 at any amount.
+  - **Fee:** from the §77-13 brackets, with the §77-27 surcharge ceiling
+    stated.
+  - **Also on the page:** the NT$500 支付命令 (§77-19), what an objection does
+    to it (§519), and the free mediation (鄉鎮市調解條例§23).
+  - **When it asks instead of pricing:** several figures, a hedged figure, or no
+    figure at all.
+  - **Over the 168 stored sessions:** 28 complainant ladders are priced
+    (小額 16, 簡易 8, 通常 4). 13 name the user's figures back and ask which one
+    is the claim. 28 ask for the amount.
+
+### Changed
+
+- **Procedure articles are candidates only for procedure questions**
+  (`retriever._drop_procedure_unless_asked`). Importing 民事訴訟法 alone took
+  BM25-only recall from 321 to 319: §77-9 「因租賃權涉訟」 displaced 民法§450.
+  With the gate, it reads 321 again.
+  - `real_recall` goes from 348/356 to **349/356**, with `dense_fallbacks` 0
+    and 5.9 unexpected articles per session, as before.
+  - `mutation` reads 24 kinds at 100%, with **0/3,758** false positives.
+  - `blindspots`, `realworld`, `judgment_qa` (with its held-out set) and
+    `qualifier_audit` are unchanged.
+- **`honesty_probe` reads 16/20 · 2/15** (it was 18/20). The two questions it
+  no longer refuses, oos-14 (支付命令) and oos-15 (小額訴訟), were written as
+  「民事訴訟法 absent」 and are now answered from it. Their expected values were
+  not edited.
+
 ## 0.2.0 — 2026-10-21
 
 The first version with a changelog, covering everything since `23906c0`
