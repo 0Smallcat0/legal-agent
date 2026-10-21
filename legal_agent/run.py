@@ -73,6 +73,12 @@ def build_runtime_llm():
                 "  (不想裝模型也可以:設 LEGAL_AGENT_PROVIDER=manual 改用免費的手動模式——"
                 "程式印出組好的提示詞,你貼到任何聊天視窗再把答案貼回來。)"
             )
+        if not ollama_available(host, model=model):
+            _die(
+                f"⚠ 本機 Ollama 有在跑,但還沒下載模型 {model}。請執行:\n"
+                f"  ollama pull {model}\n"
+                "下載完再重跑本程式。(想用已下載的其他模型:設 LEGAL_AGENT_OLLAMA_MODEL=模型名稱)"
+            )
         return ollama_llm()
 
     if provider == "hf":

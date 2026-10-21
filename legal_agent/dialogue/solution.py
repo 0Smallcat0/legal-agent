@@ -254,7 +254,7 @@ def _also_retrieved_block(retrieved, cited) -> str | None:
         for s in missing[:5]
     )
     return (
-        "※ 以下條文有檢索到,但上面的分析沒有提到——逐字列出供你自己判斷是否相關"
+        "※ 以下條文有檢索到,但上面的分析沒有提到——逐字列出各條第一項供你自己判斷是否相關"
         f"(共 {len(missing)} 條,列出前 {min(len(missing), 5)} 條):\n{body}"
     )
 
@@ -271,12 +271,19 @@ def _generic_letter(retrieved, collected_facts: dict) -> str | None:
     It quotes no period. The letter goes to the other side, and a period is the
     sender's own clock, already the ladder's first rung. Picked from anywhere in
     the window it was also the one line no 「請自行刪去」 covered: 退租押金 mailed
-    民法§686 (合夥人退夥) to the landlord, and with a model, 勞基法§9-1 (競業禁止)."""
+    民法§686 (合夥人退夥) to the landlord, and with a model, 勞基法§9-1 (競業禁止).
+
+    Each article is quoted whole. Its first paragraph alone sent a tenant's
+    landlord §432's duty of care without the 但書 that exempts ordinary wear.
+    Keeping only articles of the lead article's kind was measured and rejected:
+    retrieval's first article is often the off-topic one, and on the 168 stored
+    sessions 19 lost every expected article from the letter."""
     if not retrieved:
         return None
     cited = retrieved[:3]
     basis = "\n".join(
-        f"    {i}. {s.statute_id}{s.article_no}:{(s.content or '').splitlines()[0]}"
+        f"    {i}. {s.statute_id}{s.article_no}:"
+        + "\n       ".join((s.content or "").splitlines())
         for i, s in enumerate(cited, 1)
     )
     evidence = _evidence_next_step(collected_facts)
@@ -619,6 +626,8 @@ _MONEY = re.compile(
 # A figure the user gave per month / per item is a rate, not what is owed.
 _RATE_BEFORE = ("每", "月薪", "月付", "月費", "月租", "月繳", "月領", "個月", "年薪",
                 "時薪", "日薪", "一天", "一年", "薪水", "薪資", "一次", "一期")
+# 「押金兩個月共三萬二」: the months were counted and this is their sum, not a rate.
+_TOTAL_BEFORE = re.compile(r"(?:共|合計|總計|加起來)是?\s*$")
 # The other side's figure — a cap, an offer or a charge (「最高賠三千」「只肯退我五千」
 # 「還要收手續費三千」) — is what the user disputes, not what they claim. 「沒收」 is not.
 _THEIRS_BEFORE = re.compile(
@@ -707,7 +716,8 @@ def claim_amount(collected_facts: dict) -> tuple[ClaimAmount | None, tuple[str, 
         if wan:
             value, place = value * 10_000, place * 10_000
         low, high = (value + 1, value + place - 1) if more else (value, value)
-        if any(w in before for w in _RATE_BEFORE) or _THEIRS_BEFORE.search(before):
+        if ((any(w in before for w in _RATE_BEFORE) and not _TOTAL_BEFORE.search(before))
+                or _THEIRS_BEFORE.search(before)):
             rates.update((low, high))
             continue
         hedge = next((h for w in _HEDGE_BEFORE for h in (w + "是", w) if before.endswith(h)), "")

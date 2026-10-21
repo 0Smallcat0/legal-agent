@@ -153,6 +153,16 @@ def test_ollama_available_true_then_false(monkeypatch):
     assert ol.ollama_available("http://localhost:11434") is False
 
 
+def test_a_running_server_without_the_model_is_not_available(monkeypatch):
+    # The server answered, so the page picked Ollama, and every generate call
+    # was a 404 that reached the visitor as a bare 「錯誤」.
+    tags = {"models": [{"name": "qwen3:latest", "model": "qwen3:latest"}]}
+    monkeypatch.setattr(ol.urllib.request, "urlopen", lambda *a, **k: _FakeResp(tags))
+    assert ol.ollama_available(model="qwen2.5:7b") is False
+    assert ol.ollama_available(model="qwen3") is True
+    assert ol.ollama_available(model="qwen3:latest") is True
+
+
 def test_build_runtime_llm_ollama_dispatch(monkeypatch):
     monkeypatch.setattr(config, "load_env", lambda: None)
     monkeypatch.setattr(config, "LLM_PROVIDER", "ollama")
@@ -169,6 +179,17 @@ def test_build_runtime_llm_ollama_down_exits_cleanly(monkeypatch, capsys):
         run.build_runtime_llm()
     assert exc.value.code == 2
     assert "Ollama" in capsys.readouterr().out
+
+
+def test_build_runtime_llm_names_the_missing_model(monkeypatch, capsys):
+    monkeypatch.setattr(config, "load_env", lambda: None)
+    monkeypatch.setattr(config, "LLM_PROVIDER", "ollama")
+    monkeypatch.setattr(config, "OLLAMA_MODEL", "qwen2.5:7b")
+    monkeypatch.setattr("legal_agent.dialogue.ollama_llm.ollama_available",
+                        lambda host=None, timeout=3.0, model=None: model is None)
+    with pytest.raises(SystemExit):
+        run.build_runtime_llm()
+    assert "ollama pull qwen2.5:7b" in capsys.readouterr().out
 
 
 if __name__ == "__main__":

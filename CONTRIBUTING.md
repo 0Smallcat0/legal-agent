@@ -107,8 +107,8 @@ an existing one.
 
 - **A session where the answer was wrong or the window was off-topic.** This is
   the most valuable thing you can send, and the issue template asks for the
-  wording you actually used. Every one of the 168 stored sessions started this
-  way.
+  wording you actually used. The 168 stored sessions were written by this
+  project, so a stranger's wording is exactly what they lack.
 - Bugs in the deterministic layers — verifier, retrieval filters, 主文 parsing,
   the ladder. These are code, so they are testable, so they are fixable.
 - Portability work: the engine is jurisdiction-agnostic, and only the corpus and

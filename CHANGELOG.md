@@ -44,6 +44,26 @@ With no amount, it asks instead of guessing (RESULTS §13).
   no longer refuses, oos-14 (支付命令) and oos-15 (小額訴訟), were written as
   「民事訴訟法 absent」 and are now answered from it. Their expected values were
   not edited.
+- **The README and the page open with what the tool does for the person**, in
+  Chinese, and point at the Space. Install is one command per line, and the
+  「答錯了」 issue form is bilingual. The page's top line no longer lists
+  engineering figures.
+
+### Fixed
+
+- **分析研判 on the page showed the model's markdown** as literal 「**」 and a
+  lone 「###」 line (`app._plain`).
+- **The 存證信函 quoted only each article's first paragraph**, so a tenant's
+  letter cited §432's duty of care without the 但書 that exempts ordinary wear.
+  It now quotes each article whole.
+- **「再問一件事就好」 was followed by three questions.** The intake now counts
+  the fields still open and says 「最多再問兩件／三件事」 when more than one is
+  left (`flow._questions_ahead`).
+- **Ollama running without the model** answered every call with 404, which the
+  page showed as a bare 「錯誤」. The page and the CLI now say which model to
+  `ollama pull` (`ollama_available(model=)`).
+- **「押金兩個月共三萬二」 was read as a monthly rate** and dropped from the
+  litigation rung; after 共／合計／總計／加起來 it is the claim.
 
 ## 0.2.0 — 2026-10-21
 

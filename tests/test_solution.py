@@ -141,6 +141,22 @@ def test_the_letter_quotes_no_period_the_window_happened_to_carry():
     assert "民法第949條" in ladder.rungs[0].what_it_is
 
 
+def test_the_letter_quotes_the_whole_article_so_its_proviso_goes_with_it():
+    """The deposit visitor's letter quoted §432's first paragraph — the tenant's
+    duty of care — and left out the 但書 that exempts ordinary wear."""
+    _432 = _Article(
+        "民法", "第432條",
+        "承租人應以善良管理人之注意，保管租賃物，租賃物有生產力者，並應保持其生產力。\n"
+        "承租人違反前項義務，致租賃物毀損、滅失者，負損害賠償責任。但依約定之方法或依物之"
+        "性質而定之方法為使用、收益，致有變更或毀損者，不在此限。",
+    )
+    letter = build_generic_ladder(
+        {"rent_issue": "退租扣押金"}, [_RENT_7, _432], stance="complainant",
+    ).letter_template
+    assert "致有變更或毀損者，不在此限。" in letter
+    assert "返還押金或抵充債務後之賸餘押金。" in letter
+
+
 def test_no_letter_template_without_retrieval():
     """Nothing retrieved, nothing to cite — the letter would be blanks around blanks."""
     assert build_generic_ladder({"problem": "我買到贓車"}, []).letter_template is None

@@ -74,6 +74,8 @@ def test_the_mediation_rungs_cite_the_mediation_statute_that_now_ships():
     ("貨款四十幾萬", 400_001, 499_999),
     ("貨款30多萬", 300_001, 399_999),                # like 三十多萬, not 30萬 and a bit
     ("訂金被沒收五萬", 50_000, 50_000),
+    ("押金兩個月共三萬二", 32_000, 32_000),         # a sum of months, not a rate
+    ("月租一萬六,押金兩個月共三萬二", 32_000, 32_000),
 ])
 def test_an_amount_the_user_typed_is_read(said, low, high):
     claim, asked = claim_amount({"problem": said})
