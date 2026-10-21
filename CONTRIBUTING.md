@@ -61,6 +61,7 @@ python -m legal_agent.evaluation.judgment_coverage                 # same-kind j
 python -m legal_agent.evaluation.judgment_qa                       # judgments the page should cite, 38 questions (+12 held out)
 python -m legal_agent.evaluation.realworld                         # already-ended disputes, retrieval + refusal
 python -m legal_agent.evaluation.realworld --direction             # answer vs recorded outcome, from stored blind codings
+python -m legal_agent.evaluation.judge_direction --lexical        # direction-word check vs the same blind codings
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # honesty-threshold sweep (stub answer, retrieval only)
 ```
 
@@ -76,6 +77,7 @@ python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # statute cov
 python -m legal_agent.evaluation.ablation evals/golden_v2.json     # bare model vs gated pipeline (--models, --out)
 python -m legal_agent.evaluation.mutation --semantic               # the semantic 4th axis; semantic_unreached must be 0
 python -m legal_agent.evaluation.realworld --answers               # prints answers beside outcomes for a human; scores nothing
+python -m legal_agent.evaluation.judge_direction                  # four local LLM judges vs the blind codings (--report re-prints)
 ```
 
 ## Running it

@@ -37,13 +37,14 @@ The worked example is Taiwan law — 2,921 articles across 16 everyday statutes
 and 435 real court judgments, all in the repo, so a fresh clone reproduces every
 number below.
 
-## Three numbers, and what each does not say
+## Four numbers, and what each does not say
 
 | | measured | what it does NOT say |
 |---|---|---|
 | **The checker** — errors planted into correct answers, across the whole corpus | **100% caught in each of 24 kinds, 0/2,921 false positives** | Green means the article exists, is in force and was not misquoted. It never meant the article governs your problem. |
 | **Against the bare model** — the same model with and without the pipeline | citations a reader would have to take on trust: **67% → 5%** (llama3.1, golden set) | The gated delta sits inside the harness's run-to-run spread; the 67% reproduces. qwen2.5:7b, one sample: 33% → 2.9%, and 13% of its bare citations name a law that does not exist. Not measured against a frontier model. |
 | **On disputes it has never seen** — government case tables, governing article taken from the authority's own 法令依據 column, never tuned against | right article in the window **12/23**; answer points the opposite way to the recorded outcome **3/16** | On the case table it was tuned against, the same measure reads 25/27. 12/23 is the honest figure for new territory. |
+| **Catching those wrong-way answers** — 5 blind-coded inversions vs 11 agreements, checker never sees the outcome | four local LLM judges (Prometheus 2, JudgeLM, Qwen2.5, Llama3.1): **0/5 caught, or 3–5/5 only by also flagging 8–11 of the 11 right answers**. No-model 主文/理由 direction-word check: **2/5 caught, 1/11 false** | Neither ships. The word check's split is within chance at this size (one-sided p = 0.21), and what it catches is the model mislabelling 對方, not wrong law. Nothing here catches a wrong-way answer yet. |
 
 Every other number — retrieval recall 348/356 on 168 real sessions, honesty and
 refusal rates, the reference-judgment acceptance set (87% of judgments shown are
