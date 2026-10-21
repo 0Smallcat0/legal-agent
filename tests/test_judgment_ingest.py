@@ -89,6 +89,35 @@ def test_a_name_inside_the_main_text_costs_the_main_text_not_the_judgment():
     assert awards(trimmed) == ()
 
 
+SOCIAL_ORDER_RULING = (
+    "臺灣範例地方法院簡易庭裁定\n115年度範秩字第1號\n"
+    "移送機關\xa0 \xa0 範例市警察局\n被移送人\xa0 \xa0 林樣本\n"
+    "上列被移送人因違反社會秩序維護法案件,本院裁定如下:\n"
+    "　　主　文\n林樣本無正當理由攜帶具有殺傷力之器械,處罰鍰新臺幣8000元。\n"
+    "　　理　由\n一、被移送人林樣本違法之事實如下。\n"
+)
+NON_PARTY_IN_MAIN_TEXT = (
+    "臺灣範例地方法院民事判決\n114年度訴字第1號\n原      告  範例銀行股份有限公司\n"
+    "上列當事人間請求履行保證債務事件,本院判決如下:\n主　　文\n"
+    "被告於原告對訴外人陳範例之財產執行無效果時,應給付原告新臺幣10萬元。\n"
+    "事實及理由\n略。\n"
+)
+
+
+def test_a_social_order_ruling_names_its_person_as_被移送人():
+    """社維法 rulings carry no 原告/被告; the person fined is 被移送人, and the
+    主文 opens with that name (two backfilled rulings did, unmasked)."""
+    assert names_in_main_text(SOCIAL_ORDER_RULING) == {"林樣本"}
+    assert "林樣本" not in redact(SOCIAL_ORDER_RULING)
+
+
+def test_a_non_party_named_in_the_main_text_withholds_it_too():
+    assert names_in_main_text(NON_PARTY_IN_MAIN_TEXT) == {"陳範例"}
+    assert "陳範例" not in redact(NON_PARTY_IN_MAIN_TEXT)
+    masked = NON_PARTY_IN_MAIN_TEXT.replace("陳範例", "陳○○")
+    assert names_in_main_text(masked) == set()
+
+
 def _seed(conn: sqlite3.Connection, jid: str, full_text: str, cited: list[dict]) -> None:
     conn.execute(
         "INSERT INTO judgments (jid, court, year, case_type, cited_articles, full_text)"

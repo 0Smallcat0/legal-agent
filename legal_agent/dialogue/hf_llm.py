@@ -4,7 +4,7 @@ For the public Space, which has no Ollama. On a ZeroGPU host a real GPU exists
 only inside a `@spaces.GPU` function, so generation runs there, and the weights
 are placed on `cuda` once at startup, as that host requires. Anywhere else the
 decorator is absent and the same code runs on whatever device torch finds —
-which is how it is measured locally (evals/RESULTS.md §10).
+which is how it is measured locally (evals/RESULTS.md §12).
 
 torch and transformers are imported in this module and nowhere else, so the
 library, the tests and the Ollama path never need them (`pip install .[space]`).
@@ -29,7 +29,7 @@ MAX_NEW_TOKENS = 2048
 # ZeroGPU admits a call against this, not against the time it ends up using: a
 # visitor whose remaining daily quota is below it is refused outright
 # (unauthenticated 2 min/day, free account 5), and a call that runs past it is
-# aborted. 90 s fits the longest measured answer (1,574 tokens, RESULTS.md §10)
+# aborted. 90 s fits the longest measured answer (1,574 tokens, RESULTS.md §12)
 # down to 18 tok/s. The Space's own speed is not measured yet: _generate logs
 # it per call.
 GPU_SECONDS = 90

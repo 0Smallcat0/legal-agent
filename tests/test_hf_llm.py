@@ -2,7 +2,7 @@
 
 The generation test needs torch and fakes the weights; CI has no torch and
 skips it. The real weights are exercised by the measurement in
-evals/RESULTS.md §10, not here.
+evals/RESULTS.md §12, not here.
 
 Run:  python -m pytest tests/test_hf_llm.py -q
 """

@@ -219,7 +219,7 @@ def _drop_insufficient_boilerplate(answer: str) -> str:
 
 _CJK = re.compile(r"[一-鿿]+")
 # 「**法律明文**」 and 「### 法律明文」 alike: Qwen2.5 writes the second on every
-# answer (RESULTS.md §10), and a bold-only pattern skipped this gate for it.
+# answer (RESULTS.md §12), and a bold-only pattern skipped this gate for it.
 _HEADING = re.compile(
     r"^(?:#{1,6}[ \t]*)?\*{0,2}(法律明文|實務見解|分析研判)\*{0,2}[ \t]*[:：]?[ \t]*$",
     re.MULTILINE,
@@ -285,7 +285,7 @@ def _restore_empty_practice_section(answer: str, retrieved) -> str:
     """Write 「實務見解 (無)」 back when the model dropped that heading and nothing
     of that rank was retrieved — what the prompt tells it to write, and what the
     section would truthfully say. Qwen2.5 drops it on 7 of 27 answers (RESULTS.md
-    §10); without this, all seven get UNSEGMENTED_NOTICE although the law and
+    §12); without this, all seven get UNSEGMENTED_NOTICE although the law and
     the analysis ARE separated. When a 函釋 was retrieved the gap is real and the
     notice stays."""
     if not answer or any(s.hierarchy_level in _PRACTICE_LEVELS for s in retrieved):

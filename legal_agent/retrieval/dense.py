@@ -34,7 +34,7 @@ from legal_agent import config
 EMBED_MODEL = "bge-m3"
 # The same model's published weights, for config.EMBED_BACKEND = "st" (the
 # Space, which has no Ollama). Its own index file: the two are measured
-# separately in evals/RESULTS.md §10, so they are never mixed in one ranking.
+# separately in evals/RESULTS.md §12, so they are never mixed in one ranking.
 ST_EMBED_MODEL = "BAAI/bge-m3"
 _DEFAULT_STEM = Path(config.DB_PATH).parent / (
     "dense_bgem3_st" if config.EMBED_BACKEND == "st" else "dense_bgem3"

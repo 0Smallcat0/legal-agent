@@ -217,7 +217,7 @@ HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
   <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">植入錯誤抓取率 24 類全數 100%(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="meta">植入錯誤抓取率 24 類全數 100%(零誤報) · 435 篇實際判決佐證 · 不需任何 API 金鑰</p>
 </div>
 """
 
@@ -616,7 +616,7 @@ STATS = """
 <div class="statgrid">
   <div class="stat"><div class="num">24 類 100%</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">法條涵蓋率(含部分命中;嚴格 73%)</div></div>
-  <div class="stat"><div class="num">386</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
+  <div class="stat"><div class="num">435</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(32/32)</div></div>
   <div class="stat"><div class="num">18/20 · 2/15</div><div class="lbl">範圍外拒答 / 語料內誤拒(兩個方向都量)</div></div>
   <div class="stat"><div class="num">67% → 5%</div><div class="lbl">使用者只能盲信的引用比例(裸模型 vs 五閘門)</div></div>
@@ -661,7 +661,7 @@ def _build_dense_index() -> None:
 
 if config.EMBED_BACKEND == "st":
     # In a thread: embedding the corpus on CPU took 578 s locally (RESULTS.md
-    # §10), and the page is usable meanwhile — retrieval is BM25 alone until
+    # §12), and the page is usable meanwhile — retrieval is BM25 alone until
     # the index file exists, exactly as after a plain `pip install`.
     threading.Thread(target=_build_dense_index, daemon=True).start()
 

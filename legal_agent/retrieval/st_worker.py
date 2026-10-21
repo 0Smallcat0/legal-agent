@@ -5,7 +5,7 @@ model forward there — on CPU, with or without `spaces` loaded — CUDA's devic
 count is settled as 0 for that process. Every `@spaces.GPU` worker forked from
 it then fails at its own start with 「No CUDA GPUs are available」, before any
 of this project's code runs (the deployed Space did, 2026-10-21; reproduced
-under WSL with the Space's package set, RESULTS.md §10). So the embedding
+under WSL with the Space's package set, RESULTS.md §12). So the embedding
 model lives in a separately started interpreter, and the main process only
 trades text for float32 rows with it over a pipe — no torch op ever runs in it.
 

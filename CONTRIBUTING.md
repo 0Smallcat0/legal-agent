@@ -57,6 +57,8 @@ python -m legal_agent.evaluation.paragraph_bounds_audit            # 款 upper-b
 python -m legal_agent.evaluation.real_recall                       # retrieval recall, 168 stored sessions
 python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse, 35 cases
 python -m legal_agent.evaluation.judgment_relevance                # reference-judgment tier, 168 sessions
+python -m legal_agent.evaluation.judgment_coverage                 # same-kind judgments per dispute family
+python -m legal_agent.evaluation.judgment_qa                       # judgments the page should cite, 38 questions (+12 held out)
 python -m legal_agent.evaluation.realworld                         # already-ended disputes, retrieval + refusal
 python -m legal_agent.evaluation.realworld --direction             # answer vs recorded outcome, from stored blind codings
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # honesty-threshold sweep (stub answer, retrieval only)
