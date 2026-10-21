@@ -42,7 +42,7 @@ number below.
 | | measured | what it does NOT say |
 |---|---|---|
 | **The checker** — errors planted into correct answers, across the whole corpus | **100% caught in each of 24 kinds, 0/2,921 false positives** | Green means the article exists, is in force and was not misquoted. It never meant the article governs your problem. |
-| **Against the bare model** — the same model with and without the pipeline | citations a reader would have to take on trust: **67% → 5%** (llama3.1, golden set) | The gated delta sits inside the harness's run-to-run spread; the 67% reproduces. Not measured against a frontier model. |
+| **Against the bare model** — the same model with and without the pipeline | citations a reader would have to take on trust: **67% → 5%** (llama3.1, golden set) | The gated delta sits inside the harness's run-to-run spread; the 67% reproduces. qwen2.5:7b, one sample: 33% → 2.9%, and 13% of its bare citations name a law that does not exist. Not measured against a frontier model. |
 | **On disputes it has never seen** — government case tables, governing article taken from the authority's own 法令依據 column, never tuned against | right article in the window **12/23**; answer points the opposite way to the recorded outcome **3/16** | On the case table it was tuned against, the same measure reads 25/27. 12/23 is the honest figure for new territory. |
 
 Every other number — retrieval recall 348/356 on 168 real sessions, honesty and
