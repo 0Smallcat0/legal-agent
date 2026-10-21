@@ -32,6 +32,37 @@ _11_1 = _Article(
     "企業經營者與消費者訂立定型化契約前，應有三十日以內之合理期間，供消費者審閱全部條款內容。",
 )
 _226 = _Article("民法", "第226條", "因可歸責於債務人之事由，致給付不能者，債權人得請求賠償損害。")
+_950 = _Article(
+    "民法", "第950條",
+    "盜贓、遺失物或其他非基於原占有人之意思而喪失其占有之物，如現占有人由公開交易場所，"
+    "或由販賣與其物同種之物之商人，以善意買得者，非償還其支出之價金，不得回復其物。",
+)
+_686 = _Article(
+    "民法", "第686條",
+    "合夥未定有存續期間，或經訂明以合夥人中一人之終身，為其存續期間者，各合夥人得聲明退夥，"
+    "但應於兩個月前通知他合夥人。\n前項退夥，不得於退夥有不利於合夥事務之時期為之。\n"
+    "合夥縱定有存續期間，如合夥人有非可歸責於自己之重大事由，仍得聲明退夥，不受前二項規定之限制。",
+)
+_125 = _Article("民法", "第125條", "請求權，因十五年間不行使而消滅。但法律所定期間較短者，依其規定。")
+_RENT_7 = _Article(
+    "租賃住宅市場發展及管理條例", "第7條",
+    "押金之金額，不得逾二個月之租金總額。\n出租人應於租賃契約消滅，承租人返還租賃住宅及清償"
+    "租賃契約所生之債務時，返還押金或抵充債務後之賸餘押金。",
+)
+_440 = _Article(
+    "民法", "第440條",
+    "承租人租金支付有遲延者，出租人得定相當期限，催告承租人支付租金，如承租人於其期限內不為支付，"
+    "出租人得終止契約。\n租賃物為房屋者，遲付租金之總額，非達二個月之租額，不得依前項之規定，"
+    "終止契約。其租金約定於每期開始時支付者，並應於遲延給付逾二個月時，始得終止契約。\n"
+    "租用建築房屋之基地，遲付租金之總額，達二年之租額時，適用前項之規定。",
+)
+_RENT_12 = _Article(
+    "租賃住宅市場發展及管理條例", "第12條",
+    "租賃契約消滅時，租賃住宅之返還，應由租賃當事人共同完成屋況及附屬設備之點交。一方未會同點交，"
+    "經他方定相當期限催告仍不會同者，視為完成點交。\n前項點交後尚有遺留物，除租賃當事人另有約定外，"
+    "經出租人定相當期限催告仍不取回時，視為拋棄其所有權，其所需處理費用，得由押金扣除，不足者，"
+    "出租人得請求承租人給付。",
+)
 
 
 def test_articles_the_answer_skipped_are_shown_to_the_reader():
@@ -99,8 +130,10 @@ def test_the_letter_template_is_rendered_and_quotes_the_law_verbatim():
 def test_the_letter_quotes_no_period_the_window_happened_to_carry():
     """退租押金's letter told the landlord 「另請台端注意」 民法§686 — 合夥人退夥 — because
     a 兩個月 in the window was the first period found. The period is the sender's
-    own clock and stays in the ladder; the letter keeps only its three 依據."""
-    window = [_226, _11_1, _226, _949]
+    own clock and stays in the ladder; the letter keeps only its three 依據.
+
+    §950 heads the window as it heads the real 買到贓車 one, BM25 and hybrid."""
+    window = [_950, _11_1, _226, _949]
     ladder = build_generic_ladder({"problem": "我買到贓車"}, window, stance="complainant")
     assert "另請台端注意" not in ladder.letter_template
     assert "自喪失占有之時起二年以內" not in ladder.letter_template
@@ -149,6 +182,23 @@ def test_the_deadline_is_quoted_verbatim_and_leads_the_ladder():
     assert ladder.rungs[0].key == "deadline"
     assert ladder.rungs[0].recommended
     assert "自喪失占有之時起二年以內" in ladder.rungs[0].what_it_is
+
+
+def test_a_period_from_another_dispute_does_not_lead_the_ladder():
+    """退租押金's recommended first step was 「先確認期限」 quoting 民法§686 — 合夥人
+    應於兩個月前通知 — because a 兩個月 in the user's words pulled it into the window."""
+    window = [_RENT_7, _440, _RENT_12, _686]
+    ladder = build_generic_ladder({"problem": "房東扣押金"}, window, stance="complainant")
+    assert all(r.key != "deadline" for r in ladder.rungs)
+    assert "民法第686條" not in ladder.render()
+
+
+def test_a_limitation_period_is_quoted_whatever_the_dispute():
+    """時效 cuts across every kind of dispute, so it is kept from anywhere in the window."""
+    window = [_RENT_7, _440, _RENT_12, _686, _125]
+    deadline = build_generic_ladder({}, window, stance="complainant").rungs[0]
+    assert deadline.key == "deadline"
+    assert deadline.legal_basis == ("民法第125條",)
 
 _COST_RANK = {"免費": 0, "低": 1, "中": 2, "高": 3}
 

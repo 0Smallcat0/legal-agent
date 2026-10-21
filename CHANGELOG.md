@@ -75,6 +75,12 @@ instead of 17; and CI gates that could never fail now can.
   period found anywhere in the window, which for 退租押金 told the landlord about
   合夥人退夥 (民法§686). A period reached the letter in 68 of 168 sessions and was
   an expected article in 11.
+- **The deadline step quotes periods of the case's own dispute** (RESULTS §8.2).
+  退租押金's recommended first step was 「先確認期限」 citing the same 民法§686. A
+  period is now quoted from the first three articles (the answer's citations
+  first), from one of the same kind, or from a 時效 rule. On the 168 stored
+  sessions, hybrid retrieval as on the Space: **93 → 72 references, expected
+  articles 16 → 16**; BM25 only, 102 → 82 and 16 → 14.
 - **The answer is what follows the last `</think>`**, so a model that reasons in
   the open no longer puts the prompt's own rules on the page.
 - **The heading gates read markdown headings** (RESULTS §12). The gate that moves

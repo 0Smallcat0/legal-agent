@@ -931,12 +931,36 @@ expected articles in 11**; hybrid, 67 and 14. The period is the sender's own
 clock and already leads the ladder, so the letter now quotes only its three
 依據 and no period.
 
-**The deadline rung has the same noise, stated rather than fixed.** The rung
-quotes up to three periods from the window. BM25 only: **102 references in 68
-sessions, 16 of them expected articles**; hybrid: 93 in 67, 16. Expected lists
-are not exhaustive, so 86/102 bounds the noise from above, but the 退租押金 page
-shows its shape: the recommended first step is 「先確認期限」 citing 民法§686. Two
-narrowings were measured and are in §9; neither shipped.
+**The deadline rung had the same noise.** It quotes up to three periods from
+the window, and the window's tail is often another dispute's: the 退租押金 page's
+recommended first step was 「先確認期限」 citing 民法§686. Two narrowings that
+judge each article on its own lost real deadlines and are in §9. What shipped
+judges an article against the case instead (`solution._on_topic`): a period is
+quoted from the first three articles (the answer's citations first), from one
+of the same kind as them (`retrieval/families.py`; outside 民法 the statute
+itself; a 民法 article the table leaves out goes with the others between the
+same two mapped ranges, so §949 travels with §950 and §686 with neither §440
+nor 租賃條例§7), or from a rule that cuts across every kind (時效). On the 168
+stored sessions:
+
+| | sessions with the rung | references | expected articles among them |
+|---|---|---|---|
+| hybrid (the Space) | 67 → 58 | 93 → **72** | 16 → **16** |
+| BM25 only | 68 → 59 | 102 → 82 | 16 → 14 |
+
+On the hybrid path it removes 22 references and adds one (民法§125), none of
+them expected: 民法§54 (社團) in three dismissal cases, 性平法§15 in a work injury,
+個資法§30 in an old card debt, 消保法§19 in a tour, 民法§656 (旅客行李) in a tenancy
+— and 民法§197, the 侵權 二年, eight times, wherever no 侵權 article is among the
+first three. That last one is the cost: a reader whose contract dispute also
+carries a tort claim no longer sees its clock in this rung (the article is
+still on the page). BM25 only it removes 23 and adds 3: it loses 民法§416 (撤銷贈與
+一年) for `gave-house-to-son-no-support`, where three 扶養 articles head the
+window, and 勞基法§2 twice — the 平均工資 definition's 六個月, which is no
+deadline — and gains 民法§197 for `time-barred`. Expected lists are not
+exhaustive, so 56/72 still bounds the noise from above. **Not fixed:** 勞基法§2's
+definition still matches 「期間」 and is quoted when §2 is among the first
+three. `real_recall` does not move; the rung is not a retrieval input.
 
 ## §9 — Measured, then NOT shipped
 

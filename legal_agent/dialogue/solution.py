@@ -16,6 +16,8 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, replace
 
+from legal_agent.retrieval.families import _CIVIL_RANGES, _CROSS_CUTTING, statute_family
+
 # §9 / 環保局 exclusion note — ALWAYS present in the output (spec: this must appear).
 EPA_NOTE = (
     "若噪音源為工廠/娛樂/營業/營建等「特定場所」(噪音管制法§9),改走環保局檢舉——"
@@ -318,10 +320,45 @@ def _deadline_sentences(retrieved) -> list[tuple[str, str]]:
     return [(ref, sentence) for _rank, ref, sentence in ranked]
 
 
+_RANGE_STARTS = sorted(lo for lo, _hi, _family in _CIVIL_RANGES)
+
+
+def _kind(statute) -> str:
+    """The kind of dispute an article belongs to: the shared family table first,
+    the statute itself outside 民法, and for a 民法 article the table leaves out, the
+    stretch of the code between the same two mapped ranges — so §949 goes with
+    §950 (占有) and §686 (合夥) goes with neither §440 nor §7."""
+    family = statute_family(f"{statute.statute_id}{statute.article_no}")
+    if family is not None:
+        return family
+    number = re.match(r"第(\d+)", statute.article_no or "")
+    if statute.statute_id != "民法" or not number:
+        return statute.statute_id
+    after = next((lo for lo in _RANGE_STARTS if lo > int(number.group(1))), 0)
+    return f"民法<{after}"
+
+
+def _on_topic(retrieved) -> list:
+    """The window cut to the dispute the case is about, for quoting periods.
+
+    The tail of an eight-article window is often another dispute's: 退租押金 led its
+    ladder with 民法§686, 合夥人退夥. A period is quoted from the first three
+    articles (the answer's own citations first, `_answer_first`), from one of the
+    same kind as them, or from a rule that cuts across every kind (時效). On the 168
+    stored sessions the quoted periods go from 93 to 72 and all 16 that are
+    expected articles stay (evals/RESULTS.md §8.2)."""
+    window = list(retrieved or [])
+    kinds = {_kind(s) for s in window[:3]} - _CROSS_CUTTING
+    if not kinds:
+        return window
+    return [s for i, s in enumerate(window)
+            if i < 3 or _kind(s) in kinds or _kind(s) in _CROSS_CUTTING]
+
+
 def _deadline_rung(retrieved) -> Rung | None:
     """Surface the periods the retrieved articles themselves state. A claim dies of
     a deadline the user never heard of, and no other rung mentions time at all."""
-    deadlines = _deadline_sentences(retrieved)
+    deadlines = _deadline_sentences(_on_topic(retrieved))
     if not deadlines:
         return None
     quoted = ";".join(f"{ref}「{sentence}」" for ref, sentence in deadlines[:3])
@@ -643,7 +680,7 @@ def build_respondent_ladder(collected_facts: dict, retrieved=None) -> SolutionLa
     # how it is labelled. Handing a respondent 「你要在二年內…」 would be the same
     # error as the ladder: a deadline printed to the wrong party reads as an
     # instruction to act on it.
-    deadlines = _deadline_sentences(retrieved)
+    deadlines = _deadline_sentences(_on_topic(retrieved))
     if deadlines:
         quoted = ";".join(f"{ref}「{sentence}」" for ref, sentence in deadlines[:3])
         rungs.append(Rung(
