@@ -4,7 +4,7 @@ Numbers here are copied from [`evals/RESULTS.md`](evals/RESULTS.md), which stays
 the single source; each entry names its section. How the project got to 0.1.0 is
 told in [`evals/HISTORY.md`](evals/HISTORY.md).
 
-## Unreleased
+## 0.3.0 — 2026-10-22
 
 The action ladder now says what suing would cost. It works the court track and
 the 裁判費 out from the amount the user typed, quoting 民事訴訟法 word for word.

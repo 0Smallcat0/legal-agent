@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "legal-agent"
-version = "0.2.0"
+version = "0.3.0"
 description = "Retrieval-augmented legal Q&A whose citations are verified by code, with the verifier itself graded by seeded defects"
 readme = "README.md"
 license = { file = "LICENSE" }
