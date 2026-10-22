@@ -184,6 +184,28 @@ def _drop_inheritance_while_alive(query: str, candidates: list[Statute]) -> list
     ]
 
 
+# A procedure statute says how a case runs (which court, which track, what fee),
+# not who is right. Once 民事訴訟法 shipped, §77-9 「因租賃權涉訟」 took a seat in
+# lease questions and pushed 民法§450 out. Its articles are candidates only
+# when the question is about the suit or the mediation itself.
+_PROCEDURE_IN_QUESTION = {
+    "民事訴訟法": ("起訴", "訴訟", "裁判費", "支付命令", "督促程序", "小額", "簡易程序",
+                 "管轄", "地院", "上訴", "開庭", "假扣押", "假處分"),
+    "鄉鎮市調解條例": ("調解",),
+}
+
+
+def _drop_procedure_unless_asked(query: str, candidates: list[Statute]) -> list[Statute]:
+    """Drop a procedure statute's articles unless the question names that procedure."""
+    closed = {
+        statute for statute, words in _PROCEDURE_IN_QUESTION.items()
+        if not any(word in query for word in words)
+    }
+    if not closed:
+        return candidates
+    return [c for c in candidates if c.statute_id not in closed]
+
+
 def _retrieve_scored(
     query: str,
     as_of_date: str | None,
@@ -217,6 +239,7 @@ def _retrieve_scored(
     candidates = _drop_industry_regulation(query, candidates)
     candidates = _drop_tenancy_when_owner_occupied(query, candidates)
     candidates = _drop_inheritance_while_alive(query, candidates)
+    candidates = _drop_procedure_unless_asked(query, candidates)
     if not candidates:
         return []
 

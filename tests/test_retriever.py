@@ -508,6 +508,28 @@ def test_owner_occupied_keeps_the_building_articles_that_mention_a_tenant():
     assert [s.article_no for s in kept] == ["第27條"]
 
 
+def test_a_lease_question_gets_no_procedure_article(shipped_conn):
+    """Measured when 民事訴訟法 shipped: §77-9 「因租賃權涉訟」 took a window seat
+    in four lease sessions and, BM25-only, pushed 民法§450 out of one. A question
+    that is not about the suit has no use for the article that prices it."""
+    import legal_agent
+
+    hits = legal_agent.retrieve(
+        "租約到期後沒有續約,我照常繳房租,房東突然叫我兩週內搬走", conn=shipped_conn,
+    )
+    assert hits and all(s.statute_id not in ("民事訴訟法", "鄉鎮市調解條例") for s in hits)
+
+
+def test_a_question_about_the_suit_reaches_the_procedure_statute(shipped_conn):
+    """The two questions honesty_probe used to refuse as 民事訴訟法-absent."""
+    import legal_agent
+
+    for question in ("聽說欠錢可以聲請支付命令比較快,要怎麼聲請?對方如果提異議會怎樣?",
+                     "我要告的金額只有八萬,聽說有小額訴訟,裁判費要多少?自己可以打嗎?"):
+        hits = legal_agent.retrieve(question, conn=shipped_conn)
+        assert any(s.statute_id == "民事訴訟法" for s in hits), question
+
+
 if __name__ == "__main__":
     raise SystemExit(pytest.main([__file__, "-q"]))
 

@@ -64,11 +64,20 @@ def test_a_gpu_worker_error_reaches_the_page_with_its_message(monkeypatch):
 def test_analysis_llm_prefers_ollama_then_the_space_model_then_the_stub(monkeypatch):
     import app
 
-    monkeypatch.setattr(app, "ollama_available", lambda: False)
+    monkeypatch.setattr(app, "ollama_available", lambda **k: False)
     monkeypatch.setattr(app, "_SPACE_LLM", None)
     assert app._analysis_llm() is app._stub_llm
     monkeypatch.setattr(app, "_SPACE_LLM", lambda p: "x")
     assert app._analysis_llm() is app._space_llm
+
+
+def test_a_server_without_the_model_says_which_model_to_pull(monkeypatch):
+    import app
+
+    monkeypatch.setattr(app, "ollama_available", lambda model=None: model is None)
+    monkeypatch.setattr(app, "_SPACE_LLM", None)
+    monkeypatch.setattr(app.config, "OLLAMA_MODEL", "qwen2.5:7b")
+    assert "ollama pull qwen2.5:7b" in app._analysis_llm()("prompt")
 
 
 def test_generate_is_one_user_turn_greedy_at_zero_and_returns_only_new_tokens(monkeypatch):

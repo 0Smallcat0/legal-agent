@@ -17,15 +17,26 @@ from collections.abc import Callable
 from legal_agent import config
 
 
-def ollama_available(host: str | None = None, timeout: float = 3.0) -> bool:
+def ollama_available(
+    host: str | None = None, timeout: float = 3.0, model: str | None = None,
+) -> bool:
     """True if an Ollama server answers at `host` (used to fail fast with a helpful
-    message before a conversation starts)."""
+    message before a conversation starts) and, given `model`, has it pulled: a
+    server without the model answers every generate call with 404, which the web
+    page showed as a bare 「錯誤」."""
     base = (host or config.OLLAMA_HOST).rstrip("/")
     try:
         with urllib.request.urlopen(f"{base}/api/tags", timeout=timeout) as resp:
-            return getattr(resp, "status", 200) == 200
-    except (urllib.error.URLError, OSError):
+            if getattr(resp, "status", 200) != 200:
+                return False
+            if model is None:
+                return True
+            tags = json.loads(resp.read().decode("utf-8"))
+    except (urllib.error.URLError, OSError, ValueError):
         return False
+    names = {m.get(key) for m in tags.get("models", []) for key in ("name", "model")}
+    # 「qwen3」 is pulled as 「qwen3:latest」.
+    return model in names or f"{model}:latest" in names
 
 
 def ollama_llm(

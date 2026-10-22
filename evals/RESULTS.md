@@ -25,15 +25,15 @@ identically.
 
 | what | number | harness |
 |---|---|---|
-| seeded defects caught | **100% in each of 24 kinds, 0/2,921 false positives** — per-kind denominators in §4 | `mutation` |
+| seeded defects caught | **100% in each of 24 kinds, 0/3,758 false positives** — per-kind denominators in §4 | `mutation` |
 | blindspot cases the checker catches | **21/25** — 4 named misses, all modal/proviso semantics | `blindspots`, `evals/blindspots_v1.json` |
 | semantic 4th axis — the only thing that catches a subject swap | catches **9/9**, and flags **1,259/2,921 (43%)** of CORRECT citations, so it stays off | `mutation --semantic` *(model)*, llama3.1, `semantic_unreached` 0 |
 | statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `golden_set evals/golden_v2.json` *(model)*, grader at temperature 0, k=8 |
 | honesty tier | **29/32 (91%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **32/32 (100%)** | same run |
-| out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second | `honesty_probe`, 35 cases, retrieval only |
-| retrieval recall, real user wording | **348/356 (98%)**, 5.9 unexpected articles per session | `real_recall`, 168 stored sessions, k=8, `dense_fallbacks` 0 |
-| the same, after a plain `pip install` (no dense index) | **321/356** (published as 320; re-measured 321 on 2026-10-20, identical on 23906c0) | `real_recall`, `dense_fallbacks` 168/168 |
+| out-of-scope refused / in-scope falsely refused | **16/20 · 2/15** — both directions, because only measuring the first hid the second. The two no longer refused ask about 民事訴訟法, which §13 added; their expected values were left as written (18/20 before) | `honesty_probe`, 35 cases, retrieval only |
+| retrieval recall, real user wording | **349/356 (98%)**, 5.9 unexpected articles per session (348 before §13's 民事訴訟法 import, twice on the same machine) | `real_recall`, 168 stored sessions, k=8, `dense_fallbacks` 0 |
+| the same, after a plain `pip install` (no dense index) | **321/356** (published as 320; re-measured 321 on 2026-10-20, identical on 23906c0, and 321 again after §13) | `real_recall`, `dense_fallbacks` 168/168 |
 | deadlines quoted from the retrieved articles | **69/168 sessions** | counted over the 168 stored sessions |
 | first action names the reader's own documents | **83/168 sessions** | counted, same sessions |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** | counted, same sessions |
@@ -51,8 +51,13 @@ identically.
 | answer points the OPPOSITE way to the recorded outcome | **3 of 16** externally labelled, **2 of 8** derived — `flagged_count` 0 on all five | `realworld --direction`, blind-coded, re-runs without a model |
 | catching those wrong-way answers without the outcome | four local LLM judges: **0/5**, or **3–5/5 at 8–11/11 false**; no-model 主文/理由 direction words: **2/5 at 1/11 false** (p = 0.21) — neither ships, §7.1 | `judge_direction` *(model)* / `judge_direction --lexical` |
 
+After §13 added 民事訴訟法 and 鄉鎮市調解條例 (2,921 → 3,758 articles), only the
+rows produced by `mutation`, `blindspots`, `honesty_probe`, `real_recall`,
+`judgment_qa` and `realworld` were re-measured; every other row is from the
+2,921-article corpus.
+
 Environment: local, zero paid API; models via Ollama on an RTX 4060 (8 GB).
-Corpus: **2,921 articles in force across 16 everyday-law statutes, plus one
+Corpus: **3,758 articles in force across 18 everyday-law statutes, plus one
 historical version** (a repealed slice of 違反社會秩序維護法案件處理辦法§11) and the
 police routing note, which is counted separately; 1,367 harvested judgments, 386
 of them shipped, plus 49 fetched from the public 裁判書查詢 site (435) — see [`legal_agent/corpus/README.md`](../legal_agent/corpus/README.md).
@@ -135,30 +140,34 @@ number for a kind that is not listed here does not exist.
 
 | seeded error kind | caught | what it plants |
 |---|---|---|
-| `nonexistent_article` | **2,513/2,513** | an article number the statute does not have |
-| `ghost_suffix` | **2,513/2,513** | a 之N suffix on an article that has none |
-| `prefixed_statute` | **48/48** | a real statute name behind a qualifier prefix |
+| `nonexistent_article` | **3,190/3,190** | an article number the statute does not have |
+| `ghost_suffix` | **3,190/3,190** | a 之N suffix on an article that has none |
+| `prefixed_statute` | **54/54** | a real statute name behind a qualifier prefix |
 | `verbatim_crossref` | **15/15** | a cross-reference quoted from another article |
-| `ghost_paragraph` | **1,433/1,433** | a 項 the article does not have |
-| `real_paragraph_ref` | **1,433/1,433** | a 項 that exists (must NOT be flagged) |
-| `ghost_item` | **392/392** | a 款 beyond the article's last one |
-| `real_item_ref` | **392/392** | a 款 that exists (must NOT be flagged) |
-| `ghost_item_multilist` | **24/24** | a 款 above every list, in an article with several 款 lists |
-| `real_item_ref_multilist` | **24/24** | the highest 款 that exists there (must NOT be flagged) |
-| `period_swap` | **707/707** | a deadline replaced with a different one |
-| `period_direction_flip` | **454/454** | 內 flipped to 後, or the reverse |
-| `real_period_direction` | **457/457** | the direction as written (must NOT be flagged) |
-| `anaphora_period` | **707/707** | a deadline attributed to the wrong article |
-| `direction_flip` | **326/326** | 以上 flipped to 以下 on a penalty |
-| `real_bare_amount` | **345/345** | the amount as written (must NOT be flagged) |
-| `docnum_adjacent_amount` | **2,921/2,921** | a wrong amount with a 文號 written right after the citation |
-| `docnum_before_citation` | **2,921/2,921** | a 文號 written right before the citation; graded on the status line, which must not claim full traceability |
-| `real_positional_amount` | **344/344** | the amount in digit-by-digit form, 一〇〇〇〇 (must NOT be flagged) |
-| `real_docnum_own_clause` | **345/345** | the real amount, then a 文號 in its own clause stating another (must NOT be flagged) |
-| `vague_amount` | **690/690** | 「數萬元」 or 「數千元」, which name no amount; graded on the status line, which must not claim full traceability |
-| `anaphora_amount` | **345/345** | an amount attributed to the wrong article |
-| `fraction_tamper` | **63/63** | 三分之二 altered |
-| `real_fraction` | **82/82** | the fraction as written (must NOT be flagged) |
+| `ghost_paragraph` | **1,836/1,836** | a 項 the article does not have |
+| `real_paragraph_ref` | **1,836/1,836** | a 項 that exists (must NOT be flagged) |
+| `ghost_item` | **454/454** | a 款 beyond the article's last one |
+| `real_item_ref` | **454/454** | a 款 that exists (must NOT be flagged) |
+| `ghost_item_multilist` | **28/28** | a 款 above every list, in an article with several 款 lists |
+| `real_item_ref_multilist` | **28/28** | the highest 款 that exists there (must NOT be flagged) |
+| `period_swap` | **782/782** | a deadline replaced with a different one |
+| `period_direction_flip` | **499/499** | 內 flipped to 後, or the reverse |
+| `real_period_direction` | **502/502** | the direction as written (must NOT be flagged) |
+| `anaphora_period` | **782/782** | a deadline attributed to the wrong article |
+| `direction_flip` | **341/341** | 以上 flipped to 以下 on a penalty |
+| `real_bare_amount` | **367/367** | the amount as written (must NOT be flagged) |
+| `docnum_adjacent_amount` | **3,758/3,758** | a wrong amount with a 文號 written right after the citation |
+| `docnum_before_citation` | **3,758/3,758** | a 文號 written right before the citation; graded on the status line, which must not claim full traceability |
+| `real_positional_amount` | **366/366** | the amount in digit-by-digit form, 一〇〇〇〇 (must NOT be flagged) |
+| `real_docnum_own_clause` | **367/367** | the real amount, then a 文號 in its own clause stating another (must NOT be flagged) |
+| `vague_amount` | **734/734** | 「數萬元」 or 「數千元」, which name no amount; graded on the status line, which must not claim full traceability |
+| `anaphora_amount` | **367/367** | an amount attributed to the wrong article |
+| `fraction_tamper` | **73/73** | 三分之二 altered |
+| `real_fraction` | **93/93** | the fraction as written (must NOT be flagged) |
+
+Denominators are over the 3,758-article corpus (2026-10-21, after 民事訴訟法 and
+鄉鎮市調解條例 shipped — §13); every kind stayed at 100%. The dated figures in
+the paragraphs below are what was measured on the 2,921-article corpus of their day.
 
 `docnum_adjacent_amount` and `real_positional_amount` were added on 2026-10-16
 after an audit reproduced both failures by hand; on the verifier before that day's fix they scored **0/2,921** caught
@@ -203,20 +212,20 @@ number parser cost 26 of the 82 `real_fraction` cases.
 
 The `real_*` kinds are the half that makes the other half mean anything: they
 plant nothing and must come back unflagged, which is where a false-positive rate
-of 0/2,921 comes from rather than from a checker that simply flags less.
+of 0/3,758 comes from rather than from a checker that simply flags less.
 
-**Also in every run, outside the twenty-four rows above:** `control` **2,921/2,921** (the correct-citation population
-the 0/2,921 is measured on), `wrong_amount` **2,921/2,921**,
-`bare_penalty_amount` **2,921/2,921**, `out_of_force` **2,921/2,921**,
+**Also in every run, outside the twenty-four rows above:** `control` **3,758/3,758** (the correct-citation population
+the 0/3,758 is measured on), `wrong_amount` **3,758/3,758**,
+`bare_penalty_amount` **3,758/3,758**, `out_of_force` **3,758/3,758**,
 `prose_prefix` **32/32**, `alias_typo` **2/2**, `fake_statute` **1/1** and
 `prefixed_statute_control` **3/3** (parse-only positive controls for
 `prefixed_statute`). `tests/test_published_numbers.py` checks every per-kind
 figure the harness prints against this section.
 
-**Still not covered.** The 項 axis is verifiable for 1,433 of 2,921 articles;
-the other 1,488 are marked unverified because the official two-space indentation
+**Still not covered.** The 項 axis is verifiable for 1,836 of 3,758 articles;
+the other 1,922 are marked unverified because the official two-space indentation
 was flattened during ingestion, so paragraph existence cannot be derived. The 款
-axis is verifiable for 392; on the 24 whose 款 numbering restarts it catches
+axis is verifiable for 454; on the 28 whose 款 numbering restarts it catches
 only a 款 above every list and marks the rest unverified.
 Those are not failures being hidden — they are articles this claim does not
 speak for.
@@ -931,12 +940,36 @@ expected articles in 11**; hybrid, 67 and 14. The period is the sender's own
 clock and already leads the ladder, so the letter now quotes only its three
 依據 and no period.
 
-**The deadline rung has the same noise, stated rather than fixed.** The rung
-quotes up to three periods from the window. BM25 only: **102 references in 68
-sessions, 16 of them expected articles**; hybrid: 93 in 67, 16. Expected lists
-are not exhaustive, so 86/102 bounds the noise from above, but the 退租押金 page
-shows its shape: the recommended first step is 「先確認期限」 citing 民法§686. Two
-narrowings were measured and are in §9; neither shipped.
+**The deadline rung had the same noise.** It quotes up to three periods from
+the window, and the window's tail is often another dispute's: the 退租押金 page's
+recommended first step was 「先確認期限」 citing 民法§686. Two narrowings that
+judge each article on its own lost real deadlines and are in §9. What shipped
+judges an article against the case instead (`solution._on_topic`): a period is
+quoted from the first three articles (the answer's citations first), from one
+of the same kind as them (`retrieval/families.py`; outside 民法 the statute
+itself; a 民法 article the table leaves out goes with the others between the
+same two mapped ranges, so §949 travels with §950 and §686 with neither §440
+nor 租賃條例§7), or from a rule that cuts across every kind (時效). On the 168
+stored sessions:
+
+| | sessions with the rung | references | expected articles among them |
+|---|---|---|---|
+| hybrid (the Space) | 67 → 58 | 93 → **72** | 16 → **16** |
+| BM25 only | 68 → 59 | 102 → 82 | 16 → 14 |
+
+On the hybrid path it removes 22 references and adds one (民法§125), none of
+them expected: 民法§54 (社團) in three dismissal cases, 性平法§15 in a work injury,
+個資法§30 in an old card debt, 消保法§19 in a tour, 民法§656 (旅客行李) in a tenancy
+— and 民法§197, the 侵權 二年, eight times, wherever no 侵權 article is among the
+first three. That last one is the cost: a reader whose contract dispute also
+carries a tort claim no longer sees its clock in this rung (the article is
+still on the page). BM25 only it removes 23 and adds 3: it loses 民法§416 (撤銷贈與
+一年) for `gave-house-to-son-no-support`, where three 扶養 articles head the
+window, and 勞基法§2 twice — the 平均工資 definition's 六個月, which is no
+deadline — and gains 民法§197 for `time-barred`. Expected lists are not
+exhaustive, so 56/72 still bounds the noise from above. **Not fixed:** 勞基法§2's
+definition still matches 「期間」 and is quoted when §2 is among the first
+three. `real_recall` does not move; the rung is not a retrieval input.
 
 ## §9 — Measured, then NOT shipped
 
@@ -974,10 +1007,12 @@ Each of these looked obviously right and lost on the numbers:
 
 - **ranking reference judgments by 案由 family** — derivable at runtime from the
   articles already retrieved, no LLM, and it would obviously raise the 51/88.
-  That is exactly why it is not shipped: the harness scores by the same map, so
-  the ranker would be graded on its own target and the number would rise without
-  anything getting better. Shipping it needs a relevance signal the ranker does
-  not consult.
+  That is exactly why it was not shipped as the ranking: the harness scores by
+  the same map, so the ranker would be graded on its own target and the number
+  would rise without anything getting better. It shipped on 2026-10-21 only as a
+  tiebreak among equal article overlap (§11, fix 3), and §11 reads the 91% it
+  produced as the ranker learning the grader's table, not as independent
+  evidence.
 - **making the award sort a tiebreak instead of the primary key.**
   `related_judgments` sorts by shared-article count and then re-sorts the whole
   candidate list by 「states an award」, so a case sharing one article with a sum
@@ -1504,6 +1539,159 @@ python -m legal_agent.evaluation.ablation evals/golden_v2.json --models qwen2.5:
     --temperature 0 --conditions bare --out run.json            # ~3 h on 4 CPU cores
 python -m legal_agent.evaluation.ablation evals/golden_v2.json --from-json run.json \
     --official ChLaw.json ChOrder.json                          # the split above
+```
+
+## §13 — what suing costs: 民事訴訟法 and 鄉鎮市調解條例 (2026-10-21)
+
+Of the things a reader comes for, 「值不值得打」 was the one the page could not
+answer. The generic ladder's last rung read 「小額/簡易/通常程序,依金額與案情選擇」,
+and 民事訴訟法 was not in the corpus, so the coverage gate refused 小額訴訟, 裁判費
+and 支付命令 questions on purpose.
+
+**The import.** 民事訴訟法 (800 articles, pcode B0010001) and 鄉鎮市調解條例 (37;
+mediation is free under its §23) come from today's `ChLaw.xml` through the same
+`moj_xml` pipeline as `moj_gap_v1`. The download now uses English tags
+(`<Law>`, `<LawName>`, `<ArticleConctent>` …); the parser reads both shapes, and
+each has a fixture test. Re-parsing the new file reproduces 2,847 of the 2,856
+shipped articles of the 15 laws it carries, character for character; the other
+9 were amended since. The corpus goes from 2,921 to **3,758** articles in force,
+and from 16 to 18 statutes. The 民事訴訟法 row is gone from `ABSENT_DOMAINS`,
+because the invariant test forces that. Like every bulk import, each article
+carries its law's date (民事訴訟法 2023-11-29, 鄉鎮市調解條例 2023-01-13), not
+its own amendment history.
+
+**What the import broke, and the fix.** Before anything else changed, base
+(`83b9bda`) was measured on this machine. `real_recall` was run twice and read
+348/356 both times. The other harnesses call no model, and §1 already records
+that they re-run identically.
+
+| | base | import only | import + procedure gate |
+|---|---|---|---|
+| `real_recall`, `dense_fallbacks` 0 | 348/356, 5.9 unexpected | 348/356 | **349/356**, 5.9 unexpected |
+| the same, BM25 only | 321/356, 6.1 unexpected | **319/356** | **321/356**, 6.1 unexpected |
+
+The import alone cost two sessions on BM25:
+
+- `lease-expired-still-living` lost 民法§450. 民事訴訟法§77-9 「因租賃權涉訟」
+  took its seat.
+- `pay-only-after-delivery` lost 民法§505 to §503. No procedure article entered
+  that window. BM25 is computed over the candidates, so 837 more documents
+  changed every term's weight.
+
+A procedure statute says how a case runs (which court, which track, what fee),
+not who is right. So `retriever._drop_procedure_unless_asked` keeps 民事訴訟法
+as a candidate only when the question contains one of 起訴, 訴訟, 裁判費,
+支付命令, 督促程序, 小額, 簡易程序, 管轄, 地院, 上訴, 開庭, 假扣押 or 假處分.
+鄉鎮市調解條例 needs 調解. For any other question the candidate set is the base
+one exactly, so BM25 is base BM25. Three of the 168 sessions open the gate
+(`fake-sale`, `which-court-to-sue`, `need-order-faster`), and none mentions
+調解.
+
+With the gate, BM25 is 321 again; two windows (both of them sessions that open
+the gate) hold the same articles in another order. Hybrid reads 349:
+`tour-hotel-downgraded` gains 民法§514-7, and no session loses an article.
+Eleven of the 168 hybrid windows differ from base. The dense half ranks the
+whole index before candidates are filtered, so procedure articles still take up
+dense ranks and move RRF slightly, even on questions that leave the gate shut.
+One procedure article reached a window: 民事訴訟法§531, in `fake-sale`.
+
+| harness | base | after |
+|---|---|---|
+| `mutation` | 24 kinds 100%, 24,823/24,823, 0/2,921 | 24 kinds 100%, **31,123/31,123, 0/3,758** (per kind in §4) |
+| `mutation --retrieval-first`, no dense index (CI's condition) | 24,823/24,823, `retrieval_miss_quoted` 1/1 | 31,123/31,123, 1/1; same rows apart from the denominators |
+| `blindspots` | 21/25 | 21/25, output identical |
+| `realworld` | 25/27 tuned, 12/23 held out | identical |
+| `realworld --direction` | 3/16 · 2/8 | identical |
+| `judgment_qa`, focus | 87/100 · 35/38 · 0/38 答非所問 | identical |
+| the same, held out | 27/32 · 11/12 · 0/12 | identical |
+| `qualifier_audit` | 0 false rejects, 5/5 probes refused | the same (2,836 → 3,021 citations scanned) |
+| `honesty_probe` | 18/20 · 2/15 | **16/20** · 2/15 |
+
+**Why honesty reads 16/20, and why it was not "fixed".** The two questions it no
+longer refuses are `oos-14-payment-order` and `oos-15-small-claim`. Both were
+written as 「民事訴訟法 absent」 and are now answered from it:
+
+- oos-14's window holds 民事訴訟法§514, §519 and §521 (when to object to a
+  支付命令, and what objecting does);
+- oos-15's holds §436-8 (the 小額 track).
+
+Their expected tier still says `insufficient`, and it stays that way: the only
+fix would be to edit an expected value, or to refuse questions the corpus can
+now answer. Every other case keeps its tier. The 2/15 in-scope false refusals
+are the same two as before. The test that held this table to the corpus
+(`test_every_absent_statute_is_really_absent_from_the_corpus`) did its job,
+because it made the row go.
+
+**The litigation rung, priced by code.** `solution._litigation_rung` takes the
+amount the user typed and turns it into a court track and a fee.
+
+- **Reading the amount.** `claim_amount` reads 「八萬」「三萬八」「1.5萬」
+  「新台幣 30,000 元」「八萬多」「四十幾萬」 from the user's own words.
+- **What it skips.** It does not read rates (月薪, 每月), the other side's figure
+  (「最高賠三千」「只肯退我五千」), or non-money (「一塊農地」「三千人」).
+- **The track.** Up to 十萬 is 小額 (§436-8), up to 五十萬 is 簡易 (§427), and
+  anything above is 通常. A 道路交通事故 claim is 簡易 at any amount (§427 II
+  ⑪).
+- **The fee.** It follows the §77-13 brackets, with the remainder rounded up to
+  a 萬. The page then states the §77-27 ceiling on any surcharge: the fee
+  plus at most 5/10 of it.
+- **A range is priced at both ends.** 「八萬多」 is 80,001 to 89,999.
+- **Payment order and mediation.** The page also states that a 支付命令 costs
+  NT$500 (§77-19 II ⑤) and what an objection does to it (§519), and that mediation
+  costs nothing (鄉鎮市調解條例§23).
+- **Every legal line is quoted.** Each one is a verbatim substring of the
+  article it names, and a test checks each one against the shipped corpus.
+
+The rung never picks among figures. Several unmarked amounts, a hedged one
+(「大概兩百萬」「不到十萬」), or a range that crosses a track boundary make it ask
+instead. It names the user's figures back to them and computes nothing. A figure
+the user marks as the claim (「欠我三十萬」「要回八萬塊」) is taken even when
+other figures appear.
+
+Counted over the 168 stored sessions:
+
+| | sessions |
+|---|---|
+| ladders that are the complainant's and end in the litigation rung | 69 (71 complainants; 2 go through the noise ladder) |
+| priced: track and fee shown | **28** — 小額 16 · 簡易 8 · 通常 4 |
+| asks, naming the figures the user gave | 13 |
+| asks for the amount (none given) | 28 |
+| any single amount read, all stances | 59 (the rung is shown to complainants only, as before) |
+
+Some examples:
+
+- `loan-unpaid` 「二十萬」 → 簡易, 裁判費 2,000 to 3,000 元.
+- `debtor-moved-assets` 「一百萬」 → 通常, 10,000 to 15,000.
+- `unpaid-goods` 「四十幾萬」 → 簡易, 4,100 to 7,500.
+- `which-court-to-sue` 「三萬八」 → 小額, 1,000 to 1,500.
+- `injury-claim` (「五萬多」「三萬」) asks which one is the claim.
+
+**What this does not get right.**
+
+- **The surcharge figure.** 臺灣高等法院's 113-12-30 加徵 standard is not in the
+  corpus. So the page gives the statutory ceiling (§77-27), not the figure the
+  court will actually bill.
+- **The reader's seat, upstream.** In four of the 69 sessions, the stance
+  classifier reads the reader as the complainant. In fact they are the one
+  asked to pay, or they are asking for a friend who is:
+  - `one-of-three-borrowers`, 「九十萬」;
+  - `adult-son-owes-money`, 「十五萬」;
+  - `loan-note-with-an-unconscionable-clause`, 「二十萬」;
+  - `old-card-debt`, which asks.
+
+  On the first three, the rung prices a suit the reader would be defending. It
+  says 「若這就是你要請求的金額」, but the seat is wrong, and that is
+  upstream of this rung.
+- **Whether the figure read is the claim.** No session is labelled with its
+  claim amount, so this is counted, not scored.
+- **The model-run rows in §1.** They were not re-run on the new corpus.
+
+```bash
+python -m legal_agent.data.moj_xml ChLaw.xml -o legal_agent/corpus/moj_procedure_v1_proposal.json \
+    --include 民事訴訟法 --include 鄉鎮市調解條例 --strict
+python -m legal_agent.evaluation.real_recall      # 349/356, dense_fallbacks 0
+python -m legal_agent.evaluation.honesty_probe    # 16/20 · 2/15
+python -m pytest tests/test_litigation_rung.py tests/test_retriever.py -q
 ```
 
 ## More
