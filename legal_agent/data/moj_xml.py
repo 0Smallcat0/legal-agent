@@ -24,6 +24,17 @@ File shape (verified against the official format / kong0107-mojLawSplit):
       …
     </LAWS>
 
+The current download (``https://law.moj.gov.tw/api/Ch/Law/XML``, a zip holding
+``ChLaw.xml``, checked 2026-10-21) carries the same fields under English tags:
+<Laws><Law><LawLevel> <LawName> <LawURL> <LawModifiedDate> <LawEffectiveDate>
+<LawAbandonNote> <LawHistories> <LawArticles><Article><ArticleType>A|C
+<ArticleNo> <ArticleConctent> (sic). Type C is a 編章節 heading. Both shapes
+parse; an English <Law> is renamed field for field and goes through the same
+code, so the two cannot disagree: re-parsing today's file reproduces 2,847 of
+the 2,856 shipped articles of the 15 laws it carries, character for character;
+the other 9 were amended since (民法 1, 刑法 1, 道交條例 7). The one 命令 in the
+corpus is not in this file.
+
 Honesty limits (spec §1.3 trap 1 — stated, not papered over):
   * The bulk file carries LAW-level dates only, so every article of a law gets
     the law-level effective_from — per-article amendment history is NOT here.
@@ -85,6 +96,31 @@ def _parse_moj_date(raw: str | None, label: str) -> str:
 def _normalize_article_no(raw: str) -> str:
     """'第 9-1 條' → '第9-1條' (drop internal whitespace, keep everything else)."""
     return _WHITESPACE.sub("", raw)
+
+
+# English-schema field -> the Chinese tag `_law_to_proposals` reads.
+_EN_FIELDS = {
+    "LawLevel": "法規性質", "LawName": "法規名稱", "LawURL": "法規網址",
+    "LawModifiedDate": "最新異動日期", "LawEffectiveDate": "生效日期",
+    "LawAbandonNote": "廢止註記", "LawHistories": "沿革內容",
+}
+
+
+def _english_law_as_chinese(law: ET.Element) -> ET.Element:
+    """An English-schema <Law> rebuilt as a <法規>, field for field, text untouched."""
+    out = ET.Element("法規")
+    for en, zh in _EN_FIELDS.items():
+        ET.SubElement(out, zh).text = law.findtext(en) or ""
+    body = ET.SubElement(out, "法規內容")
+    for article in law.iter("Article"):
+        text = article.findtext("ArticleConctent") or ""
+        if (article.findtext("ArticleType") or "").strip() == "A":
+            row = ET.SubElement(body, "條文")
+            ET.SubElement(row, "條號").text = article.findtext("ArticleNo") or ""
+            ET.SubElement(row, "條文內容").text = text
+        else:
+            ET.SubElement(body, "編章節").text = text
+    return out
 
 
 def _law_to_proposals(law: ET.Element) -> tuple[list[dict], list[str]]:
@@ -171,14 +207,17 @@ def parse_moj_xml(
     context = ET.iterparse(str(path), events=("start", "end"))
     _, root = next(context)                   # <LAWS> — kept for memory reclaim
     for event, elem in context:
-        if event != "end" or elem.tag != "法規":
+        if event != "end" or elem.tag not in ("法規", "Law"):
             continue
-        name = (elem.findtext("法規名稱") or "").strip()
+        english = elem.tag == "Law"
+        name = (elem.findtext("LawName" if english else "法規名稱") or "").strip()
         if include is not None and name not in include:
             root.clear()                      # not selected — free and move on
             continue
         try:
-            rows, law_warnings = _law_to_proposals(elem)
+            rows, law_warnings = _law_to_proposals(
+                _english_law_as_chinese(elem) if english else elem
+            )
             proposals.extend(rows)
             warnings.extend(law_warnings)
         except MojXmlError as exc:

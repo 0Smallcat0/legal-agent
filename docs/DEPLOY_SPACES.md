@@ -10,7 +10,7 @@ checklist. **The 分析研判 is written by `Qwen/Qwen2.5-7B-Instruct` on ZeroGP
 `BAAI/bge-m3` through sentence-transformers on CPU. Both switch on by
 themselves: ZeroGPU sets `SPACES_ZERO_GPU`, and `config.py` reads it — no Space
 variable or secret to set. Every gate (citation check, honesty tier, ladder)
-still runs in code after the model; RESULTS.md §10 has what the model and the
+still runs in code after the model; RESULTS.md §12 has what the model and the
 embedding measured locally.
 
 A visitor's GPU quota is daily: about **2 minutes unauthenticated, 5 with a free
@@ -43,7 +43,7 @@ function, defined when `app.py` imports the backend at startup.
 **No torch op may run in the main process.** One sentence-transformers forward
 there — on CPU — and every GPU call after it fails with `RuntimeError: No CUDA
 GPUs are available` from `spaces/zero/wrappers.py` `worker_init`, which the page
-used to show only as 「('RuntimeError')」 (2026-10-21; RESULTS.md §10). That is
+used to show only as 「('RuntimeError')」 (2026-10-21; RESULTS.md §12). That is
 why the embedding runs in `retrieval/st_worker.py`'s own process. A GPU error
 now reaches the 分析研判 box with its message, so this one would read in full. The old
 `_zerogpu_probe` shim — a decorated function nothing called — is gone, and
@@ -70,7 +70,7 @@ It differs from `main` in exactly three ways:
    sentence-transformers==6.1.0
    ```
 
-   These are the versions RESULTS.md §10 was measured with (`pip install
+   These are the versions RESULTS.md §12 was measured with (`pip install
    .[space]` gives the same set locally); ZeroGPU supports torch 2.8.0 and up.
 
 The frontmatter pins the gradio the app is developed against — leaving

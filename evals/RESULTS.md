@@ -25,33 +25,42 @@ identically.
 
 | what | number | harness |
 |---|---|---|
-| seeded defects caught | **100% in each of 24 kinds, 0/2,921 false positives** — per-kind denominators in §4 | `mutation` |
+| seeded defects caught | **100% in each of 24 kinds, 0/3,758 false positives** — per-kind denominators in §4 | `mutation` |
 | blindspot cases the checker catches | **21/25** — 4 named misses, all modal/proviso semantics | `blindspots`, `evals/blindspots_v1.json` |
 | semantic 4th axis — the only thing that catches a subject swap | catches **9/9**, and flags **1,259/2,921 (43%)** of CORRECT citations, so it stays off | `mutation --semantic` *(model)*, llama3.1, `semantic_unreached` 0 |
 | statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict | `golden_set evals/golden_v2.json` *(model)*, grader at temperature 0, k=8 |
 | honesty tier | **29/32 (91%)** | same run (decided from retrieval scores, so model-independent) |
 | wrong-premise detection | **32/32 (100%)** | same run |
-| out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second | `honesty_probe`, 35 cases, retrieval only |
-| retrieval recall, real user wording | **348/356 (98%)**, 5.9 unexpected articles per session | `real_recall`, 168 stored sessions, k=8, `dense_fallbacks` 0 |
-| the same, after a plain `pip install` (no dense index) | **321/356** (published as 320; re-measured 321 on 2026-10-20, identical on 23906c0) | `real_recall`, `dense_fallbacks` 168/168 |
+| out-of-scope refused / in-scope falsely refused | **16/20 · 2/15** — both directions, because only measuring the first hid the second. The two no longer refused ask about 民事訴訟法, which §13 added; their expected values were left as written (18/20 before) | `honesty_probe`, 35 cases, retrieval only |
+| retrieval recall, real user wording | **349/356 (98%)**, 5.9 unexpected articles per session (348 before §13's 民事訴訟法 import, twice on the same machine) | `real_recall`, 168 stored sessions, k=8, `dense_fallbacks` 0 |
+| the same, after a plain `pip install` (no dense index) | **321/356** (published as 320; re-measured 321 on 2026-10-20, identical on 23906c0, and 321 again after §13) | `real_recall`, `dense_fallbacks` 168/168 |
 | deadlines quoted from the retrieved articles | **69/168 sessions** | counted over the 168 stored sessions |
 | first action names the reader's own documents | **83/168 sessions** | counted, same sessions |
 | 存證信函 template, law quoted verbatim | **168/168 sessions** | counted, same sessions |
 | articles on the page the model skipped | **8 → 18 of 21 expected** | counted on the saved sessions |
 | first reference judgment states an awarded sum | **50/60 sessions** (shipped corpus; 54/60 on the full local harvest) | counted over 60 stored sessions |
-| that judgment is the same KIND of dispute as the question | **51/88 scorable (58%)**, 146/168 sessions carry one, 58/146 案由 too generic to tell | `judgment_relevance`, both sides derived |
+| that judgment is the same KIND of dispute as the question | **107/118 scorable (91%)**, 156/168 sessions carry one, 38/156 案由 too generic to tell (was 51/88, 146/168 before §11; the ranker now uses the grader's own table — read §11 before quoting) | `judgment_relevance`, both sides derived |
+| dispute families holding ≥3 same-kind judgments | **23/25**, 6 judgments short — only 僱傭 and 消費, which no 案由 can name (was 15/25, 25 short) — §10 | `judgment_coverage`, families of the 168 sessions |
+| judgments on the page that are ones the question should cite | **87/100 (87%)**, 35/38 questions get one, **0/38 答非所問** (before: 18/63, 11/38, 17/38) — §11 | `judgment_qa`, 38 questions, focus |
+| the same, 12 questions **held out** | **27/32 (84%)**, 11/12, 0/12 答非所問 (before: 1/23, 1/12, 8/12) | `judgment_qa evals/judgment_qa_holdout_v1.json`, never tuned against |
 | reference judgments beside a golden-set answer | 11/30 cases, 10 carrying a 主文 award figure (30-case golden v2, 2026-07-25); the 32-case run after §8's respondent ban reads 7/32, 3 with an award | counted, not scored |
-| bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190); a second sample read 16/24 and 4/208, so the bare 67% reproduces and the gated delta is inside the harness's spread | `ablation` *(model)*, llama3.1 over golden_v2, `evals/ablation_v2.json` |
-| the Space's 分析研判 model, Qwen2.5-7B, against llama3.1 | citations flagged **7/241 vs 27/325**; three headings 26/27 vs 27/27 | `golden_set` *(model)*, golden_v2, Qwen as Ollama Q4 locally — §10 |
+| bare model vs gated, citations the user must trust blindly | **67% → 5% flagged** (bare 34/51, gated 9/190); a second sample read 16/24 and 4/208, so the bare 67% reproduces and the gated delta is inside the harness's spread. qwen2.5:7b, one bare sample at temperature 0: **76/231 (33%) untraceable, 30/231 (13%) naming a law that does not exist**, vs 7/241 flagged gated — §12 | `ablation` *(model)*, llama3.1 over golden_v2, `evals/ablation_v2.json`; qwen `evals/ablation_qwen25_bare_t0.json` |
+| the Space's 分析研判 model, Qwen2.5-7B, against llama3.1 | citations flagged **7/241 vs 27/325**; three headings 26/27 vs 27/27 | `golden_set` *(model)*, golden_v2, Qwen as Ollama Q4 locally — §12 |
 | the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them (first run, before tuning: 7/27 and 9/16) | `realworld`, 16 臺中市 公寓大廈 調處案, labels from the case table's own 法令依據 column |
 | the same thing, on 17 cases **held out** | **12/23**, 5 of 17 answered with none of them | `realworld`, 臺北市 13 + 新北市 4, never tuned against |
 | answer points the OPPOSITE way to the recorded outcome | **3 of 16** externally labelled, **2 of 8** derived — `flagged_count` 0 on all five | `realworld --direction`, blind-coded, re-runs without a model |
+| catching those wrong-way answers without the outcome | four local LLM judges: **0/5**, or **3–5/5 at 8–11/11 false**; no-model 主文/理由 direction words: **2/5 at 1/11 false** (p = 0.21) — neither ships, §7.1 | `judge_direction` *(model)* / `judge_direction --lexical` |
+
+After §13 added 民事訴訟法 and 鄉鎮市調解條例 (2,921 → 3,758 articles), only the
+rows produced by `mutation`, `blindspots`, `honesty_probe`, `real_recall`,
+`judgment_qa` and `realworld` were re-measured; every other row is from the
+2,921-article corpus.
 
 Environment: local, zero paid API; models via Ollama on an RTX 4060 (8 GB).
-Corpus: **2,921 articles in force across 16 everyday-law statutes, plus one
+Corpus: **3,758 articles in force across 18 everyday-law statutes, plus one
 historical version** (a repealed slice of 違反社會秩序維護法案件處理辦法§11) and the
 police routing note, which is counted separately; 1,367 harvested judgments, 386
-of them shipped — see [`legal_agent/corpus/README.md`](../legal_agent/corpus/README.md).
+of them shipped, plus 49 fetched from the public 裁判書查詢 site (435) — see [`legal_agent/corpus/README.md`](../legal_agent/corpus/README.md).
 
 **Closed-world caveat**: "not traceable to the corpus" is exactly the promise the
 system makes — it never means "this statute does not exist."
@@ -131,30 +140,34 @@ number for a kind that is not listed here does not exist.
 
 | seeded error kind | caught | what it plants |
 |---|---|---|
-| `nonexistent_article` | **2,513/2,513** | an article number the statute does not have |
-| `ghost_suffix` | **2,513/2,513** | a 之N suffix on an article that has none |
-| `prefixed_statute` | **48/48** | a real statute name behind a qualifier prefix |
+| `nonexistent_article` | **3,190/3,190** | an article number the statute does not have |
+| `ghost_suffix` | **3,190/3,190** | a 之N suffix on an article that has none |
+| `prefixed_statute` | **54/54** | a real statute name behind a qualifier prefix |
 | `verbatim_crossref` | **15/15** | a cross-reference quoted from another article |
-| `ghost_paragraph` | **1,433/1,433** | a 項 the article does not have |
-| `real_paragraph_ref` | **1,433/1,433** | a 項 that exists (must NOT be flagged) |
-| `ghost_item` | **392/392** | a 款 beyond the article's last one |
-| `real_item_ref` | **392/392** | a 款 that exists (must NOT be flagged) |
-| `ghost_item_multilist` | **24/24** | a 款 above every list, in an article with several 款 lists |
-| `real_item_ref_multilist` | **24/24** | the highest 款 that exists there (must NOT be flagged) |
-| `period_swap` | **707/707** | a deadline replaced with a different one |
-| `period_direction_flip` | **454/454** | 內 flipped to 後, or the reverse |
-| `real_period_direction` | **457/457** | the direction as written (must NOT be flagged) |
-| `anaphora_period` | **707/707** | a deadline attributed to the wrong article |
-| `direction_flip` | **326/326** | 以上 flipped to 以下 on a penalty |
-| `real_bare_amount` | **345/345** | the amount as written (must NOT be flagged) |
-| `docnum_adjacent_amount` | **2,921/2,921** | a wrong amount with a 文號 written right after the citation |
-| `docnum_before_citation` | **2,921/2,921** | a 文號 written right before the citation; graded on the status line, which must not claim full traceability |
-| `real_positional_amount` | **344/344** | the amount in digit-by-digit form, 一〇〇〇〇 (must NOT be flagged) |
-| `real_docnum_own_clause` | **345/345** | the real amount, then a 文號 in its own clause stating another (must NOT be flagged) |
-| `vague_amount` | **690/690** | 「數萬元」 or 「數千元」, which name no amount; graded on the status line, which must not claim full traceability |
-| `anaphora_amount` | **345/345** | an amount attributed to the wrong article |
-| `fraction_tamper` | **63/63** | 三分之二 altered |
-| `real_fraction` | **82/82** | the fraction as written (must NOT be flagged) |
+| `ghost_paragraph` | **1,836/1,836** | a 項 the article does not have |
+| `real_paragraph_ref` | **1,836/1,836** | a 項 that exists (must NOT be flagged) |
+| `ghost_item` | **454/454** | a 款 beyond the article's last one |
+| `real_item_ref` | **454/454** | a 款 that exists (must NOT be flagged) |
+| `ghost_item_multilist` | **28/28** | a 款 above every list, in an article with several 款 lists |
+| `real_item_ref_multilist` | **28/28** | the highest 款 that exists there (must NOT be flagged) |
+| `period_swap` | **782/782** | a deadline replaced with a different one |
+| `period_direction_flip` | **499/499** | 內 flipped to 後, or the reverse |
+| `real_period_direction` | **502/502** | the direction as written (must NOT be flagged) |
+| `anaphora_period` | **782/782** | a deadline attributed to the wrong article |
+| `direction_flip` | **341/341** | 以上 flipped to 以下 on a penalty |
+| `real_bare_amount` | **367/367** | the amount as written (must NOT be flagged) |
+| `docnum_adjacent_amount` | **3,758/3,758** | a wrong amount with a 文號 written right after the citation |
+| `docnum_before_citation` | **3,758/3,758** | a 文號 written right before the citation; graded on the status line, which must not claim full traceability |
+| `real_positional_amount` | **366/366** | the amount in digit-by-digit form, 一〇〇〇〇 (must NOT be flagged) |
+| `real_docnum_own_clause` | **367/367** | the real amount, then a 文號 in its own clause stating another (must NOT be flagged) |
+| `vague_amount` | **734/734** | 「數萬元」 or 「數千元」, which name no amount; graded on the status line, which must not claim full traceability |
+| `anaphora_amount` | **367/367** | an amount attributed to the wrong article |
+| `fraction_tamper` | **73/73** | 三分之二 altered |
+| `real_fraction` | **93/93** | the fraction as written (must NOT be flagged) |
+
+Denominators are over the 3,758-article corpus (2026-10-21, after 民事訴訟法 and
+鄉鎮市調解條例 shipped — §13); every kind stayed at 100%. The dated figures in
+the paragraphs below are what was measured on the 2,921-article corpus of their day.
 
 `docnum_adjacent_amount` and `real_positional_amount` were added on 2026-10-16
 after an audit reproduced both failures by hand; on the verifier before that day's fix they scored **0/2,921** caught
@@ -199,20 +212,20 @@ number parser cost 26 of the 82 `real_fraction` cases.
 
 The `real_*` kinds are the half that makes the other half mean anything: they
 plant nothing and must come back unflagged, which is where a false-positive rate
-of 0/2,921 comes from rather than from a checker that simply flags less.
+of 0/3,758 comes from rather than from a checker that simply flags less.
 
-**Also in every run, outside the twenty-four rows above:** `control` **2,921/2,921** (the correct-citation population
-the 0/2,921 is measured on), `wrong_amount` **2,921/2,921**,
-`bare_penalty_amount` **2,921/2,921**, `out_of_force` **2,921/2,921**,
+**Also in every run, outside the twenty-four rows above:** `control` **3,758/3,758** (the correct-citation population
+the 0/3,758 is measured on), `wrong_amount` **3,758/3,758**,
+`bare_penalty_amount` **3,758/3,758**, `out_of_force` **3,758/3,758**,
 `prose_prefix` **32/32**, `alias_typo` **2/2**, `fake_statute` **1/1** and
 `prefixed_statute_control` **3/3** (parse-only positive controls for
 `prefixed_statute`). `tests/test_published_numbers.py` checks every per-kind
 figure the harness prints against this section.
 
-**Still not covered.** The 項 axis is verifiable for 1,433 of 2,921 articles;
-the other 1,488 are marked unverified because the official two-space indentation
+**Still not covered.** The 項 axis is verifiable for 1,836 of 3,758 articles;
+the other 1,922 are marked unverified because the official two-space indentation
 was flattened during ingestion, so paragraph existence cannot be derived. The 款
-axis is verifiable for 392; on the 24 whose 款 numbering restarts it catches
+axis is verifiable for 454; on the 28 whose 款 numbering restarts it catches
 only a 款 above every list and marks the rest unverified.
 Those are not failures being hidden — they are articles this claim does not
 speak for.
@@ -582,6 +595,116 @@ goodwill and bargaining power rather than by law alone — that makes them a str
 yardstick for a legal answer, though the two decided in court are not.
 Full-pipeline reasoning was read on one model, one run.
 
+### §7.1 — can an LLM judge catch the five inversions? No. (2026-10-21)
+
+The obvious answer to "four green axes, wrong direction" is LLM-as-a-Judge: ask a
+model whether the conclusion holds. This measures whether one would have caught
+the five inversions above **before** anyone wires it in. Nothing ships; no model
+grades legal reasoning anywhere in the pipeline.
+
+Each judge gets the person's opening description and the generated answer from
+`evals/realworld_answers_run1.json`, never the outcome, and one question: is the
+direction of this conclusion tenable? Positives are the 5 `opposed` answers,
+negatives the 11 `agrees` answers, both from the blind coding above; the other 8
+enter neither rate. Temperature 0, seed 0, two passes per judge. Every prompt
+and threshold was written before the first run and never touched after — the
+judge-format templates are the models' own (Prometheus 2's
+`ABSOLUTE_PROMPT_WO_REF`, JudgeLM's `conv_judge_single` cut to one answer), and
+a score in the bottom 40% of the scale counts as a flag.
+
+| judge (local, 8 GB GPU) | wrong direction caught | right direction flagged anyway | flagged of all 24 |
+|---|---|---|---|
+| Prometheus 2 7B (Q4_K_M, 1–5, flag ≤2) | **0/5** | 0/11 | 1 |
+| JudgeLM 7B (Q4_K_M, 1–10, flag ≤4) | **5/5**, 4/5 | **11/11** | 22, 21 |
+| Qwen2.5-7B-Instruct (plain 站得住/站不住) | **3/5** | **8/11** | 17 |
+| Llama3.1-8B — the model that wrote the answers | **3/5**, 4/5 | **8/11** (+4 unreadable) | 18, 19 |
+
+Where two figures appear, the two passes differed (one case each, rent-07 —
+temperature 0 on Ollama is not bit-identical). By pool, official / derived:
+Prometheus 0/3, 0/2 caught; JudgeLM 3/3, 2/2 → 1/2; Qwen 2/3, 1/2 with 4/7, 4/4
+false; Llama 2/3, 1/2 → 2/2 with 5/7, 3/4 false.
+
+**None of the four separates the two groups.** Prometheus gave 22 of 24 answers
+a 5 — it reads a fluent, cited answer as tenable, the inversions included.
+JudgeLM gave 20 of 24 a 2: it flags everything, so its 5/5 is the 11/11 seen
+from the other side. The two general models flag 60–80% of the wrong answers
+and 73% of the right ones — a coin weighted at their base rate does the same.
+Llama's four unreadable verdicts all say 站不住 without the 「判定：」 line the
+prompt asked for; read leniently it becomes 4/5 caught and 10/11 false, which is
+worse, not better. A flag is also not a reason: Qwen's catch on apt-08 says the
+law backs the committee and the answer backed the resident — the outcome backed
+the resident and the answer backed the committee. It caught the case by misreading it.
+
+**The case that started this, outside the 24.** A hand-written answer of the
+Space's 2026-10-21 shape — 「依社會秩序維護法第72條向法院提告，請求法院處罰鄰居」
+(an administrative fine imposed by the police, presented as a lawsuit): Prometheus
+5/5 (tenable), Qwen 站得住, JudgeLM 2/10, Llama 站不住. Qwen passed it although
+the plain prompt names exactly this error as its example of 站不住. JudgeLM and
+Llama catching it means nothing at their base rates. One synthetic case, not a
+measurement — included because it is the case someone will ask about.
+
+**Reading.** At 7–8B, local, Traditional-Chinese legal text, a judge pass would
+either say nothing (Prometheus) or put a warning on three answers in four
+(JudgeLM, Qwen, Llama) — and a warning on three in four teaches a reader to
+ignore it, the 31% false-positive problem in the list below at more than twice the rate.
+The judge models are English-trained (Prometheus 2 on Mistral-7B, JudgeLM on
+LLaMA-1 with a 2048 context; the longest prompt here was 2,134 tokens); a larger
+or Chinese-trained judge is a different measurement and has not been run.
+PandaLM 7B was not run: it only compares two responses and has no
+single-answer verdict.
+
+**Limits.** 5 positives and 11 negatives: small enough that one case moves a
+rate by 9–20 points, which is why the per-case marks are printed. One run of
+answers (llama3.1), one coder on the labels (§7 above). Judgment prompts were
+not tuned, by design; a prompt tuned on these 16 would be graded on its own
+training set.
+
+```bash
+# needs Ollama with qwen2.5:7b, llama3.1:8b, and the two judge GGUFs imported
+# (repos, file names, sha256 and the import command are in the comment above JUDGES)
+python -m legal_agent.evaluation.judge_direction            # all judges, 2 passes
+python -m legal_agent.evaluation.judge_direction --report   # re-print evals/judge_direction_run1.json
+```
+
+**The no-model control: direction words, 主文 against 理由 (2026-10-21).** A
+judgment states its result in 主文 and argues it in 理由, and a reversal between
+the two is visible without understanding either. Stage 3's answers have the same
+two places, because its prompt asks the same three questions every time: the
+verdict on 「對方的說法站不站得住」 (the 主文) and 「他可以向誰主張什麼」 (the
+理由). `judge_direction --lexical` pulls a direction from each with string
+matching — 對方…站不住/不成立 → the asker, 對方…站得住/成立 → the other side;
+他可以/有權 → the asker, 他無法/不能/無權 → the other side — and flags two
+shapes, fixed from the prompt's structure: the cues point both ways
+(*contradiction*), or there is no verdict on the other side at all.
+
+| rule (no model, deterministic) | wrong direction caught | right direction flagged anyway | flagged of all 24 |
+|---|---|---|---|
+| contradiction | **2/5** (official 2/3, derived 0/2) | **1/11** | 6 |
+| contradiction or no verdict | 4/5 | **7/11** | 17 |
+
+The contradiction rule is the only check in this section whose catch rate is
+above its false-flag rate — and it still does not separate the groups: it flags
+3 of the 16 labelled answers, and 3 flags dropped at random land 2 or more on the
+5 positives 21% of the time (hypergeometric, one-sided). Its two catches
+(apt-09, apt-12) and its one false flag (apt-06) are all the same thing — the
+model writing 「對方的說法站得住腳」 about the asker's own argument — so what it
+detects is the model mislabelling 對方, not law pointing the wrong way. The
+inversion that says it plainly, rent-07's 「他的要求站得住腳」 against an outcome
+for the landlord, has consistent cues and cannot be caught by any rule that reads
+only the answer. Adding 「no verdict」 flags 7 of the 11 right answers — the
+flag-almost-everything failure of JudgeLM, Qwen and Llama again. **Not shipped.**
+
+The vocabulary was written by someone who had read the 24 answers and part of
+the blind answer-side coding (never the outcomes) while writing it, so it is not
+an independent pre-registration; two subject words (社區, 住戶) were dropped
+before the first score rather than added, to keep the rule to the prompt's own
+他/你. A rule tuned on these 16 would be graded on its training set — the reason
+this one was not.
+
+```bash
+python -m legal_agent.evaluation.judge_direction --lexical  # no model, re-runs identically
+```
+
 ## §8 — the seat the user is sitting in
 
 **2026-08-15. The owner brought a live dispute of his own and he is the party
@@ -817,16 +940,52 @@ expected articles in 11**; hybrid, 67 and 14. The period is the sender's own
 clock and already leads the ladder, so the letter now quotes only its three
 依據 and no period.
 
-**The deadline rung has the same noise, stated rather than fixed.** The rung
-quotes up to three periods from the window. BM25 only: **102 references in 68
-sessions, 16 of them expected articles**; hybrid: 93 in 67, 16. Expected lists
-are not exhaustive, so 86/102 bounds the noise from above, but the 退租押金 page
-shows its shape: the recommended first step is 「先確認期限」 citing 民法§686. Two
-narrowings were measured and are in §9; neither shipped.
+**The deadline rung had the same noise.** It quotes up to three periods from
+the window, and the window's tail is often another dispute's: the 退租押金 page's
+recommended first step was 「先確認期限」 citing 民法§686. Two narrowings that
+judge each article on its own lost real deadlines and are in §9. What shipped
+judges an article against the case instead (`solution._on_topic`): a period is
+quoted from the first three articles (the answer's citations first), from one
+of the same kind as them (`retrieval/families.py`; outside 民法 the statute
+itself; a 民法 article the table leaves out goes with the others between the
+same two mapped ranges, so §949 travels with §950 and §686 with neither §440
+nor 租賃條例§7), or from a rule that cuts across every kind (時效). On the 168
+stored sessions:
+
+| | sessions with the rung | references | expected articles among them |
+|---|---|---|---|
+| hybrid (the Space) | 67 → 58 | 93 → **72** | 16 → **16** |
+| BM25 only | 68 → 59 | 102 → 82 | 16 → 14 |
+
+On the hybrid path it removes 22 references and adds one (民法§125), none of
+them expected: 民法§54 (社團) in three dismissal cases, 性平法§15 in a work injury,
+個資法§30 in an old card debt, 消保法§19 in a tour, 民法§656 (旅客行李) in a tenancy
+— and 民法§197, the 侵權 二年, eight times, wherever no 侵權 article is among the
+first three. That last one is the cost: a reader whose contract dispute also
+carries a tort claim no longer sees its clock in this rung (the article is
+still on the page). BM25 only it removes 23 and adds 3: it loses 民法§416 (撤銷贈與
+一年) for `gave-house-to-son-no-support`, where three 扶養 articles head the
+window, and 勞基法§2 twice — the 平均工資 definition's 六個月, which is no
+deadline — and gains 民法§197 for `time-barred`. Expected lists are not
+exhaustive, so 56/72 still bounds the noise from above. **Not fixed:** 勞基法§2's
+definition still matches 「期間」 and is quoted when §2 is among the first
+three. `real_recall` does not move; the rung is not a retrieval input.
 
 ## §9 — Measured, then NOT shipped
 
 Each of these looked obviously right and lost on the numbers:
+
+- **an LLM-as-a-Judge pass to catch answers pointing the wrong way** (§7.1).
+  Four local 7–8B judges against the 5 blind-coded inversions and 11 agreements:
+  Prometheus 2 caught 0/5 (scored 22 of 24 answers 5/5); JudgeLM, Qwen2.5 and
+  Llama3.1 caught 3–5/5 only by flagging 8–11 of the 11 right answers too. No
+  judge separates the groups better than its own base rate.
+
+- **a no-model 主文/理由 direction-word check for the same thing** (§7.1).
+  Contradiction between the verdict on 對方 and the claim line caught 2/5 at
+  1/11 false — the best ratio measured, still within chance at this size
+  (p = 0.21), and every catch is the model mislabelling 對方 rather than law
+  pointing the wrong way.
 
 - **marking 「…者」 as a statutory condition.** §8 found the thresholds reaching
   the page and never being read as thresholds, and 「…者」 is how an article names
@@ -848,10 +1007,12 @@ Each of these looked obviously right and lost on the numbers:
 
 - **ranking reference judgments by 案由 family** — derivable at runtime from the
   articles already retrieved, no LLM, and it would obviously raise the 51/88.
-  That is exactly why it is not shipped: the harness scores by the same map, so
-  the ranker would be graded on its own target and the number would rise without
-  anything getting better. Shipping it needs a relevance signal the ranker does
-  not consult.
+  That is exactly why it was not shipped as the ranking: the harness scores by
+  the same map, so the ranker would be graded on its own target and the number
+  would rise without anything getting better. It shipped on 2026-10-21 only as a
+  tiebreak among equal article overlap (§11, fix 3), and §11 reads the 91% it
+  produced as the ranker learning the grader's table, not as independent
+  evidence.
 - **making the award sort a tiebreak instead of the primary key.**
   `related_judgments` sorts by shared-article count and then re-sorts the whole
   candidate list by 「states an award」, so a case sharing one article with a sum
@@ -930,7 +1091,279 @@ Each of these looked obviously right and lost on the numbers:
   and so do 民法§440/§450 and 租賃條例§10, replaced by 勞基法§9-1, 個資法§5 and
   勞保條例§14.
 
-## §10 — The Space's model: Qwen2.5-7B-Instruct, measured locally (2026-10-21)
+## §10 — does each kind of dispute have a judgment to point at? (2026-10-20, backfilled 2026-10-21)
+
+`judgment_relevance` grades the first judgment a page shows. This asks the
+question before it: for each kind of dispute the 168 stored sessions bring, how
+many shipped judgments are of that kind, and does a consultation about it get
+one on the page at all.
+
+```bash
+python -m legal_agent.evaluation.judgment_coverage                     # this table
+python -m legal_agent.data.fjud --fill                                  # fetch what is short (public site)
+python -m legal_agent.data.judgment_backfill "$LEGAL_AGENT_HOME/fjud_cache/docs" --dry-run
+```
+
+**Family** is derived from the session's own expected articles
+(`statute_family`, 民法's 編/章/節); a session can sit in two rows, and 38 of the
+168 name no family (cross-cutting articles only) and are not in the table.
+**附判決** = the page shows ≥1 reference judgment; **同類** = ≥1 of those shown
+has a 案由 of the session's family. Both use `judgment_relevance`'s focus (the
+answer cites the right law), so they are a ceiling. **庫存同類** = shipped
+judgments whose 案由 names the family AND that cite an article of it — the only
+ones the JOIN can bring to a page under that family. **待補** = short of 3, one
+page's worth (`related_judgments` shows three).
+
+Current state — 435 shipped judgments, the code at the end of §11, `dense_fallbacks` 0:
+
+| 家族 | 諮詢數 | 附判決 | 同類 | 庫存同類 | 待補 |
+|---|---|---|---|---|---|
+| 侵權 | 12 | 12 | 10 | 92 | 0 |
+| 勞動 | 12 | 11 | 10 | 7 | 0 |
+| 承攬 | 11 | 9 | 8 | 8 | 0 |
+| 繼承 | 11 | 11 | 9 | 15 | 0 |
+| 委任 | 9 | 9 | 8 | 9 | 0 |
+| 租賃 | 9 | 9 | 9 | 12 | 0 |
+| 買賣 | 8 | 8 | 7 | 6 | 0 |
+| 住戶 | 7 | 7 | 6 | 6 | 0 |
+| 共有 | 7 | 7 | 3 | 5 | 0 |
+| 所有權 | 7 | 6 | 4 | 21 | 0 |
+| 監護 | 6 | 6 | 6 | 31 | 0 |
+| 家暴 | 5 | 5 | 5 | 8 | 0 |
+| 扶養 | 5 | 5 | 5 | 6 | 0 |
+| 消費 | 5 | 5 | 0 | 0 | 3 |
+| 不當得利 | 4 | 4 | 3 | 5 | 0 |
+| 僱傭 | 4 | 4 | 0 | 0 | 3 |
+| 婚姻 | 4 | 4 | 4 | 13 | 0 |
+| 寄託 | 4 | 4 | 3 | 3 | 0 |
+| 保證 | 3 | 3 | 2 | 3 | 0 |
+| 消費借貸 | 3 | 3 | 2 | 20 | 0 |
+| 使用借貸 | 2 | 1 | 1 | 3 | 0 |
+| 擔保物權 | 2 | 2 | 1 | 3 | 0 |
+| 親子 | 2 | 2 | 1 | 5 | 0 |
+| 贈與 | 2 | 2 | 2 | 6 | 0 |
+| 秩序 | 1 | 1 | 1 | 12 | 0 |
+
+**23 of 25 families hold ≥3 same-kind judgments; the two short (6 in all) are
+僱傭 and 消費, which no 案由 can name** (below). Before the backfill it was 15/25,
+short 25. The rows that moved, before (386 judgments, base code) → now:
+
+| 家族 | 庫存同類(補件前) | 待補(補件前) | 同類(補件前) | 同類(現在) |
+|---|---|---|---|---|
+| 承攬 | 5 | 0 | 6 | 8 |
+| 委任 | 2 | 1 | 4 | 8 |
+| 租賃 | 6 | 0 | 4 | 9 |
+| 買賣 | 2 | 1 | 6 | 7 |
+| 住戶 | 6 | 0 | 4 | 6 |
+| 共有 | 5 | 0 | 4 | 3 |
+| 不當得利 | 5 | 0 | 1 | 3 |
+| 寄託 | 0 | 3 | 0 | 3 |
+| 保證 | 0 | 3 | 0 | 2 |
+| 使用借貸 | 0 | 3 | 0 | 1 |
+| 擔保物權 | 1 | 2 | 1 | 1 |
+| 贈與 | 0 | 3 | 0 | 2 |
+| 秩序 | 0 | 3 | 0 | 1 |
+
+By the route triage actually takes on the user's raw words (now):
+
+| 分流 | 諮詢數 | 附判決 | 同類 |
+|---|---|---|---|
+| ambiguous | 74 | 66 | 38 |
+| other:family | 21 | 21 | 19 |
+| other:labor | 17 | 15 | 11 |
+| other:rent | 16 | 16 | 11 |
+| other:consumer | 11 | 10 | 4 |
+| other:leak | 8 | 8 | 6 |
+| other:safety | 7 | 7 | 7 |
+| other:traffic | 6 | 6 | 4 |
+| noise | 5 | 5 | 5 |
+| other:space | 2 | 1 | 1 |
+| other:threat | 1 | 1 | 1 |
+
+What the table says, read plainly:
+
+- **Two of the zeros are the instrument, not the corpus.** No 案由 can be read
+  as 僱傭 (「確認僱傭關係」 is mapped to 勞動) or as 消費 (consumer disputes are
+  filed as 買賣/返還價金), so those rows are 0 whatever the corpus holds, and the
+  backfill skips them and says so. Merging 僱傭 into 勞動 on the session side
+  would be the obvious fix, and it would raise `judgment_relevance`'s own
+  number by re-drawing its grader; it was not done.
+- **Four families had no 案由 keyword at all** — 使用借貸, 寄託, 保證, 秩序.
+  Keywords were added (返還借用物/使用借貸, 寄託, 保證債務/連帶保證, 社會秩序維護法)
+  before any shipped judgment carried them; the backfilled ones now do, and a
+  test holds that each reads as its keyword's family.
+- **秩序's stock is 12, not 3**: 9 of them came in for §11's acceptance set,
+  which asks about 社維§72/§87 specifically (the family fill alone took three
+  §63/§66 rulings, which answer neither question).
+- 附判決/同類 above are with `dense_fallbacks` 0 (Ollama + bge-m3 in this
+  environment). The before column was re-measured the same way; it reproduces
+  the published `judgment_relevance` 146/168 and 51/88 exactly.
+
+### How the backfill got done
+
+**First attempt (2026-10-20 10:00 Asia/Taipei): blocked.** `judgment_backfill` was written
+and tested, but the 司法院 hosts are not reachable from the environment this
+was measured in — the outbound proxy answered `CONNECT data.judicial.gov.tw:443`
+with `403 Forbidden`, body 「request blocked: no rule or allowlist entry allows
+host "data.judicial.gov.tw"」, and the same for opendata.judicial.gov.tw,
+judgment.judicial.gov.tw, law.judicial.gov.tw and www.judicial.gov.tw. There
+were also no API credentials, and the run was at 10:00 Asia/Taipei, outside the
+API's 00:00–06:00 window. No judgment was added.
+
+**Second attempt, 2026-10-21 01:17 Asia/Taipei, with outbound network open.**
+The hosts are now reachable, but both sources need an account, and none was
+registered:
+
+- `GET https://opendata.judicial.gov.tw/api/Datasets?categoryTheme4Sys=051`
+  → 200. 裁判書 is 369 datasets, one RAR per month from 199601 to 202608
+  (the newest re-issued 「20261016Update」, e.g. 202608 = datasetId 59372,
+  fileSetId 72011), plus a `Delete-Infor` CSV (fileSetId 72012). Columns as
+  published: ID、JYEAR、JCASE、JNO、JDATE、JTITLE、JFULL、JPDF. Every one is
+  `categoryDataset: "B"`; the site's own front end renders the download link
+  only when `"A"===categoryDataset || isLogin`, and login sits behind a
+  Cloudflare Turnstile.
+- `GET /api/FilesetLists/72011/file` (and 72012, and `?preview=true`) → 500,
+  `{"succeeded":false,"message":"Entity \"GetFilesetListFileQuery\" (72011) was not found."}`;
+  `GET /api/Datasets/59372` and `/59005` (199601) → 500, the same 「not found」.
+  As a control, a category-A dataset on the same host (6876, fileSetId 8322)
+  answers 200 and serves its 950,580-byte file, so the endpoint works and the
+  refusal is the B category. `GET /api/MemberData` → 401.
+- `POST https://data.judicial.gov.tw/jdg/api/Auth` with a dummy user → 200,
+  `{"error":"驗證失敗"}` — the API host now answers (the 403 is gone, and this
+  was inside the 00:00–06:00 window), but it needs `JUDICIAL_USER` /
+  `JUDICIAL_PASSWORD`, and neither is set here. `GET /` on that host is an IIS
+  403 from the origin, not the proxy.
+
+**Third attempt (2026-10-21): the public search site, no account.**
+`https://judgment.judicial.gov.tw/FJUD/` — the same court's 裁判書查詢 — serves
+its 進階查詢 form and each judgment's full text to anyone. A bare client is
+refused by its bot defence (「The requested URL was rejected by bot-defense」);
+the headers a browser sends are enough. `data/fjud.py` submits 案由 (and, for
+§11, an article number as a full-text term), walks the result pages newest
+first, and turns each result page into the importer's flat record, so
+`judgment_backfill`, `parse_judgment` and the redaction are unchanged. It
+waits ≥3 s between any two requests (not lowerable), caches every list page
+and document under `LEGAL_AGENT_HOME`, and a re-run resumes from the cache.
+
+- Family fill: 68 requests, 19 judgments — 使用借貸/保證/寄託/秩序/贈與 3 each,
+  擔保物權 2, 委任/買賣 1 — exactly the shortfall. 秩序 takes 裁定 as well as
+  判決: 社維法 cases are decided by 裁定 (社會秩序維護法§45).
+- Situation fill (§11): 57 requests, 30 more.
+- Redaction found two holes on the way and both are closed: a 社維法 ruling
+  names its person as 被移送人 (not a role the party reader knew), and a 保證
+  judgment's 主文 named a 訴外人. Either would have shipped a full name; 5 of
+  the 49 now ship header-only. The 386 already shipped are byte-identical.
+
+## §11 — judgment citation acceptance set: are the judgments shown the ones that should be? (2026-10-21)
+
+```bash
+python -m legal_agent.evaluation.judgment_qa                                  # 38 questions, tuned on
+python -m legal_agent.evaluation.judgment_qa evals/judgment_qa_holdout_v1.json # 12 questions, held out
+```
+
+`evals/judgment_qa_v1.json` is 38 plain-words questions over 22 dispute
+families, each with the articles a careful person expects and the judgments the
+page should cite. Those judgments are not hand-picked: `expected_for` lists every
+shipped judgment whose 案由 is the question's family AND that cites one of its
+articles, and the list is frozen into the file (a test re-derives it). The
+held-out file is 12 more questions over the same families, written before any
+fix in this section and never run while choosing one.
+
+Every judgment shown is graded, not just the first:
+
+- **引用正確率** — shown judgments on the question's list / all shown;
+- **命中** — questions with ≥1 listed judgment among those shown;
+- **答非所問** — questions whose page shows judgments, none of the question's
+  family (the reader is pointed at another kind of dispute);
+- **無判決** — questions whose page shows none.
+
+`focus` = the answer cites the right law (the expected articles that reached the
+window — what stage3 passes when verification clears the answer); `window` =
+the answer cites nothing verifiable and stage3 falls back to the whole retrieval
+window. All runs: `dense_fallbacks` 0, every stage graded against the same
+frozen lists; a second run of the final code is byte-identical (the harness has
+no model in it, so its spread is zero).
+
+**Tuned on (38 questions)**
+
+| stage | judgments | focus 引用正確率 | 命中 | 答非所問 | 無判決 | window 引用正確率 | window 答非所問 |
+|---|---|---|---|---|---|---|---|
+| before | 386 | 18/63 (28.6%) | 11/38 | 17/38 | 10/38 | 9/92 (9.8%) | 21/38 |
+| family backfill (§10) | 405 | 29/72 (40.3%) | 17/38 | 10/38 | 9/38 | 18/94 (19.1%) | 14/38 |
+| fix 1: situation backfill | 435 | 48/95 (50.5%) | 23/38 | 10/38 | 4/38 | 29/103 (28.2%) | 14/38 |
+| fix 2: lexicon rows | 435 | 72/100 (72.0%) | 33/38 | 3/38 | 2/38 | 39/112 (34.8%) | 9/38 |
+| fix 3: same-kind first | 435 | **87/100 (87.0%)** | **35/38** | **0/38** | 2/38 | 54/112 (48.2%) | 3/38 |
+
+**Held out (12 questions)**
+
+| stage | judgments | focus 引用正確率 | 命中 | 答非所問 | 無判決 | window 引用正確率 | window 答非所問 |
+|---|---|---|---|---|---|---|---|
+| before | 386 | 1/23 (4.3%) | 1/12 | 8/12 | 3/12 | 1/32 (3.1%) | 10/12 |
+| family backfill (§10) | 405 | 8/30 (26.7%) | 4/12 | 6/12 | 2/12 | 6/33 (18.2%) | 6/12 |
+| fix 1: situation backfill | 435 | 8/30 (26.7%) | 4/12 | 6/12 | 2/12 | 7/33 (21.2%) | 6/12 |
+| fix 2: lexicon rows | 435 | 20/32 (62.5%) | 10/12 | 1/12 | 1/12 | 18/36 (50.0%) | 2/12 |
+| fix 3: same-kind first | 435 | **27/32 (84.4%)** | **11/12** | **0/12** | 1/12 | 23/36 (63.9%) | 1/12 |
+
+Without a dense index (a plain `pip install`), the final code reads 87/100,
+35/38, 1/38 tuned and 22/29, 10/12, 0/12 held out (focus).
+
+**Which causes, in which order.** Every miss gets one cause. After the family
+backfill (405) the tuned set's misses were: 語料無應引判決 10 · 檢索漏條文 8 ·
+被擠出前三 2 · 引錯家族 1. The fixes take them from the top:
+
+1. **語料無應引判決 (the corpus has no judgment for the situation).** Ten
+   questions' families had judgments, but none citing the question's own
+   article (a 租賃 stock of 修繕 cases does not answer 押金). `fjud --qa` asks
+   the site for the family's 案由 plus the article number as a full-text term
+   and keeps only records that serve the family AND cite one of the
+   question's articles: 30 judgments, 57 requests. This fixes its own metric
+   by construction — the honest gain is what it unblocks: the misses it
+   cleared turned out to be mostly 檢索漏條文 (12 after it).
+2. **檢索漏條文 (the expected article never reached the window).** Five
+   contract types' definition articles (使用借貸, 保證, 贈與, 抵押權, 寄託 of
+   money) plus 委任 reporting, 承攬 payment and 社維§72① were unreachable from
+   plain words, so stage3 fell back to the whole window and showed other
+   disputes. Eight lexicon rows, triggers in general words. One cost a real
+   session: 「也沒有當保證人」 fired the 保證 row, and §745/§749 attached to it
+   pushed §739 out of `adult-son-owes-money` (real_recall 347 → 346); §745 and
+   §749 now have triggers of their own and the session is back to 2/2.
+3. **引錯家族 (a judgment of another kind ranked first).** `related_judgments`
+   ranked by overlap, then by stating a sum, blind to whether a §179 judgment
+   is 返還不當得利 or 給付修繕費. Among equal overlap, a judgment whose 案由 is
+   the same kind as an article it shares now goes first, and keeps its seat
+   against the sums-first sort.
+
+Remaining misses (final, tuned, focus): 被擠出前三 2 — both are pages with NO
+judgment, because focus narrows to an article no listed judgment cites
+(`deposit-money-relative`: the window holds §603, the two listed cite §602;
+`ownership-encroach`: §796, the 19 listed cite §767) — and 檢索漏條文 1
+(`mortgage-cancel-paid`: neither §860 nor §767 reaches the window; it shows a
+拍賣抵押物 ruling). Held out: `ho-loan-use-scooter`, no judgment shown.
+
+**Every other published number, same environment, `dense_fallbacks` 0:**
+
+| harness | base code, 386 | base code, 435 | final |
+|---|---|---|---|
+| `real_recall` | — | 347/356 | 347/356 (published 348/356 is from another machine; base reads 347 here) |
+| `honesty_probe` | 18/20 · 2/15 | 18/20 · 2/15 | 18/20 · 2/15 (output identical) |
+| `judgment_relevance` | 51/88 (58%), 146/168 carry one | 65/99 (66%), 156/168 | **107/118 (91%)**, 156/168; generic 案由 58/146 → 38/156 |
+| `judgment_coverage` | 15/25 families, 25 short | 23/25, 6 short | 23/25, 6 short (僱傭, 消費 only) |
+| `mutation`, `--retrieval-first`, `blindspots`, `qualifier_audit` | | | output identical to base |
+
+**Read the 91% with this in mind.** Fix 3 ranks with the same 案由→family
+table `judgment_relevance` grades with (it moved to `retrieval/families.py` so
+the library no longer imports from a harness), and `judgment_qa`'s expected
+lists are drawn with it too. The grader and the ranker therefore agree by
+construction on what 「same kind」 means; the rise from 66% to 91% is the ranker
+learning the grader's definition, not independent evidence that a reader is
+better served. The table is coarse: `upstairs-leak` now counts as a match with
+a 損害賠償(交通) judgment, because both are 侵權. No session went from match
+to mismatch, and 共有's 同類 in §10 went from 4 to 3.
+
+What none of this measures: whether a judgment shown is the same SITUATION.
+A 返還寄託物 case about a warehouse and one about cash are both 「寄託」.
+
+## §12 — The Space's model: Qwen2.5-7B-Instruct, measured locally (2026-10-21)
 
 Until this section the public Space had no model: its 分析研判 box said so, and
 the question people bring most — does the other side's claim hold up (16 of 33
@@ -1065,6 +1498,201 @@ claim — every citation verified, the reasoning wrong (the limit §7 measures).
 - **The Space's index build time**, beyond a bracket: the log has no
   timestamps, and `dense index ready` appeared between 3 and 14 minutes after
   startup (after the first answer, which therefore ran on BM25 alone).
+
+### §12.1 — the same model with no pipeline at all (2026-10-21)
+
+The gated column above says how often the Space's model is caught. This asks
+what a reader gets from that model with NO pipeline: the golden_v2 question sent
+straight to `qwen2.5:7b`, asked to cite the statutes it believes apply
+(`ablation --conditions bare --temperature 0`), every citation then checked.
+
+「Untraceable to the corpus」 mixes two things — a real law the 16-statute corpus
+does not hold, and a law that does not exist — so each citation is also checked
+against the 全國法規資料庫 open data (`--official`: law.moj.gov.tw ChLaw + ChOrder,
+11,803 laws and regulations with their articles, downloaded 2026-10-21):
+
+| golden_v2, bare | citations | in the corpus, verified | real law + real article, outside the corpus | real law, no such article | **no such law** |
+|---|---|---|---|---|---|
+| qwen2.5:7b, temperature 0 | 231 | 155 (67%) | 46 (20%) | 0 | **30 (13%)** |
+| llama3.1, temperature 0.2 (the stored v2 run) | 51 | 17 (33%) | 20 (39%) | 2 (4%) | **12 (24%)** |
+
+- Every untraceable qwen citation is of a statute outside the corpus; it never
+  misquoted a statute the corpus holds. The nonexistent ones are plausible
+  names: 「噪音防制法」 ×13 (the law is 噪音管制法), 「治安維護法」 ×9, 「地方自治法」,
+  「民事調解法」, and one in Simplified characters (「勞資争议处理法」).
+- Gated, the same model is flagged on 7 of 241 citations (above), so the pipeline
+  takes the share a reader would have to trust blindly from 33% to 2.9%, and a
+  nonexistent law never reaches the page unflagged.
+- **This is ONE sample.** Temperature 0 did not make Ollama repeatable on this
+  CPU: re-running the first five questions gave different answers on three
+  of them, and one of those went from 「1 nonexistent law」 to 「3 real laws with
+  no such article」 (`evals/ablation_qwen25_bare_t0_rerun.json`). The gap — 13%
+  of citations naming a law that does not exist, against 2.9% of all citations
+  flagged once gated — is far wider than that, but the per-bucket figures are
+  not a measured spread and should not be quoted to the percent.
+- Not measured: a frontier model (no API key in the environment that ran this),
+  and llama3.1 at temperature 0 (its row is the 0.2 run, re-bucketed with
+  `--from-json`, so the two rows are not a model comparison).
+
+```bash
+python -m legal_agent.evaluation.ablation evals/golden_v2.json --models qwen2.5:7b \
+    --temperature 0 --conditions bare --out run.json            # ~3 h on 4 CPU cores
+python -m legal_agent.evaluation.ablation evals/golden_v2.json --from-json run.json \
+    --official ChLaw.json ChOrder.json                          # the split above
+```
+
+## §13 — what suing costs: 民事訴訟法 and 鄉鎮市調解條例 (2026-10-21)
+
+Of the things a reader comes for, 「值不值得打」 was the one the page could not
+answer. The generic ladder's last rung read 「小額/簡易/通常程序,依金額與案情選擇」,
+and 民事訴訟法 was not in the corpus, so the coverage gate refused 小額訴訟, 裁判費
+and 支付命令 questions on purpose.
+
+**The import.** 民事訴訟法 (800 articles, pcode B0010001) and 鄉鎮市調解條例 (37;
+mediation is free under its §23) come from today's `ChLaw.xml` through the same
+`moj_xml` pipeline as `moj_gap_v1`. The download now uses English tags
+(`<Law>`, `<LawName>`, `<ArticleConctent>` …); the parser reads both shapes, and
+each has a fixture test. Re-parsing the new file reproduces 2,847 of the 2,856
+shipped articles of the 15 laws it carries, character for character; the other
+9 were amended since. The corpus goes from 2,921 to **3,758** articles in force,
+and from 16 to 18 statutes. The 民事訴訟法 row is gone from `ABSENT_DOMAINS`,
+because the invariant test forces that. Like every bulk import, each article
+carries its law's date (民事訴訟法 2023-11-29, 鄉鎮市調解條例 2023-01-13), not
+its own amendment history.
+
+**What the import broke, and the fix.** Before anything else changed, base
+(`83b9bda`) was measured on this machine. `real_recall` was run twice and read
+348/356 both times. The other harnesses call no model, and §1 already records
+that they re-run identically.
+
+| | base | import only | import + procedure gate |
+|---|---|---|---|
+| `real_recall`, `dense_fallbacks` 0 | 348/356, 5.9 unexpected | 348/356 | **349/356**, 5.9 unexpected |
+| the same, BM25 only | 321/356, 6.1 unexpected | **319/356** | **321/356**, 6.1 unexpected |
+
+The import alone cost two sessions on BM25:
+
+- `lease-expired-still-living` lost 民法§450. 民事訴訟法§77-9 「因租賃權涉訟」
+  took its seat.
+- `pay-only-after-delivery` lost 民法§505 to §503. No procedure article entered
+  that window. BM25 is computed over the candidates, so 837 more documents
+  changed every term's weight.
+
+A procedure statute says how a case runs (which court, which track, what fee),
+not who is right. So `retriever._drop_procedure_unless_asked` keeps 民事訴訟法
+as a candidate only when the question contains one of 起訴, 訴訟, 裁判費,
+支付命令, 督促程序, 小額, 簡易程序, 管轄, 地院, 上訴, 開庭, 假扣押 or 假處分.
+鄉鎮市調解條例 needs 調解. For any other question the candidate set is the base
+one exactly, so BM25 is base BM25. Three of the 168 sessions open the gate
+(`fake-sale`, `which-court-to-sue`, `need-order-faster`), and none mentions
+調解.
+
+With the gate, BM25 is 321 again; two windows (both of them sessions that open
+the gate) hold the same articles in another order. Hybrid reads 349:
+`tour-hotel-downgraded` gains 民法§514-7, and no session loses an article.
+Eleven of the 168 hybrid windows differ from base. The dense half ranks the
+whole index before candidates are filtered, so procedure articles still take up
+dense ranks and move RRF slightly, even on questions that leave the gate shut.
+One procedure article reached a window: 民事訴訟法§531, in `fake-sale`.
+
+| harness | base | after |
+|---|---|---|
+| `mutation` | 24 kinds 100%, 24,823/24,823, 0/2,921 | 24 kinds 100%, **31,123/31,123, 0/3,758** (per kind in §4) |
+| `mutation --retrieval-first`, no dense index (CI's condition) | 24,823/24,823, `retrieval_miss_quoted` 1/1 | 31,123/31,123, 1/1; same rows apart from the denominators |
+| `blindspots` | 21/25 | 21/25, output identical |
+| `realworld` | 25/27 tuned, 12/23 held out | identical |
+| `realworld --direction` | 3/16 · 2/8 | identical |
+| `judgment_qa`, focus | 87/100 · 35/38 · 0/38 答非所問 | identical |
+| the same, held out | 27/32 · 11/12 · 0/12 | identical |
+| `qualifier_audit` | 0 false rejects, 5/5 probes refused | the same (2,836 → 3,021 citations scanned) |
+| `honesty_probe` | 18/20 · 2/15 | **16/20** · 2/15 |
+
+**Why honesty reads 16/20, and why it was not "fixed".** The two questions it no
+longer refuses are `oos-14-payment-order` and `oos-15-small-claim`. Both were
+written as 「民事訴訟法 absent」 and are now answered from it:
+
+- oos-14's window holds 民事訴訟法§514, §519 and §521 (when to object to a
+  支付命令, and what objecting does);
+- oos-15's holds §436-8 (the 小額 track).
+
+Their expected tier still says `insufficient`, and it stays that way: the only
+fix would be to edit an expected value, or to refuse questions the corpus can
+now answer. Every other case keeps its tier. The 2/15 in-scope false refusals
+are the same two as before. The test that held this table to the corpus
+(`test_every_absent_statute_is_really_absent_from_the_corpus`) did its job,
+because it made the row go.
+
+**The litigation rung, priced by code.** `solution._litigation_rung` takes the
+amount the user typed and turns it into a court track and a fee.
+
+- **Reading the amount.** `claim_amount` reads 「八萬」「三萬八」「1.5萬」
+  「新台幣 30,000 元」「八萬多」「四十幾萬」 from the user's own words.
+- **What it skips.** It does not read rates (月薪, 每月), the other side's figure
+  (「最高賠三千」「只肯退我五千」), or non-money (「一塊農地」「三千人」).
+- **The track.** Up to 十萬 is 小額 (§436-8), up to 五十萬 is 簡易 (§427), and
+  anything above is 通常. A 道路交通事故 claim is 簡易 at any amount (§427 II
+  ⑪).
+- **The fee.** It follows the §77-13 brackets, with the remainder rounded up to
+  a 萬. The page then states the §77-27 ceiling on any surcharge: the fee
+  plus at most 5/10 of it.
+- **A range is priced at both ends.** 「八萬多」 is 80,001 to 89,999.
+- **Payment order and mediation.** The page also states that a 支付命令 costs
+  NT$500 (§77-19 II ⑤) and what an objection does to it (§519), and that mediation
+  costs nothing (鄉鎮市調解條例§23).
+- **Every legal line is quoted.** Each one is a verbatim substring of the
+  article it names, and a test checks each one against the shipped corpus.
+
+The rung never picks among figures. Several unmarked amounts, a hedged one
+(「大概兩百萬」「不到十萬」), or a range that crosses a track boundary make it ask
+instead. It names the user's figures back to them and computes nothing. A figure
+the user marks as the claim (「欠我三十萬」「要回八萬塊」) is taken even when
+other figures appear.
+
+Counted over the 168 stored sessions:
+
+| | sessions |
+|---|---|
+| ladders that are the complainant's and end in the litigation rung | 69 (71 complainants; 2 go through the noise ladder) |
+| priced: track and fee shown | **28** — 小額 16 · 簡易 8 · 通常 4 |
+| asks, naming the figures the user gave | 13 |
+| asks for the amount (none given) | 28 |
+| any single amount read, all stances | 59 (the rung is shown to complainants only, as before) |
+
+Some examples:
+
+- `loan-unpaid` 「二十萬」 → 簡易, 裁判費 2,000 to 3,000 元.
+- `debtor-moved-assets` 「一百萬」 → 通常, 10,000 to 15,000.
+- `unpaid-goods` 「四十幾萬」 → 簡易, 4,100 to 7,500.
+- `which-court-to-sue` 「三萬八」 → 小額, 1,000 to 1,500.
+- `injury-claim` (「五萬多」「三萬」) asks which one is the claim.
+
+**What this does not get right.**
+
+- **The surcharge figure.** 臺灣高等法院's 113-12-30 加徵 standard is not in the
+  corpus. So the page gives the statutory ceiling (§77-27), not the figure the
+  court will actually bill.
+- **The reader's seat, upstream.** In four of the 69 sessions, the stance
+  classifier reads the reader as the complainant. In fact they are the one
+  asked to pay, or they are asking for a friend who is:
+  - `one-of-three-borrowers`, 「九十萬」;
+  - `adult-son-owes-money`, 「十五萬」;
+  - `loan-note-with-an-unconscionable-clause`, 「二十萬」;
+  - `old-card-debt`, which asks.
+
+  On the first three, the rung prices a suit the reader would be defending. It
+  says 「若這就是你要請求的金額」, but the seat is wrong, and that is
+  upstream of this rung.
+- **Whether the figure read is the claim.** No session is labelled with its
+  claim amount, so this is counted, not scored.
+- **The model-run rows in §1.** They were not re-run on the new corpus.
+
+```bash
+python -m legal_agent.data.moj_xml ChLaw.xml -o legal_agent/corpus/moj_procedure_v1_proposal.json \
+    --include 民事訴訟法 --include 鄉鎮市調解條例 --strict
+python -m legal_agent.evaluation.real_recall      # 349/356, dense_fallbacks 0
+python -m legal_agent.evaluation.honesty_probe    # 16/20 · 2/15
+python -m pytest tests/test_litigation_rung.py tests/test_retriever.py -q
+```
 
 ## More
 

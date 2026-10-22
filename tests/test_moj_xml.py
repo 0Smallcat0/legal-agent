@@ -103,6 +103,20 @@ def test_strict_mode_raises_instead_of_warning():
         parse_moj_xml(FIXTURE, strict=True)
 
 
+# ── the current English-tag download ────────────────────────────────────────
+FIXTURE_EN = ROOT / "tests" / "fixtures" / "moj_sample_en.xml"
+
+
+def test_english_schema_parses_identically_to_the_chinese_one():
+    # Same five laws in today's ChLaw.xml shape (whitespace-only empty fields,
+    # a type-C heading, the official 「ArticleConctent」 spelling): every row and
+    # every warning must come out exactly as from the Chinese-tag file.
+    assert parse_moj_xml(FIXTURE_EN) == parse_moj_xml(FIXTURE)
+    assert parse_moj_xml(FIXTURE_EN, include={"測試噪音管制標準"}) == parse_moj_xml(
+        FIXTURE, include={"測試噪音管制標準"}
+    )
+
+
 # ── selection ────────────────────────────────────────────────────────────────
 def test_include_filter_keeps_only_named_laws():
     proposals, warnings = parse_moj_xml(FIXTURE, include={"測試噪音管制標準"})

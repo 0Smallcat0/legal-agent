@@ -57,8 +57,11 @@ python -m legal_agent.evaluation.paragraph_bounds_audit            # 款 upper-b
 python -m legal_agent.evaluation.real_recall                       # retrieval recall, 168 stored sessions
 python -m legal_agent.evaluation.honesty_probe                     # refuse / false-refuse, 35 cases
 python -m legal_agent.evaluation.judgment_relevance                # reference-judgment tier, 168 sessions
+python -m legal_agent.evaluation.judgment_coverage                 # same-kind judgments per dispute family
+python -m legal_agent.evaluation.judgment_qa                       # judgments the page should cite, 38 questions (+12 held out)
 python -m legal_agent.evaluation.realworld                         # already-ended disputes, retrieval + refusal
 python -m legal_agent.evaluation.realworld --direction             # answer vs recorded outcome, from stored blind codings
+python -m legal_agent.evaluation.judge_direction --lexical        # direction-word check vs the same blind codings
 python -m legal_agent.evaluation.calibrate evals/golden_v2.json    # honesty-threshold sweep (stub answer, retrieval only)
 ```
 
@@ -74,6 +77,7 @@ python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # statute cov
 python -m legal_agent.evaluation.ablation evals/golden_v2.json     # bare model vs gated pipeline (--models, --out)
 python -m legal_agent.evaluation.mutation --semantic               # the semantic 4th axis; semantic_unreached must be 0
 python -m legal_agent.evaluation.realworld --answers               # prints answers beside outcomes for a human; scores nothing
+python -m legal_agent.evaluation.judge_direction                  # four local LLM judges vs the blind codings (--report re-prints)
 ```
 
 ## Running it
@@ -103,8 +107,8 @@ an existing one.
 
 - **A session where the answer was wrong or the window was off-topic.** This is
   the most valuable thing you can send, and the issue template asks for the
-  wording you actually used. Every one of the 168 stored sessions started this
-  way.
+  wording you actually used. The 168 stored sessions were written by this
+  project, so a stranger's wording is exactly what they lack.
 - Bugs in the deterministic layers — verifier, retrieval filters, 主文 parsing,
   the ladder. These are code, so they are testable, so they are fixable.
 - Portability work: the engine is jurisdiction-agnostic, and only the corpus and

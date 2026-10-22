@@ -107,6 +107,16 @@ def _render_ready(state: SessionState) -> str:
     return f"資訊已收集完成,接下來檢索相關法條並整理處理步驟。\n整理到的事實:\n{facts}"
 
 
+def _questions_ahead(state: SessionState) -> str:
+    """How many questions are coming, counted, not promised: the deposit visitor
+    was told 「再問一件事就好」 and then asked three."""
+    fields = [f for batch in intake.checklist_for(state.problem_type) for f in batch]
+    left = sum(1 for f in fields
+               if f.key not in state.collected_facts and f.key not in state.asked_keys)
+    left = min(left, MAX_INTAKE_TURNS)
+    return "再問一件事就好——" if left <= 1 else f"最多再問{'兩三'[left - 2]}件事——"
+
+
 def _seed_key(problem_type: str | None) -> str:
     """The field the opening complaint answers — the first one in that domain's
     checklist. Their own words beat asking 「發生了什麼事?」 right after they said."""
@@ -137,12 +147,13 @@ def _enter_noise_intake(state: SessionState, user_message: str) -> tuple[str, Se
     state.stage = Stage.INTAKE
     # The opening complaint already describes the noise; don't ask for it again.
     state.collected_facts.setdefault("noise_type", state.user_text or user_message)
+    ahead = _questions_ahead(state)
     batch = intake.next_questions(state)[:1]
     state.pending_questions = [f.key for f in batch]
     state.asked_keys.update(state.pending_questions)
     return (
         triage.stance_line(state.stance, state.problem_type) + "\n"
-        + "了解,住宅噪音的問題。再問一件事就好——\n" + _render_batch(batch)
+        + f"了解,住宅噪音的問題。{ahead}\n" + _render_batch(batch)
     ), state
 
 
@@ -156,6 +167,7 @@ def _enter_generic_intake(state: SessionState, user_message: str,
         # reply (when they differ) — nothing the user typed is dropped
         parts = [p.strip() for p in (state.user_text, user_message) if p and p.strip()]
         state.collected_facts[seed] = " / ".join(dict.fromkeys(parts))
+    ahead = _questions_ahead(state)
     batch = intake.next_questions(state)[:1]
     state.pending_questions = [f.key for f in batch]
     state.asked_keys.update(state.pending_questions)
@@ -166,7 +178,7 @@ def _enter_generic_intake(state: SessionState, user_message: str,
     preface = f"{message}\n" if message else ""
     return (
         preface + triage.stance_line(state.stance, state.problem_type) + "\n"
-        + opener + "再問一件事就好——\n" + _render_batch(batch)
+        + opener + ahead + "\n" + _render_batch(batch)
     ), state
 
 

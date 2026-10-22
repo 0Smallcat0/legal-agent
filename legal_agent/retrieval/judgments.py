@@ -88,22 +88,34 @@ def related_judgments(
         if ref not in entry["matched"]:
             entry["matched"].append(ref)
 
+    # A judgment is the SAME KIND of case as an article it shares when its 案由
+    # names that article's dispute (§179 under 「返還不當得利」, not under
+    # 「給付修繕費」). Among equal overlap, those go first; they also keep their
+    # seats against the sums-first sort below (judgment_qa, RESULTS §11).
+    from legal_agent.retrieval.families import case_type_family, statute_family
+
+    for meta in by_jid.values():
+        kind = case_type_family(meta["case_type"])
+        meta["same_kind"] = kind is not None and any(
+            statute_family(ref) == kind for ref in meta["matched"])
+
     items = sorted(by_jid.items(), key=lambda kv: kv[0], reverse=True)   # newer jid first
-    items.sort(key=lambda kv: len(kv[1]["matched"]), reverse=True)       # overlap wins
+    items.sort(key=lambda kv: (len(kv[1]["matched"]), kv[1]["same_kind"]),
+               reverse=True)                                            # overlap, then kind
 
     # 主文 and the header are parsed only for the few judgments actually shown —
     # verbatim slices, no LLM; an unreadable one simply yields nothing.
     from legal_agent.data.judgment_text import awards as _awards
     from legal_agent.data.judgment_text import citation as _citation
 
-    # The reader asks 「我能拿回多少」, so judgments stating a sum go first. Parse
-    # a few more candidates than are shown; the stable sort keeps overlap order
-    # inside each group.
+    # The reader asks 「我能拿回多少」, so within each kind, judgments stating a sum
+    # go first. Parse a few more candidates than are shown; the stable sort keeps
+    # overlap order inside each group.
     widened = [
         (jid, meta, _awards(meta.get("full_text")), _citation(meta.get("full_text")))
         for jid, meta in items[: limit * 3]
     ]
-    widened.sort(key=lambda row: not row[2])
+    widened.sort(key=lambda row: (not row[1]["same_kind"], not row[2]))
     shown = _reserve_a_seat_without_a_sum(widened, limit)
 
     from legal_agent.data.judgment_text import main_text as _main_text

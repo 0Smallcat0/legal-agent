@@ -20,32 +20,64 @@ preload_from_hub:
 
 [![CI](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml/badge.svg)](https://github.com/0Smallcat0/legal-agent/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
 [![Live demo](https://img.shields.io/badge/%F0%9F%A4%97%20demo-Hugging%20Face-yellow)](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)
 
-**A RAG pipeline where every citation is checked by code, and the checker is
-itself graded by planting errors in correct answers: 100% caught across
-twenty-four error kinds, 0/2,921 false positives — with the kinds it cannot plant
-named rather than left out of the denominator.**
+**花錢請律師之前，先把自己的處境搞懂。** 用平常講話的方式說出你遇到的事——押金不退、
+車禍賠償、加班費沒給、樓上太吵——回答幾個問題，就會看到：
 
-The usual defence against a hallucinated citation is a better prompt. This one
-is a separate program that runs after the model and compares each citation
-against the source corpus — does the article exist, does the quote match, was it
-in force. The interesting part is not that the checker exists; it is that its
-recall is a *measured number* rather than a claim, because errors are seeded
-into otherwise-correct answers across the whole corpus and it has to catch them.
+- **適用的法條原文和白話說明。** 每一條引用都由程式拿官方條文查核過，查不到或引錯的會標出來。
+- **從不花錢到上法院的處理步驟。** 寄存證信函（附範本，法條逐字引用）、申請免費調解，最後才是
+  訴訟；你說了金額，它會算出該走小額、簡易還是通常程序，裁判費大約多少。
+- **引用相同法條的法院判決。** 法院最後怎麼判、判賠多少，摘自判決主文。
 
-Everything that must be right is decided by code, not by the model: retrieval,
-the citation check, the confidence tier, the deadline quotes, the action ladder.
-The model writes the prose. **The whole pipeline runs with no model at all**,
-which is also how it is tested — no network, no API key.
+**[直接在瀏覽器用](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)**——免費、不用註冊。
 
-**[Try it without installing anything](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)** —
-the 引用查核 tab ships a pre-filled broken answer, so the whole story takes about
-thirty seconds to check for yourself.
+涵蓋 18 部民生法規（民法、勞動基準法、租賃住宅市場發展及管理條例、消費者保護法、公寓大廈管理
+條例、道路交通管理處罰條例等）共 3,758 條現行條文，和 435 則法院判決。資料庫沒有涵蓋的問題，
+它會直接說不知道，不會硬答。**這是參考工具，不是法律意見，也不能取代律師。**
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/0Smallcat0/legal-agent/main/docs/demo_web.png" alt="一次諮詢的畫面：分析、引用相同法條的判決和法院判賠金額、處理步驟" width="840">
+</p>
+
+### 在自己的電腦上用
+
+需要 [Python 3.10 以上](https://www.python.org/downloads/)。在終端機一行一行執行：
 
 ```bash
-pip install .                     # no torch, no GPU; the corpus ships inside
+git clone https://github.com/0Smallcat0/legal-agent.git
+cd legal-agent
+python -m pip install ".[demo]"
+python app.py
+```
+
+再用瀏覽器打開終端機印出的網址（通常是 http://127.0.0.1:7860）。不需要帳號、金鑰或顯示卡：
+法條、處理步驟和判決都由程式產生。只有「分析研判」那一段要用語言模型——裝好
+[Ollama](https://ollama.com) 後執行 `ollama pull llama3.1`，重新開啟程式就有。
+
+**答錯了？** 用[回報表單](https://github.com/0Smallcat0/legal-agent/issues/new?template=wrong-answer.yml)
+貼上你當時輸入的原話和它的回答。這是讓它變準最有用的資料；表單是公開的，不要貼個資。
+
+---
+
+## For engineers: a RAG pipeline where every citation is checked by code
+
+The checker is itself graded, by planting errors into correct answers and
+counting what it catches.
+
+The usual defence against a hallucinated citation is a better prompt. Here it is
+a separate program that runs after the model and compares each citation with the
+source corpus: does the article exist, does the quote match, was it in force on
+that date. Everything that must be right — retrieval, the citation check, the
+confidence tier, the deadlines quoted — is decided by code; the model only
+writes the prose, and the whole pipeline also runs with no model at all.
+
+The [demo](https://huggingface.co/spaces/NoirOAO/legal-agent-demo)'s 引用查核 tab
+ships a pre-filled broken answer; checking it takes thirty seconds. The checker
+on its own:
+
+```bash
+python -m pip install "git+https://github.com/0Smallcat0/legal-agent.git"
 ```
 
 ```python
@@ -56,161 +88,56 @@ for r in legal_agent.verify("依社會秩序維護法第72條,深夜喧嘩可處
 # True  主張金額 [60000] 元未見於條文(條文金額 [10000])
 ```
 
-That is the whole setup. The database builds itself from the corpus inside the
-package on first call — no clone, no key, no model, no network. `verify` is pure
-Python, so it cannot be argued out of a verdict. Pass `as_of="2024-06-01"` to
-check the law as it stood on a date rather than today.
+No torch, GPU, key or model: the database builds itself from the packaged corpus
+on first call. `as_of="2024-06-01"` checks the law as it stood that day. The
+corpus and the 435 judgments are all in the repo, so a fresh clone reproduces
+every number below.
 
-To run the demo from a clone instead:
+### Four numbers, and what each does not say
 
-```bash
-pip install .[demo] && python app.py
-```
+| | measured | what it does NOT say |
+|---|---|---|
+| **The checker** — errors planted into correct answers, across the whole corpus | **100% caught in each of 24 kinds, 0/3,758 false positives** | Green means the article exists, is in force and was not misquoted. It never meant the article governs your problem. |
+| **Against the bare model** — the same model with and without the pipeline | citations a reader would have to take on trust: **67% → 5%** (llama3.1, golden set) | The gated delta sits inside the harness's run-to-run spread; the 67% reproduces. qwen2.5:7b, one sample: 33% of bare citations untraceable and 13% naming a law that does not exist, against 2.9% flagged once gated. Not measured against a frontier model. |
+| **On disputes it has never seen** — government case tables, governing article taken from the authority's own 法令依據 column, never tuned against | right article in the window **12/23**; answer points the opposite way to the recorded outcome **3/16** | On the case table it was tuned against, the same measure reads 25/27. 12/23 is the honest figure for new territory. |
+| **Catching those wrong-way answers** — 5 blind-coded inversions vs 11 agreements, checker never sees the outcome | four local LLM judges (Prometheus 2, JudgeLM, Qwen2.5, Llama3.1): **0/5 caught, or 3–5/5 only by also flagging 8–11 of the 11 right answers**. No-model 主文/理由 direction-word check: **2/5 caught, 1/11 false** | Neither ships. The word check's split is within chance at this size (one-sided p = 0.21), and what it catches is the model mislabelling 對方, not wrong law. Nothing here catches a wrong-way answer yet. |
 
-The worked example is Taiwan law: 2,921 articles across 16 everyday statutes, all
-in force (plus one repealed historical version, kept for point-in-time queries),
-and 386 real court judgments, all shipped in the repo, so a fresh clone
-reproduces every number below.
+Every other number — retrieval recall 349/356 on 168 stored sessions written in
+everyday wording, honesty and refusal rates, the reference-judgment acceptance
+set (87% of judgments shown are ones the question should cite, 84% held out) —
+is in [`evals/RESULTS.md` §1](evals/RESULTS.md), each with the harness that
+produces it and the ones that went down. Retrieval reaches 349/356 only with the
+optional bge-m3 index (`ollama pull bge-m3`, then
+`python -m legal_agent.retrieval.dense`); a plain install is lexical only and
+reads 321/356.
 
-<p align="center">
-  <img src="https://raw.githubusercontent.com/0Smallcat0/legal-agent/main/docs/demo_web.png" alt="A real consultation: the model's analysis, the judgments citing those same articles with what each court ordered paid, and the action ladder" width="840">
-</p>
+<sub>In the screenshot above, the 8B model calls 民法§18/§195 irrelevant; right
+below it, three real judgments decided under those very articles, the award read
+verbatim from the 主文. The weakest part is the model; the parts that must be
+right are not left to it.</sub>
 
-<sub>The 8B model calls 民法§18/§195 irrelevant; right below it, three real
-judgments decided under those very articles — one awarding 2,150,000–5,134,300
-元, read verbatim from its 主文. The weakest part is the model; the parts that
-must be right are not left to it.</sub>
+### Three things you can lift
 
-## Measured, reproducible
-
-A subset of the table in [`evals/RESULTS.md` §1](evals/RESULTS.md), copied from
-it; that table also names the harness behind every row.
-
-| what | number |
-|---|---|
-| seeded defects caught | **100% in each of 24 kinds, 0/2,921 false positives** — per-kind denominators in RESULTS §4 |
-| statute coverage, 32-case golden set | **pass 19 / partial 7 / miss 0** of 26 scorable — 100% pass+partial, 73% strict |
-| retrieval recall, real user wording | **348/356 (98%)**, 5.9 unexpected articles per session |
-| honesty tier | **29/32 (91%)** |
-| wrong-premise detection | **32/32 (100%)** |
-| out-of-scope refused / in-scope falsely refused | **18/20 · 2/15** — both directions, because only measuring the first hid the second |
-| deadlines quoted from the retrieved articles | **69/168 sessions** |
-| first reference judgment states an awarded sum | **50/60 sessions** (shipped corpus; 54/60 on the full local harvest) |
-| that judgment is the same KIND of dispute as the question | **51/88 scorable (58%)**, 146/168 sessions carry one, 58/146 案由 too generic to tell |
-| first action names the reader's own documents | **83/168 sessions** |
-| 存證信函 template, law quoted verbatim | **168/168 sessions** |
-| articles on the page the model skipped | **8 → 18 of 21 expected** |
-| the article the AUTHORITY cited — cases tuned on | **25/27**, 0 of 16 answered with none of them (first run, before tuning: 7/27 and 9/16) |
-| the same thing, on 17 cases **held out** | **12/23**, 5 of 17 answered with none of them |
-
-```bash
-python -m legal_agent.evaluation.mutation                          # catch rate
-python -m legal_agent.evaluation.golden_set evals/golden_v2.json   # golden set
-python -m legal_agent.evaluation.real_recall                       # lived sessions
-python -m legal_agent.evaluation.judgment_relevance                # reference tier
-python -m legal_agent.evaluation.realworld                         # already-ended disputes
-```
-
-Every harness, and which ones need a model:
-[CONTRIBUTING.md → The harnesses](CONTRIBUTING.md#the-harnesses).
-
-**Read the last two rows before you trust the first one.** Every other number here
-is measured against expectations this project wrote — the same hand built the
-retriever and the answer key. These two are not: the cases are government
-dispute-resolution case tables, the input is the party's opening description, and
-the governing article is the one the deciding body printed in its own 法令依據
-column. On the first such table the right article reached the window 7 times out
-of 27, with 9 of 16 cases answered anyway with none of them and no refusal. The
-governance half of that domain had simply never been in the vocabulary table; two
-passes of curated rows took it to 25/27 with no case left answering on nothing,
-while every other figure in this table stayed exactly where it was.
-
-**Then two more tables of the same kind were added, and nothing was tuned against
-them: 12/23, with 5 of 17 cases answered on none of the governing articles.**
-That is the honest figure for a dispute the project has not seen. 25/27 is not
-withdrawn and is not wrong — it is the number on the set it was curated against,
-and it is labelled as such from here on. Three of the five silent misses want the
-same article (共用部分的修繕與費用分擔) and get its neighbours instead. Those rows
-are deliberately NOT being added to the vocabulary table: curating until they pass
-would move 52% toward 93% and destroy the only held-out number in the project.
-RESULTS.md §7 has the full breakdown.
-
-The verifier stayed green through all of it, and that is not a malfunction:
-**green means the cited article exists, is in force, and was not misquoted — it
-has never meant the article governs your problem.** The seeded-defect figure measures the
-first sentence. The second now has a number of its own, blind-coded and
-re-runnable: over the 24 ended disputes, the answer points the OPPOSITE way to
-the recorded outcome in **3 of 16** on the externally-labelled set and **2 of 8**
-on the derived one — and `flagged_count` is 0 on all five. The five cases that
-did draw a flag are not the five that pointed the wrong way; on this set the two
-do not overlap at all.
-
-```bash
-python -m legal_agent.evaluation.realworld --direction
-```
-
-Both codings are blind — the answers are coded from a file that carries no
-outcome, the outcomes from the case record afterwards, and the comparison is
-arithmetic. No model grades legal reasoning here, and none will. See
-[`evals/RESULTS.md`](evals/RESULTS.md) §7.
-
-**Two of those rows need a second half a plain install does not have.** The
-retriever is BM25 plus a hand-written vocabulary table plus optional bge-m3
-embeddings, and the embeddings need a local index that is built rather than
-shipped — it is derived from your corpus and it is ~12 MB of floats. Straight
-after `pip install .` the retrieval half is lexical only: **recall 321/356
-rather than 348/356**, measured. To reach the published figure:
-
-```bash
-ollama pull bge-m3                        # ~1.2 GB, once
-python -m legal_agent.retrieval.dense     # builds the index beside your corpus
-```
-
-The verifier, the corpus, the honesty tier, the ladder and the 存證信函 template
-never touch it and are unaffected. `real_recall` now prints whether the dense
-half actually participated, so a number measured without it says so.
-
-## Three things you can lift
-
-Each is self-contained, with no Taiwan-specific logic worth speaking of:
-
-- **[citation verifier](legal_agent/anti_hallucination/verifier.py)** — pure
-  code, no model. Extracts citations from generated text and checks existence,
-  content match, and in-force date against the corpus.
-- **[mutation-tested guardrails](legal_agent/evaluation/mutation.py)** — the
-  harness that grades the verifier by seeding defects. This is the piece most
-  RAG projects are missing: a number for how much your safety net actually
-  catches.
+- **[citation verifier](legal_agent/anti_hallucination/verifier.py)** — pure code,
+  no model: extracts citations from generated text and checks existence, content
+  and in-force date against the corpus.
+- **[mutation-tested guardrails](legal_agent/evaluation/mutation.py)** — grades
+  the verifier by seeding defects, so the safety net has a measured catch rate.
 - **[time-sliced retrieval](legal_agent/retrieval/retriever.py)** — filters by
   point-in-time validity *before* ranking, so a repealed version cannot be
   retrieved and then explained away.
 
-## Design notes worth the detour
+### More
 
-- **Retrieval fires exactly once**, on the complete fact set after intake.
-  Multi-turn re-retrieval is the documented cause of RAG degradation; here it is
-  enforced by a test, not a convention.
-- **The model sits behind a `str -> str` seam** with three swappable backends —
-  `manual` (paste into any chat), `ollama` (local, the default), `anthropic`
-  (paid). Pick one with `LEGAL_AGENT_PROVIDER=manual`, no source edit: measured
-  on a clean venv, that was the only step in the documented path that left a
-  first-time reader stuck, because `pip install` puts `config.py` in
-  site-packages. **Swapping the model is measured, not assumed**: llama3.1:8B
-  and qwen3:4b score identically on the golden set — pass 19 / partial 7 /
-  miss 0, tier 29/32, premise 32/32 — because those are decided by retrieval and
-  by code. The model changes the prose and nothing that is scored.
-- **Judgments are reference tier**, never retrieval candidates and never citable
-  law. They reach a page only through a deterministic join on articles the
-  pipeline already retrieved, with the award figure read verbatim from the 主文.
+[RESULTS.md](evals/RESULTS.md) every number, its harness, and the ones that went
+down · [SPEC.md](SPEC.md) design · [CONTRIBUTING.md](CONTRIBUTING.md) the bar a
+change has to clear · [AGENTS.md](AGENTS.md) the same plus the measurement traps ·
+[DEPLOY_SPACES.md](docs/DEPLOY_SPACES.md) hosting · [CHANGELOG.md](CHANGELOG.md)
+what changed
 
-[SPEC.md](SPEC.md) design · [RESULTS.md](evals/RESULTS.md) every number, the
-method behind it, and the ones that went down ·
-[CONTRIBUTING.md](CONTRIBUTING.md) the bar a change has to clear ·
-[AGENTS.md](AGENTS.md) the same bar plus the measurement traps, for coding agents ·
-[DEPLOY_SPACES.md](docs/DEPLOY_SPACES.md) hosting
+```bash
+python -m legal_agent.evaluation.mutation                # the checker's catch rate
+python -m legal_agent.evaluation.realworld --direction   # disputes it has never seen
+```
 
-**Found a wrong answer?** That is the most useful thing you can send — the
-[issue template](.github/ISSUE_TEMPLATE/wrong-answer.yml) asks for the wording
-you actually typed, which is how all 168 stored regression sessions began.
-
-Personal engineering experiment, **not legal advice**. [MIT](LICENSE).
+Personal project, **not legal advice**. [MIT](LICENSE).

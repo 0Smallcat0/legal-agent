@@ -26,6 +26,9 @@ PROPOSALS = (
     # Gap batch: statutes triage routes to (強制汽車責任保險法, 勞保條例, 就服法,
     # 性平法) that the bulk batch lacked.
     "moj_gap_v1_proposal.json",
+    # Procedure batch: 民事訴訟法 (which court track, the 裁判費, 支付命令 — what
+    # suing costs) and 鄉鎮市調解條例 (the free mediation the ladder points to).
+    "moj_procedure_v1_proposal.json",
     "noise_routing_proposal.json",
 )
 

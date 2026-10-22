@@ -198,6 +198,7 @@ def run_ablation(
     limit: int | None = None,
     on_progress: Callable[[str], None] | None = None,
     checkpoint_path: str | Path | None = None,
+    conditions: tuple[str, ...] = ("bare", "gated"),
 ) -> AblationReport:
     """Run every golden case through both conditions for each model.
 
@@ -209,6 +210,11 @@ def run_ablation(
     timeout) is retried once, then recorded as an "[ERROR] …" run and skipped
     in aggregates — one dead generation must not lose the batch. When
     `checkpoint_path` is set the report JSON is rewritten after every model.
+    `conditions` runs one arm alone, when the other was measured elsewhere
+    on the same cases and settings. With `checkpoint_path`, the JSON is also
+    rewritten after every case, and a run pointed at an existing file resumes:
+    case-runs already there (errors aside) are kept and not asked again — a
+    CPU run of one model is hours, and a restarted container must not cost it.
     """
     if llm_factory is None:
         from legal_agent.dialogue.ollama_llm import ollama_llm
@@ -221,11 +227,21 @@ def run_ablation(
         cases = cases[:limit]
 
     report = AblationReport()
+    done: set[tuple[str, str, str]] = set()
+    if checkpoint_path is not None and Path(checkpoint_path).exists():
+        for run in load_runs(checkpoint_path):
+            if run.answer.startswith("[ERROR]"):
+                continue
+            report.runs.append(run)
+            done.add((run.model, run.case_id, run.condition))
     with corpus_connection(conn) as conn:
         for model in models:
             llm = llm_factory(model)
             for i, case in enumerate(cases, 1):
-                for runner, condition in ((_run_bare, "bare"), (_run_gated, "gated")):
+                arms = ((_run_bare, "bare"), (_run_gated, "gated"))
+                for runner, condition in (a for a in arms if a[1] in conditions):
+                    if (model, case.get("id", ""), condition) in done:
+                        continue
                     run = None
                     for attempt in (1, 2):
                         try:
@@ -250,9 +266,63 @@ def run_ablation(
                     )
                 if on_progress:
                     on_progress(f"[{model}] {i}/{len(cases)} {case.get('id','')}")
-            if checkpoint_path is not None:
-                report.to_json(checkpoint_path)
+                if checkpoint_path is not None:
+                    report.to_json(checkpoint_path)
     return report
+
+
+# ── What an untraceable bare citation IS, against the national law list ──
+# 「Not traceable to the corpus」 mixes a real law the corpus does not hold with
+# a law that does not exist. The 全國法規資料庫 open data (law.moj.gov.tw
+# /api/Ch/Law/JSON and /api/Ch/Order/JSON, ~11,800 laws and regulations with
+# their articles) separates them without anyone's judgement.
+_MOJ_ARTICLE_RE = re.compile(r"第(\d+)(?:-(\d+))?條")
+BUCKETS = ("corpus verified", "real law, outside corpus", "real law, no such article",
+           "no such law")
+
+
+def load_official(paths) -> dict[str, set[str]]:
+    """law name -> its article numbers, in the corpus's 「第15-1條」 form."""
+    laws: dict[str, set[str]] = {}
+    for path in paths:
+        data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+        for law in data.get("Laws", []):
+            numbers = laws.setdefault(law["LawName"], set())
+            for article in law.get("LawArticles") or []:
+                m = _MOJ_ARTICLE_RE.match((article.get("ArticleNo") or "").replace(" ", ""))
+                if m:
+                    numbers.add(f"第{m.group(1)}條" if not m.group(2)
+                                else f"第{m.group(1)}-{m.group(2)}條")
+    return laws
+
+
+def classify_bare(runs: list[CaseRun], golden_path, official: dict[str, set[str]],
+                  conn=None) -> dict[str, dict[str, int]]:
+    """model -> bucket -> count, over the bare arm's citations (re-verified)."""
+    cases = {c.get("id", ""): c for c in load_golden_set(golden_path)}
+    out: dict[str, dict[str, int]] = {}
+    with corpus_connection(conn) as conn:
+        for run in runs:
+            if run.condition != "bare" or run.answer.startswith("[ERROR]"):
+                continue
+            counts = out.setdefault(run.model, dict.fromkeys(BUCKETS, 0))
+            case = cases.get(run.case_id, {})
+            for v in verify_answer(run.answer, [], as_of_date=case.get("as_of_date"), conn=conn):
+                sid, ano = v.citation.statute_id, v.citation.article_no
+                if not v.flagged:
+                    counts["corpus verified"] += 1
+                elif sid not in official:
+                    counts["no such law"] += 1
+                elif ano in official[sid]:
+                    counts["real law, outside corpus"] += 1
+                else:
+                    counts["real law, no such article"] += 1
+    return out
+
+
+def load_runs(path) -> list[CaseRun]:
+    return [CaseRun(**{**raw, "stats": CitationStats(**raw["stats"])})
+            for raw in json.loads(Path(path).read_text(encoding="utf-8"))]
 
 
 if __name__ == "__main__":  # python -m legal_agent.evaluation.ablation <golden.json>
@@ -268,13 +338,37 @@ if __name__ == "__main__":  # python -m legal_agent.evaluation.ablation <golden.
     parser.add_argument("--models", nargs="+", default=[config.OLLAMA_MODEL])
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--out", default=None, help="write per-run JSON here")
+    # 0.2 is what the published v2 run used; 0 makes a run repeatable
+    # (AGENTS.md trap 3), which is what a delta between models needs.
+    parser.add_argument("--temperature", type=float, default=0.2)
+    parser.add_argument("--conditions", nargs="+", choices=("bare", "gated"),
+                        default=["bare", "gated"])
+    parser.add_argument("--official", nargs="+", default=None,
+                        help="全國法規資料庫 ChLaw.json/ChOrder.json:把 bare 的未回溯引用分成"
+                             "「真實法規、語料外」與「不存在的法規/條號」")
+    parser.add_argument("--from-json", default=None,
+                        help="不呼叫模型,讀既有的 raw runs JSON(搭配 --official)")
     args = parser.parse_args()
     print_corpus_fingerprint()
 
+    if args.from_json:
+        rep = AblationReport(runs=load_runs(args.from_json))
+        print(rep.render())
+        if args.official:
+            for model, counts in classify_bare(rep.runs, args.golden,
+                                               load_official(args.official)).items():
+                total = sum(counts.values())
+                print(f"{model} bare {total} citations: " + ", ".join(
+                    f"{k} {n} ({n / total:.0%})" for k, n in counts.items()))
+        raise SystemExit(0)
+
+    from legal_agent.dialogue.ollama_llm import ollama_llm
+
     rep = run_ablation(
         args.golden, models=args.models, limit=args.limit,
+        llm_factory=lambda m: ollama_llm(model=m, timeout=1800.0, temperature=args.temperature),
         on_progress=lambda msg: print(msg, flush=True),
-        checkpoint_path=args.out,
+        checkpoint_path=args.out, conditions=tuple(args.conditions),
     )
     print(rep.render())
     if args.out:

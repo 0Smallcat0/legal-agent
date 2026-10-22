@@ -44,7 +44,7 @@ Every one of these produced a wrong number that was believed for a while.
    test run and a CLI run share it.
 2. **Dense retrieval fails SILENTLY.** Without Ollama + `bge-m3` +
    `python -m legal_agent.retrieval.dense`, hybrid retrieval degrades to pure
-   BM25 and recall drops 348/356 → 321/356 with no error. The harnesses print
+   BM25 and recall drops 349/356 → 321/356 with no error. The harnesses print
    `dense_fallbacks`; **confirm it is 0 before comparing any number to a
    published one.**
 3. **The golden-set grader must run at temperature 0.** At 0.2 the same code

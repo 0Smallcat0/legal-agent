@@ -265,9 +265,12 @@ with three swappable backends — `manual` (free, paste into any chat), `ollama`
 (free, local), `anthropic` (paid) — so the whole pipeline tests against a fake
 model: no network, no key. **Retrieval fires exactly once per consultation**, on
 the complete fact set after intake (multi-turn re-retrieval is the documented
-cause of RAG degradation) — enforced by a test, not a convention.
+cause of RAG degradation) — enforced by a test, not a convention. **Swapping the model is measured, not assumed**: llama3.1:8B and qwen3:4b
+score identically on the golden set — pass 19 / partial 7 / miss 0, tier 29/32,
+premise 32/32 — because those are decided by retrieval and by code; the model
+changes the prose and nothing that is scored.
 
-**Scope today.** One jurisdiction (Taiwan). 2,921 articles across 16 everyday
+**Scope today.** One jurisdiction (Taiwan). 3,758 articles across 18 everyday
 statutes, all in force, plus a police routing note and the corpus's first capped
 historical slice (one repealed version of 違反社會秩序維護法案件處理辦法§11), imported from the official 全國法規資料庫 bulk XML with the original
 hand-verified 11 articles kept as a character-for-character golden sample. One

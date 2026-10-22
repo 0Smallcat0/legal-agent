@@ -48,19 +48,22 @@ def test_marking_is_lossless():
 
 def test_the_corpus_counts_behind_this_choice_still_hold():
     """The pattern is the PAIR because either half alone is imprecise or noise:
-    「者」 is 71% of the corpus, and 但 alone runs to a different terminator in 312
-    articles. Numbers measured 2026-08-15; a drift means the tradeoff needs
-    re-reading, not that the test should be edited."""
+    「者」 is 68% of the corpus, and 但 alone runs to a different terminator in 410
+    articles. Numbers measured 2026-08-15 (223 / 312 / 2,066, 71%); re-read
+    2026-10-21 when 民事訴訟法 and 鄉鎮市調解條例 shipped: each of their 81 new
+    不在此限 articles slices to a verbatim 但…不在此限, and the misses are the same
+    old ones. A drift means the tradeoff needs re-reading, not that the test
+    should be edited."""
     conn = legal_agent.open_corpus()
     try:
         def count(sql):
             return conn.execute(sql).fetchone()[0]
 
         live = "SELECT COUNT(*) FROM statutes WHERE effective_to IS NULL"
-        assert count(f"{live} AND content LIKE '%不在此限%'") == 223
-        assert count(f"{live} AND content LIKE '%但%' AND content NOT LIKE '%不在此限%'") == 312
+        assert count(f"{live} AND content LIKE '%不在此限%'") == 304
+        assert count(f"{live} AND content LIKE '%但%' AND content NOT LIKE '%不在此限%'") == 410
         # 「…者」 was measured and rejected: register, not marker.
-        assert count(f"{live} AND content LIKE '%者%'") == 2066
+        assert count(f"{live} AND content LIKE '%者%'") == 2574
     finally:
         conn.close()
 

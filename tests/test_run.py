@@ -108,6 +108,18 @@ def test_the_web_and_the_cli_state_the_same_limits():
     assert "引用查核" in app._quiet_verification([])
 
 
+def test_the_web_page_shows_the_analysis_without_markdown():
+    # The deposit visitor on the Space read these characters literally.
+    import app
+
+    body = ("分析研判\n**押金返還**:房東須舉證。\n###\n建議承租人收集照片。\n"
+            "### 結論\n請先協商。")
+    shown = app._clean_section("分析研判(模型推論)", body)
+    assert "*" not in shown and "#" not in shown
+    assert shown.startswith("押金返還:房東須舉證。")
+    assert "建議承租人收集照片。" in shown and "結論\n請先協商。" in shown
+
+
 def test_placeholder_model_exits_cleanly(monkeypatch, capsys):
     monkeypatch.setattr(config, "load_env", lambda: None)
     monkeypatch.setattr(config, "LLM_PROVIDER", "anthropic")         # test the paid path's guard

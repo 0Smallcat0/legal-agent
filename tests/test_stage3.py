@@ -229,7 +229,7 @@ def test_a_statute_section_emptied_by_the_move_is_rebuilt_from_the_corpus():
 
 def test_markdown_headings_get_the_same_gate():
     """Qwen2.5 writes 「### 法律明文」 on every answer; the bold-only pattern let its
-    inference sit under the statute heading unmoved (RESULTS.md §10)."""
+    inference sit under the statute heading unmoved (RESULTS.md §12)."""
     answer = (
         "### 法律明文\n\n"
         "1. 由自己之行為表示以代理權授與他人，或知他人表示為其代理人而不為反對之表示者，"

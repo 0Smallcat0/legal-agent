@@ -259,6 +259,22 @@ def test_non_noise_problem_reaches_ready_via_its_own_checklist():
     assert "problem" not in s.collected_facts
 
 
+def test_the_opener_promises_no_fewer_questions_than_follow():
+    # The Space told this visitor 「再問一件事就好」 and then asked three.
+    s = SessionState()
+    opener = None
+    for msg in ("退租後房東說房子有損耗,要扣我兩個月押金,合理嗎?",
+                "月租一萬二,押金兩個月,有書面租約",
+                "要扣全部兩萬四,說牆壁髒、地板有刮痕",
+                "入住時有拍照,搬走時沒拍。9月30日搬走"):
+        reply, s = handle_turn(s, msg)
+        if opener is None and "件事" in reply:
+            opener = reply
+    assert s.stage == Stage.READY_FOR_STAGE3
+    promised = {"一": 1, "兩": 2, "三": 3}[opener.split("再問")[1][0]]
+    assert len(s.asked_keys) <= promised
+
+
 if __name__ == "__main__":
     import pytest
 

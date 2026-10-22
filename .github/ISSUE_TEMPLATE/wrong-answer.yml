@@ -1,58 +1,54 @@
-name: Wrong answer or off-topic articles
-description: A consultation where the retrieved articles or the answer were wrong. The most useful report you can file.
+name: 答錯了 / 法條不相關 (Wrong answer or off-topic articles)
+description: 一次諮詢的法條或回答不對。這是最有用的回報。
 labels: ["wrong-answer"]
 body:
   - type: markdown
     attributes:
       value: |
-        Every one of the 168 stored regression sessions started as a report like
-        this. What matters most is **the wording you actually typed** — not a
-        tidied-up legal summary of it. Half the defects found so far were a
-        retrieval row failing to fire on how a real person states the problem.
+        最有用的是**你當時輸入的原話**，不用整理成法律用語：很多問題都出在系統沒認出一般人的說法。
 
-        Please do not paste anything you would not want public: this repository
-        is public, and so is the issue.
+        這裡是公開的，請不要貼姓名、地址、電話這類個人資料。
   - type: textarea
     id: input
     attributes:
-      label: What you typed, verbatim
-      description: Your own words, uncorrected. If you went through the intake questions, include those answers too.
+      label: 你輸入的原話 (What you typed, verbatim)
+      description: 照原樣貼上，不用修改。如果有回答它追問的問題，也一起貼上。
       placeholder: 退租三個月了房東還是不退押金，說要抵修繕費，但我搬走前有拍照
     validations:
       required: true
   - type: textarea
     id: got
     attributes:
-      label: What came back
-      description: Paste the 法律明文 block and, if you can, the retrieval window printed under the answer.
+      label: 它的回答 (What came back)
+      description: 貼上「法律明文」那一段；能的話也貼答案下面列出的法條清單。
     validations:
       required: true
   - type: textarea
     id: expected
     attributes:
-      label: Which article should have been there
-      description: If you know it, name it (e.g. 民法第455條). If you only know the answer felt wrong, say that — an unnamed miss is still a report worth having.
+      label: 應該出現哪一條 (Which article should have been there)
+      description: 知道的話寫出來（例如 民法第455條）。只覺得不對、說不出哪一條也沒關係，照樣很有用。
     validations:
       required: false
   - type: dropdown
     id: shape
     attributes:
-      label: Which of these fits, if any
-      description: These are failure shapes already named in RESULTS.md. Guessing is fine.
+      label: 比較像哪一種 (Which of these fits, if any)
+      description: 用猜的就好。
       options:
-        - The window answered the wrong question entirely
-        - The right articles were there but the answer ignored them
-        - The article the other side relies on was missing
-        - It agreed with a premise I had already ruled out
-        - An irrelevant statute took up most of the window
-        - Not sure
+        - 整個答非所問 (The window answered the wrong question entirely)
+        - 對的法條有出現，但回答沒用到 (The right articles were there but the answer ignored them)
+        - 少了對方會拿來主張的那一條 (The article the other side relies on was missing)
+        - 我已經說不是那樣，它還照那樣答 (It agreed with a premise I had already ruled out)
+        - 一部不相關的法規佔了大半 (An irrelevant statute took up most of the window)
+        - 不確定 (Not sure)
     validations:
       required: false
   - type: input
     id: backend
     attributes:
-      label: Model backend
-      description: config.LLM_PROVIDER — manual, ollama (which model?), or anthropic.
-      placeholder: ollama / llama3.1:8b
+      label: 在哪裡用的 (Where you ran it)
+      description: 網頁版就寫「網頁版」；在自己電腦上跑的，寫用的模型（例如 ollama / llama3.1）。
+      placeholder: 網頁版
     validations:
       required: false

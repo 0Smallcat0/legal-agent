@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "legal-agent"
-version = "0.1.0"
+version = "0.3.0"
 description = "Retrieval-augmented legal Q&A whose citations are verified by code, with the verifier itself graded by seeded defects"
 readme = "README.md"
 license = { file = "LICENSE" }
@@ -30,7 +30,7 @@ anthropic = ["anthropic>=0.116.0", "python-dotenv>=1.0.0"]
 dev = ["pytest>=8.0.0", "ruff>=0.15.0"]
 # The Space's model and embedding backends (dialogue/hf_llm.py, LEGAL_AGENT_EMBED=st).
 # torch>=2.8 because ZeroGPU supports nothing older; the pins are the set
-# evals/RESULTS.md §10 was measured with.
+# evals/RESULTS.md §12 was measured with.
 space = [
     "torch>=2.8.0",
     "transformers==5.20.2",

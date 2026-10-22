@@ -24,6 +24,7 @@ HF Spaces:  live at huggingface.co/spaces/NoirOAO/legal-agent-demo. Deploying is
 """
 from __future__ import annotations
 
+import re
 import threading
 from html import escape
 
@@ -216,15 +217,14 @@ h4.blockhead {margin:16px 0 2px; font-size:var(--fs-title); font-weight:600; col
 HERO = """
 <div class="hero">
   <h1>Legal Agent</h1>
-  <p class="sub">問診式法律諮詢:先收集事實,資料齊備才檢索一次並作答;每筆引用經「存在、內容、時效」查核。</p>
-  <p class="meta">植入錯誤抓取率 24 類全數 100%(零誤報) · 386 篇實際判決佐證 · 不需任何 API 金鑰</p>
+  <p class="sub">花錢請律師之前,先把自己的處境搞懂:說出你遇到的事、回答幾個問題,就會看到適用的法條原文、白話說明,和從不花錢到上法院的處理步驟。</p>
+  <p class="meta">免費、不用註冊 · 回答引用的每一條法條都拿官方條文查核過 · 附引用相同法條的法院判決供參考</p>
 </div>
 """
 
 FOOTER = """
-<p class="disclaimer">工程實驗,非法律意見,不能取代律師。法源為全國法規資料庫官方
-公開資料逐字匯入(16 部民生法規 2,921 條現行條文+1 個歷史版本+警察分工實務指引);「住宅噪音」有專屬問診流程,
-其他問題走通用流程。資料庫未涵蓋的領域,系統會直接說不知道。</p>
+<p class="disclaimer">這是參考工具,不是法律意見,也不能取代律師。法條逐字取自全國法規資料庫的官方公開資料
+(18 部民生法規、3,758 條現行條文),參考判決取自司法院公開的 435 篇法院判決。資料庫沒有涵蓋的問題,系統會直接說不知道,不會硬答。</p>
 """
 
 # Placeholder for the result column before the first consultation completes —
@@ -335,10 +335,21 @@ def _retr_cards(scored, with_fulltext: bool = False) -> str:
     return "".join(cards)
 
 
+_MD_EMPHASIS = re.compile(r"\*\*|__")
+_MD_HEADING = re.compile(r"^[ \t]*#{1,6}[ \t]*", re.MULTILINE)
+
+
+def _plain(text: str) -> str:
+    """These cards show plain text, so the model's markdown reached the visitor
+    as literal 「**」 and a lone 「###」 line (the deposit case on the Space)."""
+    text = _MD_HEADING.sub("", _MD_EMPHASIS.sub("", text))
+    return re.sub(r"\n{3,}", "\n\n", text)
+
+
 def _clean_section(title: str, body: str) -> str:
-    """Strip the model's markdown-bold remnants and duplicated heading."""
+    """Strip the model's markdown and the duplicated heading."""
     base = title.split("(")[0]
-    text = body
+    text = _plain(body)
     for _ in range(3):
         text = text.strip().strip("*:：」「").strip()
         if text.startswith(base):
@@ -361,7 +372,7 @@ def _sections_html(result) -> str:
     if not blocks:   # model skipped the headings — show the raw answer, flagged
         return (
             '<div class="note">模型未依三段格式作答,以下為原文。</div>'
-            f'<div class="seccard"><div class="b">{escape(result.answer)}</div></div>'
+            f'<div class="seccard"><div class="b">{escape(_plain(result.answer))}</div></div>'
         )
 
     # Reference judgments — deterministic join on the retrieved articles,
@@ -434,9 +445,18 @@ def _space_llm(prompt: str) -> str:
 
 
 def _analysis_llm():
-    if ollama_available():
+    if ollama_available(model=config.OLLAMA_MODEL):
         return ollama_llm()
-    return _space_llm if _SPACE_LLM is not None else _stub_llm
+    if _SPACE_LLM is not None:
+        return _space_llm
+    if ollama_available():
+        model = config.OLLAMA_MODEL
+        return lambda prompt: _stub_llm(
+            prompt,
+            f"本機 Ollama 有在跑,但還沒下載模型 {model}。在終端機執行 "
+            f"`ollama pull {model}` 後重新諮詢,可取得此段分析。",
+        )
+    return _stub_llm
 
 
 def _clean_ladder(text: str) -> str:
@@ -528,7 +548,7 @@ def consult_step(message: str, history: list[dict], state: SessionState):
     # Without one the scripted checklist runs, which keeps this demo working on
     # HF Spaces free CPU with no keys.
     history = [*history, {"role": "user", "content": message}]
-    if ollama_available():
+    if ollama_available(model=config.OLLAMA_MODEL):
         reply, state = handle_turn_smart(
             state, message, history, ollama_llm(fmt="json"),
         )
@@ -616,9 +636,9 @@ STATS = """
 <div class="statgrid">
   <div class="stat"><div class="num">24 類 100%</div><div class="lbl">植入錯誤抓取率(零誤報)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">法條涵蓋率(含部分命中;嚴格 73%)</div></div>
-  <div class="stat"><div class="num">386</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
+  <div class="stat"><div class="num">435</div><div class="lbl">收錄判決(判賠金額逐字讀自主文)</div></div>
   <div class="stat"><div class="num">100%</div><div class="lbl">錯誤前提偵測(32/32)</div></div>
-  <div class="stat"><div class="num">18/20 · 2/15</div><div class="lbl">範圍外拒答 / 語料內誤拒(兩個方向都量)</div></div>
+  <div class="stat"><div class="num">16/20 · 2/15</div><div class="lbl">範圍外拒答 / 語料內誤拒(兩個方向都量;少的 2 題問民事訴訟法,已補進語料)</div></div>
   <div class="stat"><div class="num">67% → 5%</div><div class="lbl">使用者只能盲信的引用比例(裸模型 vs 五閘門)</div></div>
 </div>
 """
@@ -661,7 +681,7 @@ def _build_dense_index() -> None:
 
 if config.EMBED_BACKEND == "st":
     # In a thread: embedding the corpus on CPU took 578 s locally (RESULTS.md
-    # §10), and the page is usable meanwhile — retrieval is BM25 alone until
+    # §12), and the page is usable meanwhile — retrieval is BM25 alone until
     # the index file exists, exactly as after a plain `pip install`.
     threading.Thread(target=_build_dense_index, daemon=True).start()
 
@@ -730,9 +750,9 @@ with gr.Blocks(title="Legal Agent") as demo:
 
     with gr.Tab("法規檢索"):
         gr.Markdown(
-            "資料庫收錄 16 部民生法規、2,921 條現行條文(民法、刑法、消保法、勞基法、"
+            "資料庫收錄 18 部民生法規、3,758 條現行條文(民法、刑法、消保法、勞基法、"
             "勞保條例、就服法、性平工作法、個資法、道交條例、強制車險法、公寓大廈、"
-            "租賃住宅、家暴法、噪音管制、社維法及其處理辦法)。\n\n"
+            "租賃住宅、家暴法、噪音管制、社維法及其處理辦法、民事訴訟法、鄉鎮市調解條例)。\n\n"
             "同一事實、不同基準日:2025-06-11 生效的社維法第72條,在 2024 時點不會成為候選。"
         )
         q_in = gr.Textbox(value=DEFAULT_QUERY, label="事實描述")

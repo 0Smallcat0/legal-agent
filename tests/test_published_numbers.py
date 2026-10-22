@@ -59,17 +59,17 @@ def test_every_prose_corpus_count_matches_the_corpus(shipped_conn):
     """
     statutes, articles, judgments = _corpus_counts(shipped_conn)
     expected = [
-        # README — the sentence that frames the whole worked example
-        ("README.md", f"{articles:,} articles across {statutes} everyday statutes"),
-        ("README.md", f"{judgments} real court judgments"),
+        # README — the scope sentence a visitor reads first
+        ("README.md", f"涵蓋 {statutes} 部民生法規"),
+        ("README.md", f"共 {articles:,} 條現行條文，和 {judgments} 則法院判決"),
+        ("README.md", f"the {judgments} judgments are all in the repo"),
         # SPEC.md — the scope paragraph
         ("SPEC.md", f"{articles:,} articles across {statutes} everyday"),
         # the CLI's opening line
         ("legal_agent/run.py", f"語料為 {statutes} 部民生法規"),
-        # the demo: footer disclaimer, 法規檢索 tab, hero line
-        ("app.py", f"{statutes} 部民生法規 {articles:,} 條現行條文"),
-        ("app.py", f"{statutes} 部民生法規、{articles:,} 條現行條文"),
-        ("app.py", f"{judgments} 篇實際判決佐證"),
+        # the demo: footer disclaimer, 法規檢索 tab
+        ("app.py", f"({statutes} 部民生法規、{articles:,} 條現行條文),參考判決取自司法院公開的 {judgments} 篇"),
+        ("app.py", f"資料庫收錄 {statutes} 部民生法規、{articles:,} 條現行條文"),
     ]
     wrong = [(name, text) for name, text in expected if text not in _read(name)]
     assert not wrong, (

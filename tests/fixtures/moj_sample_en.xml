@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Laws UpdateDate="2026/10/8 上午 12:00:00">
+  <Law>
+    <LawLevel>法律</LawLevel>
+    <LawName>測試噪音管制法</LawName>
+    <LawURL>https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=T0000001</LawURL>
+    <LawCategory>行政＞環境部＞噪音管制目</LawCategory>
+    <LawModifiedDate>20211208</LawModifiedDate>
+    <LawEffectiveDate>
+    </LawEffectiveDate>
+    <LawEffectiveNote>
+    </LawEffectiveNote>
+    <LawAbandonNote>
+    </LawAbandonNote>
+    <LawHasEngVersion>N</LawHasEngVersion>
+    <EngLawName>
+    </EngLawName>
+    <LawAttachements />
+    <LawHistories>1.中華民國八十一年二月一日制定</LawHistories>
+    <LawForeword>
+    </LawForeword>
+    <LawArticles>
+      <Article>
+        <ArticleType>C</ArticleType>
+        <ArticleNo>
+        </ArticleNo>
+        <ArticleConctent>   第 一 章 總則</ArticleConctent>
+      </Article>
+      <Article>
+        <ArticleType>A</ArticleType>
+        <ArticleNo>第 1 條</ArticleNo>
+        <ArticleConctent>為維護國民健康及環境安寧,提高國民生活品質,特制定本測試法。</ArticleConctent>
+      </Article>
+      <Article>
+        <ArticleType>A</ArticleType>
+        <ArticleNo>第 9-1 條</ArticleNo>
+        <ArticleConctent>測試近鄰噪音,處新臺幣三千元以下罰鍰。</ArticleConctent>
+      </Article>
+      <Article>
+        <ArticleType>A</ArticleType>
+        <ArticleNo>第 99 條</ArticleNo>
+        <ArticleConctent>
+        </ArticleConctent>
+      </Article>
+    </LawArticles>
+  </Law>
+  <Law>
+    <LawLevel>命令</LawLevel>
+    <LawName>測試噪音管制標準</LawName>
+    <LawURL>https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=T0000002</LawURL>
+    <LawModifiedDate>1100120</LawModifiedDate>
+    <LawEffectiveDate>
+    </LawEffectiveDate>
+    <LawAbandonNote>
+    </LawAbandonNote>
+    <LawArticles>
+      <Article>
+        <ArticleType>A</ArticleType>
+        <ArticleNo>第 2 條</ArticleNo>
+        <ArticleConctent>測試噪音管制區分為四類。</ArticleConctent>
+      </Article>
+    </LawArticles>
+  </Law>
+  <Law>
+    <LawLevel>法律</LawLevel>
+    <LawName>測試已廢止法</LawName>
+    <LawURL>https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=T0000003</LawURL>
+    <LawModifiedDate>20200101</LawModifiedDate>
+    <LawEffectiveDate>
+    </LawEffectiveDate>
+    <LawAbandonNote>廢</LawAbandonNote>
+    <LawArticles>
+      <Article>
+        <ArticleType>A</ArticleType>
+        <ArticleNo>第 1 條</ArticleNo>
+        <ArticleConctent>本測試法已廢止。</ArticleConctent>
+      </Article>
+    </LawArticles>
+  </Law>
+  <Law>
+    <LawLevel>法律</LawLevel>
+    <LawName>測試尚未施行法</LawName>
+    <LawURL>https://law.moj.gov.tw/LawClass/LawAll.aspx?pcode=T0000005</LawURL>
+    <LawModifiedDate>20250101</LawModifiedDate>
+    <LawEffectiveDate>99991231</LawEffectiveDate>
+    <LawAbandonNote>
+    </LawAbandonNote>
+    <LawArticles>
+      <Article>
+        <ArticleType>A</ArticleType>
+        <ArticleNo>第 1 條</ArticleNo>
+        <ArticleConctent>本測試法之修正尚未施行。</ArticleConctent>
+      </Article>
+    </LawArticles>
+  </Law>
+  <Law>
+    <LawLevel>自治條例</LawLevel>
+    <LawName>測試市噪音自治條例</LawName>
+    <LawModifiedDate>20230601</LawModifiedDate>
+    <LawEffectiveDate>
+    </LawEffectiveDate>
+    <LawAbandonNote>
+    </LawAbandonNote>
+    <LawArticles>
+      <Article>
+        <ArticleType>A</ArticleType>
+        <ArticleNo>第 1 條</ArticleNo>
+        <ArticleConctent>測試市為防制噪音,特制定本自治條例。</ArticleConctent>
+      </Article>
+    </LawArticles>
+  </Law>
+</Laws>
