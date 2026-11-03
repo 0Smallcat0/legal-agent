@@ -1090,6 +1090,29 @@ Each of these looked obviously right and lost on the numbers:
   governing article. On 退租押金 itself, BM25 only, §685/§686/刑法§42 do leave —
   and so do 民法§440/§450 and 租賃條例§10, replaced by 勞基法§9-1, 個資法§5 and
   勞保條例§14.
+- **replacing bge-m3 with a newer embedding model (2026-11-03).** Same corpus
+  (3,759 current slices), `real_recall` k=8, `dense_fallbacks` 0 on every arm;
+  BM25 alone 319/356, **bge-m3 348/356** (the published number, reproduced).
+  `taide/embeddinggemma-GTAIDE-300m-2605` (Q8_0 GGUF, fine-tuned on the national
+  law database) 333/356 with its documented query/document prefixes and
+  337/356 without them; `qwen3-embedding:4b` 342/356. qwen3-embedding is far
+  better ALONE — dense-only hit@8 211/356 against bge-m3's 111/356 — but the
+  hybrid's lexicon rows, floor and reserved seats were tuned with bge-m3 in the
+  dense half, and the published number went down. A dense swap would have to
+  re-tune those against a held-out set first.
+
+## §9a — Measured, then shipped by configuration only
+
+- **qwen3.5:9b as the local generator (2026-11-03).** `golden_set` on golden_v2
+  at temperature 0, `LEGAL_AGENT_OLLAMA_THINK=false`, bge-m3 hybrid,
+  `dense_fallbacks` 0: llama3.1:latest pass 20 / partial 6 / miss 0, tier
+  29/32, premise 32/32, **verifier-flagged citations 20**; qwen3.5:9b pass 19 /
+  partial 7 / miss 0, tier 29/32, premise 32/32, **flagged citations 1**. The
+  coverage split is inside the sampling spread already documented above; the
+  flagged count is the number that moved. Switched on the author's machine
+  through `LEGAL_AGENT_OLLAMA_MODEL` / `LEGAL_AGENT_OLLAMA_THINK` (user
+  environment), not in `config.py`, so every published llama3.1 figure keeps its
+  provenance.
 
 ## §10 — does each kind of dispute have a judgment to point at? (2026-10-20, backfilled 2026-10-21)
 
