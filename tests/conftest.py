@@ -23,6 +23,14 @@ def _dense_off(monkeypatch):
     monkeypatch.setattr(config, "DENSE_RETRIEVAL", "off")
 
 
+@pytest.fixture(autouse=True)
+def _ollama_defaults(monkeypatch):
+    """A developer's own LEGAL_AGENT_OLLAMA_MODEL / _THINK must not change what
+    the tests assert; pin both to the values an unset environment gives."""
+    monkeypatch.setattr(config, "OLLAMA_MODEL", "llama3.1:latest")
+    monkeypatch.setattr(config, "OLLAMA_THINK", None)
+
+
 NOISE_FIXTURE = Path(__file__).with_name("fixtures") / "noise_corpus.json"
 
 
