@@ -22,6 +22,8 @@ import re
 import sqlite3
 from dataclasses import dataclass
 from datetime import date
+from functools import lru_cache
+from pathlib import Path
 
 from legal_agent.anti_hallucination.answer_structure import (
     _LAW_HEADING_RE,
@@ -601,6 +603,27 @@ def _is_name_qualifier(prefix: str) -> bool:
     return len(prefix) <= 4 and bool(_TIER3_REGION_SUFFIX_RE.search(prefix))
 
 
+@lru_cache(maxsize=1)
+def _real_law_names() -> tuple[str, ...]:
+    """Complete names of the real 法律-level statutes (全國法規資料庫 ChLaw),
+    longest first, from corpus/law_names_v1.txt (`#` lines are comments)."""
+    path = Path(__file__).resolve().parents[1] / "corpus" / "law_names_v1.txt"
+    names = [
+        line.strip()
+        for line in path.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.startswith("#")
+    ]
+    return tuple(sorted(names, key=len, reverse=True))
+
+
+def _longest_real_law_name(run: str, known_ids: set[str]) -> str:
+    """The longest real law name `run` ends with that is NOT a corpus id, or ''."""
+    for name in _real_law_names():
+        if run.endswith(name) and name not in known_ids:
+            return name
+    return ""
+
+
 def _strip_particle(name_run: str) -> str:
     """The name without the prose particle glued to its front (依/按/及…)."""
     for particle in _LEADING_PARTICLES:
@@ -617,6 +640,12 @@ def _resolve_id(name_run: str, known_ids: set[str]) -> str:
 
     Tier 2 — strip leading particles one at a time, checking known_ids after
     each (prose stacks them: 「並依據」), then try `_ALIASES` once.
+
+    Before Tier 3 — the run is compared with the COMPLETE names of the real laws
+    the corpus lacks (`law_names_v1.txt`): 「入出國及移民法」 ends with 民法 and
+    「金融消費者保護法」 with 消費者保護法, but neither is that law, and no
+    nation/era/region reject-list can tell. A longer real name wins over the
+    shorter corpus suffix and is returned unresolved (flagged).
 
     Tier 3 — longest known_id suffix, unless the leftover prefix is a
     name-type qualifier (`_is_name_qualifier`). A reject-list, because the
@@ -638,6 +667,13 @@ def _resolve_id(name_run: str, known_ids: set[str]) -> str:
     if canonical is not None and canonical in known_ids:
         return canonical
     matches = [kid for kid in known_ids if current.endswith(kid)]
+    real = _longest_real_law_name(current, known_ids)
+    if real and (not matches or len(real) > len(max(matches, key=len))):
+        # The run ends with the COMPLETE name of a real law the corpus does not
+        # hold, and that name is longer than the corpus id the suffix match
+        # would have taken (入出國及移民法 ends with 民法). Return the real name:
+        # it is not a known id, so the citation is flagged as 查無此法源.
+        return real
     if matches:
         best = max(matches, key=len)
         prefix = current[: -len(best)]
