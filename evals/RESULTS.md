@@ -705,6 +705,70 @@ this one was not.
 python -m legal_agent.evaluation.judge_direction --lexical  # no model, re-runs identically
 ```
 
+### §7.2 — Jev, a calibrated yes/no model, on the same two questions (2026-11-17)
+
+§7.1 and the semantic row of §1 are both yes/no questions that local 7–8B models
+could not answer. Jev (`jev-1.13-free`, OpenCode Zen's free tier, called with no
+key) answers a yes/no question with a probability, so the threshold can be swept
+instead of fixed. `legal_agent/evaluation/jev_measure.py` sends each question
+once, stores the probability, and tables every threshold offline. Every reply is
+checked for `billing_source == "free"` and cost 0, and HTTP 401/402/403/404 stop
+the run; nothing was paid or registered. What was sent is already public in this
+repo: the person's description and the generated answer (direction), the claim
+sentence and the verbatim article (semantic).
+
+**Direction — the 5 wrong / 11 right set of §7.1.** The question, written before
+the first call and not changed: 「這段回答的結論方向是否站不站得住?」 (answer
+YES = does not hold). Two passes; the two differ by at most 0.02 per case.
+
+| flag when p ≥ t | wrong direction caught /5 | right direction flagged /11 | flagged of 24 |
+|---|---|---|---|
+| 0.05 – 0.1 | 5, 5 | 11, 11 | 24, 24 |
+| 0.3 | 5, 5 | 11, 10 | 22, 21 |
+| 0.5 | **5, 5** | **7, 7** | 17, 18 |
+| 0.7 | 2, 2 | 5, 5 | 11, 11 |
+| 0.8 | 2, 2 | 3, 3 | 8, 9 |
+| 0.9 | 1, 1 | 0, 1 | 2, 3 |
+| 0.95 – 0.99 | 0, 0 | 0, 0 | 0, 0 |
+
+Against §7.1 (Qwen2.5 and Llama3.1 caught 3/5 and flagged 8/11): at p ≥ 0.5 Jev
+catches all 5 and flags 7 of the 11 right answers, a 64% false-flag rate, on 17
+of 24 answers flagged. Moving the threshold trades one for the other along a
+single line: the first point that stops flagging most right answers (0.7) catches
+2/5. The rank-based reading, which needs no threshold: the chance a wrong answer
+gets a higher p than a right one is **0.64 / 0.65** (0.5 = no separation). The
+wrong answers' p run 0.60–0.92, the right ones' 0.30–0.89 — they overlap through
+the middle. **Same verdict as §7.1: it does not separate the two groups; not
+shipped.** The 11 and 5 are small (one case = 9–20 points) and any threshold read
+off this table is graded on its own training set.
+
+**Semantic 4th axis — the `mutation --semantic` set: not measured.** The set is
+3,790 questions: the 32 planted `_SUBJECT_SWAPS` errors and the 3,758 correct
+citations (one per article of the shipped corpus). The first run got about 1,000
+answers in before the free tier answered, in full:
+
+```
+HTTP/1.1 429 Too Many Requests      Retry-After: 53469
+{"type":"error","error":{"type":"FreeUsageLimitError","message":"Free usage limit reached. Free models work in OpenCode (https://opencode.ai); subscribe to OpenCode Go to keep going: https://opencode.ai/go"}}
+```
+
+(2026-11-17 ≈ 17:15 Taiwan time; the retry window is about 14.9 hours.) That run
+had no checkpoint, so those answers were lost; the harness now checkpoints to
+`evals/jev_run1.partial.json`, asks the 32 swaps first and the controls in hash
+order (a stop part-way leaves a random sample of controls, not the first N
+articles), and treats a 429 with a long Retry-After as a stop, not a wait. The
+semantic table in the 43% row therefore has **no Jev figure yet**. The
+billing guard did not trigger: the reply was a rate limit, `billing_source` was
+never anything but `free`. A smoke test of the table code on made-up
+probabilities (0.9 for every swap, 0.1 for every control) returned 32/32 caught
+and 0/3,758 flagged at t = 0.5, as it must.
+
+```bash
+python -m legal_agent.evaluation.jev_measure direction   # 48 calls, needs no key
+python -m legal_agent.evaluation.jev_measure semantic    # 3,790 calls; resumes after a 429
+python -m legal_agent.evaluation.jev_measure report      # re-print evals/jev_run1.json
+```
+
 ## §8 — the seat the user is sitting in
 
 **2026-08-15. The owner brought a live dispute of his own and he is the party
