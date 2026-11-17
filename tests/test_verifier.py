@@ -549,6 +549,42 @@ def test_country_era_region_prefixed_statute_names_are_flagged(label, answer, pr
     assert r.flagged is True, (label, r.citation.statute_id, r.exists, r.reason)
 
 
+# A REAL statute the corpus does not carry whose name merely ENDS with a corpus
+# statute_id. Tier 3's longest-suffix match resolved both to the corpus law
+# (2026-10-25 live run), and since the article number is one the corpus law really
+# has, the citation came back exists=True, flagged=False. Neither prefix is a
+# nation/era/region qualifier, so the Tier-3 reject-list cannot see them; the
+# complete name has to be compared first (evals/RESULTS.md §14).
+_REAL_LAW_SUFFIX_COLLISIONS = [
+    ("入出國及移民法", "依入出國及移民法第184條,負損害賠償責任。", "民法"),
+    ("金融消費者保護法", "依金融消費者保護法第19條,消費者得於七日內解除契約。", "消費者保護法"),
+]
+
+
+@pytest.mark.parametrize(
+    "real_name,answer,corpus_law", _REAL_LAW_SUFFIX_COLLISIONS,
+    ids=[c[0] for c in _REAL_LAW_SUFFIX_COLLISIONS],
+)
+def test_real_law_whose_name_ends_with_a_corpus_law_is_not_resolved_to_it(
+    real_name, answer, corpus_law, live_conn,
+):
+    r = verify_answer(answer, [], conn=live_conn)[0]
+    assert r.citation.statute_id == real_name, (r.citation.statute_id, r.reason)
+    assert r.flagged is True and r.exists is False, (r.exists, r.reason)
+    assert real_name in r.reason, r.reason
+
+
+def test_real_law_name_check_leaves_the_corpus_laws_and_their_prose_prefixes_alone(live_conn):
+    for answer, expected in [
+        ("依民法第184條,負損害賠償責任。", "民法"),
+        ("房客依消費者保護法第19條,得解除契約。", "消費者保護法"),
+        ("金融機構依消費者保護法第19條,應告知。", "消費者保護法"),
+    ]:
+        r = verify_answer(answer, [], conn=live_conn)[0]
+        assert r.citation.statute_id == expected, (answer, r.citation.statute_id)
+        assert r.exists is True, (answer, r.reason)
+
+
 _PREFIX_GATE_TRUE_POSITIVES = [
     ("依民法", "依民法第440條,規定內容。", "民法", "第440條"),
     ("按民法", "按民法第440條,規定內容。", "民法", "第440條"),

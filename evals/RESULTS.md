@@ -1717,6 +1717,48 @@ python -m legal_agent.evaluation.honesty_probe    # 16/20 · 2/15
 python -m pytest tests/test_litigation_rung.py tests/test_retriever.py -q
 ```
 
+## §14 — a real law whose name ends with a corpus law (2026-11-17)
+
+`_resolve_id` Tier 3 takes the longest corpus statute_id the cited name ENDS
+with, and refuses the leftover prefix only if it is a nation, era or region
+(§6.1's reject-list). A real statute the corpus does not carry, whose name merely
+ends with one that it does, has a prefix of neither kind and was resolved to the
+corpus law (found 2026-10-25 on a live run):
+
+| cited | resolved to (before) | now |
+|---|---|---|
+| 入出國及移民法第184條 | 民法 — exists, not flagged | 入出國及移民法 — flagged, 查無此法源 |
+| 金融消費者保護法第19條 | 消費者保護法 — exists, not flagged | 金融消費者保護法 — flagged, 查無此法源 |
+
+The article number in both was one the corpus law really has, which is why the
+old resolver returned `exists=True`.
+
+Fix: before Tier 3, the run is compared with the complete names of the real
+法律/憲法-level statutes (`legal_agent/corpus/law_names_v1.txt`, 1,351 names from
+the 全國法規資料庫 `ChLaw.json`, downloaded 2026-11-17). When the run ends with a
+real name that is not a corpus id and is longer than the corpus suffix it would
+have matched, that real name is returned and the citation is flagged as absent.
+
+- **Which number moves.** None of the published ones: blindspots stays **21/25**
+  and `mutation` stays 0 false positives on 3,758 controls with every kind at 100%.
+  The two cases are not in the frozen 25 (the denominator stays frozen, see
+  `blindspots.py`); they are `test_real_law_whose_name_ends_with_a_corpus_law_is_not_resolved_to_it`
+  in `tests/test_verifier.py`, written first and red (`statute_id` 民法,
+  `flagged` False) before the change.
+- **Scope of the check.** Against the 19 statute_ids in the shipped corpus, only
+  these two real names — among all 11,805 法律 and 命令 names (`ChLaw` + `ChOrder`)
+  — end with one. The 命令-level names are therefore not shipped; when the corpus
+  gains a law, re-run that comparison before trusting the 法律-only list.
+- **What it does not cover.** A law that does not exist (「噪音防制法」) was
+  already flagged; this only closes the case where the made-up-looking name is
+  real. A real law absent from the 2026-11-17 list (enacted later) is not seen.
+
+```bash
+python -m pytest tests/test_verifier.py -q -k real_law   # 3 passed
+python -m legal_agent.evaluation.blindspots              # 21/25
+python -m legal_agent.evaluation.mutation                # all kinds 100%, controls 3758/3758
+```
+
 ## More
 
 [`HISTORY.md`](HISTORY.md) — how each number was arrived at: the three defect
