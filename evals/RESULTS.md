@@ -742,7 +742,7 @@ the middle. **Same verdict as §7.1: it does not separate the two groups; not
 shipped.** The 11 and 5 are small (one case = 9–20 points) and any threshold read
 off this table is graded on its own training set.
 
-**Semantic 4th axis — the `mutation --semantic` set: not measured.** The set is
+**Semantic 4th axis — the `mutation --semantic` set: partial (all 32 swaps, 1,042 of 3,758 controls).** The set is
 3,790 questions: the 32 planted `_SUBJECT_SWAPS` errors and the 3,758 correct
 citations (one per article of the shipped corpus). The first run got about 1,000
 answers in before the free tier answered, in full:
@@ -757,7 +757,33 @@ had no checkpoint, so those answers were lost; the harness now checkpoints to
 `evals/jev_run1.partial.json`, asks the 32 swaps first and the controls in hash
 order (a stop part-way leaves a random sample of controls, not the first N
 articles), and treats a 429 with a long Retry-After as a stop, not a wait. The
-semantic table in the 43% row therefore has **no Jev figure yet**. The
+first run's figure was lost. The second run (2026-11-18, after the window) got
+1,074 answers in — all 32 swaps and **1,042 of the 3,758 controls, a random sample
+because they are asked in hash order** — before the free tier stopped it again
+(HTTP 429, Retry-After 84,875 s ≈ 23.6 h). Table over what was answered:
+
+| flag when p ≥ t | swaps caught /32 | correct citations flagged /1,042 |
+|---|---|---|
+| 0.05 | 32 | 1,034 (99%) |
+| 0.1 | 30 | 548 (53%) |
+| 0.3 | 30 | 127 (12%) |
+| 0.5 | 30 | 38 (3.6%) |
+| 0.7 | 28 | 11 (1.1%) |
+| 0.8 | 26 | 2 (0.2%) |
+| **0.9** | **24** | **0** |
+| 0.95 | 18 | 0 |
+| 0.99 | 0 | 0 |
+
+Against the local-model row (llama3.1 caught every swap and called 43% of the
+controls wrong): at p ≥ 0.5 Jev catches 30/32 and flags 3.6% of a random quarter of
+the controls; at p ≥ 0.9 it catches 24/32 with no false flag in 1,042. Unlike §7.2
+direction, the two groups do separate here. What the table does not show: the other
+2,716 controls were not asked, so the false-flag rate has a sampling error (0/1,042
+puts the upper 95% bound near 0.3%, but only if the sample is random, which hash
+order gives and was not tested); one threshold read off this table is graded on
+its own data; the 32 swaps are all one error type (a subject swapped), so 24/32 is
+"catches planted subject swaps", not "catches semantic errors". Not shipped; the
+remaining 2,716 questions resume with the same command after the limit resets. The
 billing guard did not trigger: the reply was a rate limit, `billing_source` was
 never anything but `free`. A smoke test of the table code on made-up
 probabilities (0.9 for every swap, 0.1 for every control) returned 32/32 caught
